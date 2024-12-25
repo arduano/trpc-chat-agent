@@ -1,24 +1,20 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "./trpc";
-import { HelloWorld } from "./components/HelloWorld";
-import { useState } from "react";
+import { Chat } from "./components/Chat";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function App() {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: false,
-          },
-        },
-      })
-  );
-
   return (
     <QueryClientProvider client={queryClient}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <HelloWorld />
+        <Chat />
       </trpc.Provider>
     </QueryClientProvider>
   );
