@@ -7,7 +7,7 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "@trpc/server": "^10.45.2",
+    "@trpc/server": "^10.45.0",
     "ws": "^8.18.0",
     "zod": "^3.24.1"
   },

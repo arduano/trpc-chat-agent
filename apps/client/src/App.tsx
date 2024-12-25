@@ -1,17 +1,25 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { trpc, trpcClient } from './trpc';
-import { HelloWorld } from './components/HelloWorld';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { trpc, trpcClient } from "./trpc";
+import { HelloWorld } from "./components/HelloWorld";
+import { useState } from "react";
 
-const queryClient = new QueryClient();
+export default function App() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
 
-function App() {
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <HelloWorld />
-      </QueryClientProvider>
-    </trpc.Provider>
+      </trpc.Provider>
+    </QueryClientProvider>
   );
 }
-
-export default App;

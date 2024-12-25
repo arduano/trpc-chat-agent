@@ -1,7 +1,7 @@
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import { WebSocketServer } from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
-import { router } from './router';
+import router from './router';
 
 // Create HTTP server
 const { server, listen } = createHTTPServer({
