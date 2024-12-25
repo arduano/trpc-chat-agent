@@ -1,0 +1,13 @@
+{
+  "name": "ai-agent-trpc-langchain",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "bun run --cwd apps/server dev & bun run --cwd apps/client dev",
+    "server": "cd apps/server && bun",
+    "client": "cd apps/client && bun"
+  }
+}
