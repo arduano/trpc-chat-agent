@@ -12,12 +12,15 @@ import { AnyStructuredChatTool } from "./tool";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { UnreachableError } from "./unreachable";
 
+export type ToolCallState = "loading" | "complete" | "aborted";
+
 export type AdvancedToolCall<Tool extends AnyStructuredChatTool> = {
   id: string;
   name: Tool["TypeInfo"]["Name"];
   args: Tool["TypeInfo"]["Args"];
   // May or may not be present. Generally present when the tool finishes executing. Will be missing if execution was cancelled before completion.
   result?: MessageContent;
+  state: ToolCallState;
   client: {
     args: Tool["TypeInfo"]["ArgsForClient"];
     // May or may not be present. Generally present when the tool finishes executing. Will be missing if execution was cancelled before completion.
@@ -40,6 +43,7 @@ export type AdvancedToolCallClientSide<Tool extends AnyStructuredChatTool> = {
   progressStatus?: Tool["TypeInfo"]["ToolProgress"];
   // May or may not be present. Generally present when the tool finishes executing.
   result?: Tool["TypeInfo"]["ResultForClient"];
+  state: ToolCallState;
 };
 
 export type AdvancedToolCallClientSideFromToolsArray<
@@ -156,6 +160,7 @@ export class ChatAdvancedAIMessage<
             name: tc.name,
             args: tc.client.args,
             result: tc.client.result,
+            state: tc.state,
           })),
         })
       ),
@@ -504,6 +509,18 @@ export class ServerSideChatConversation<
     }
   }
 
+  public abortAllPendingToolCalls() {
+    for (const aiMessage of Object.values(this.data.aiMessages)) {
+      for (const part of aiMessage.parts) {
+        for (const toolCall of part.toolCalls) {
+          if (toolCall.state === "loading") {
+            toolCall.state = "aborted";
+          }
+        }
+      }
+    }
+  }
+
   private getAIMessageById(id: string) {
     const message = this.data.aiMessages?.[id];
     if (!message) {
@@ -537,6 +554,7 @@ export class ServerSideChatConversation<
       id: update.toolCallId,
       name: update.toolCallName,
       args: update.newArgs,
+      state: "loading",
       client: {
         args: update.newClientArgs,
       },
@@ -558,6 +576,9 @@ export class ServerSideChatConversation<
     }
     if (update.newClientResult !== undefined) {
       toolCall.client.result = update.newClientResult;
+    }
+    if (update.newState !== undefined) {
+      toolCall.state = update.newState;
     }
   }
 
@@ -653,6 +674,7 @@ export class ClientSideChatConversation<
     const lastPart = this.forceCloneLastPartForAIMessageId(update.messageId);
     lastPart.toolCalls.push({
       id: update.toolCallId,
+      state: "loading",
       name: update.toolCallName,
     });
   }
@@ -676,6 +698,9 @@ export class ClientSideChatConversation<
     }
     if (update.newResult !== undefined) {
       updatedToolCall.result = update.newResult;
+    }
+    if (update.newState !== undefined) {
+      updatedToolCall.state = update.newState;
     }
 
     lastPart.toolCalls[toolCallIndex] = updatedToolCall;
@@ -713,6 +738,7 @@ export type ClientUpdateMessageToolCall = {
   newArgs?: any;
   newProgressStatus?: any;
   newResult?: any;
+  newState?: ToolCallState;
 };
 
 export type ClientBeginNewAIMessagePart = {
@@ -740,14 +766,12 @@ export type ClientSideUpdate =
 
 export type ServerUpdateMessageContent = {
   kind: "update-content";
-  conversationId: string;
   messageId: string;
   contentToAppend: MessageContent;
 };
 
 export type ServerUpdateBeginToolCall = {
   kind: "begin-tool-call";
-  conversationId: string;
   messageId: string;
   toolCallId: string;
   toolCallName: string;
@@ -757,12 +781,12 @@ export type ServerUpdateBeginToolCall = {
 
 export type ServerUpdateMessageToolCall = {
   kind: "update-tool-call";
-  conversationId: string;
   messageId: string;
   toolCallId: string;
   newResult?: any;
   newClientArgs?: any;
   newClientResult?: any;
+  newState?: ToolCallState;
 };
 
 export type ServerBeginNewAIMessagePart = {
@@ -771,11 +795,21 @@ export type ServerBeginNewAIMessagePart = {
   messageId: string;
 };
 
+export type ServerSyncConversation = {
+  kind: "sync-conversation";
+  conversationData: ServerSideConversationData<any>;
+  tree: ChatBranch;
+};
+
 export type ServerSideConversationUpdate =
   | ServerUpdateBeginToolCall
   | ServerUpdateMessageContent
   | ServerUpdateMessageToolCall
   | ServerBeginNewAIMessagePart;
+
+export type ServerSideUpdate =
+  | ServerSyncConversation
+  | ServerSideConversationUpdate;
 
 function concatMessageContent(
   messageContent: MessageContent,

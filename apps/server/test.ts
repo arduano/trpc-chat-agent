@@ -46,6 +46,7 @@ import {
   ServerSideChatConversation,
   ServerSideConversationData,
   ServerSideConversationUpdate,
+  ServerSideUpdate,
   ServerUpdateBeginToolCall,
 } from "./types";
 import { dispatchCustomEvent } from "@langchain/core/callbacks/dispatch";
@@ -124,13 +125,6 @@ const tool2 = new StructuredChatTool({
 
 const allTools = [tool, tool2] as const;
 
-type FinalizeConversationMessage<
-  Tools extends readonly AnyStructuredChatTool[]
-> = {
-  conversationData: ServerSideConversationData<Tools>;
-  chatBranch: ChatBranch;
-};
-
 export function createAdvancedReactAgent<
   const Tools extends readonly AnyStructuredChatTool[]
 >(args: { llm: BaseChatModel; tools: Tools; debounceMs: number }) {
@@ -160,7 +154,14 @@ export function createAdvancedReactAgent<
     update: ClientSideUpdate,
     config: RunnableConfig
   ) => {
-    dispatchCustomEvent("on_conversation_update", update, config);
+    dispatchCustomEvent("on_conversation_client_update", update, config);
+  };
+
+  const sendServerSideUpdateToConfig = (
+    update: ServerSideUpdate,
+    config: RunnableConfig
+  ) => {
+    dispatchCustomEvent("on_conversation_server_update", update, config);
   };
 
   const handleErrors = (fn: (...args: any[]) => any) => {
@@ -217,6 +218,14 @@ export function createAdvancedReactAgent<
       },
       config
     );
+    sendServerSideUpdateToConfig(
+      {
+        kind: "sync-conversation",
+        conversationData: stateConvo.data,
+        tree: newBranch,
+      },
+      config
+    );
 
     return {
       chatBranch: newBranch,
@@ -251,6 +260,7 @@ export function createAdvancedReactAgent<
     const stateConvo = new ServerSideChatConversation(
       structuredClone(state.conversationData)
     );
+
     const messageList = stateConvo.asLangChainMessagesArray(state.chatBranch);
 
     const aiMessage = stateConvo.getAIMessageAt(state.chatBranch);
@@ -258,23 +268,11 @@ export function createAdvancedReactAgent<
       console.error("No AI message for ID, this is unexpected");
       return;
     }
+
     const aiMessageId = aiMessage.id;
 
-    const stream = await modelRunnable.streamEvents(
-      { messages: messageList },
-      {
-        ...config,
-        version: "v2",
-      }
-    );
-
-    let aggregateChunk: AIMessageChunk | undefined;
-    let currentToolId: string | undefined;
-
-    let allDebouncers: Debouncer<any>[] = [];
-    let currentToolClientPreview: Debouncer<any> | null = null;
-
     const sendServerSideUpdate = (update: ServerSideConversationUpdate) => {
+      sendServerSideUpdateToConfig(update, config);
       stateConvo.processMessageUpdate(update);
     };
 
@@ -282,139 +280,158 @@ export function createAdvancedReactAgent<
       sendClientSideUpdateToConfig(update, config);
     };
 
-    sendServerSideUpdate({
-      kind: "begin-new-ai-message-part",
-      conversationId: state.conversationData.id,
-      messageId: aiMessageId,
-    });
-    sendClientSideUpdate({
-      kind: "begin-new-ai-message-part",
-      conversationId: state.conversationData.id,
-      messageId: aiMessageId,
-    });
+    try {
+      const stream = await modelRunnable.streamEvents(
+        { messages: messageList },
+        {
+          ...config,
+          version: "v2",
+        }
+      );
 
-    for await (const chunk of stream) {
-      if (chunk.event === "on_chat_model_stream") {
-        const data = chunk.data.chunk;
-        if (isAIMessageChunk(data)) {
-          if (!aggregateChunk) {
-            aggregateChunk = data;
-          } else {
-            aggregateChunk = aggregateChunk.concat(data);
-          }
+      let aggregateChunk: AIMessageChunk | undefined;
+      let currentToolId: string | undefined;
 
-          if (data.content.length > 0) {
-            sendServerSideUpdate({
-              kind: "update-content",
-              conversationId: state.conversationData.id,
-              messageId: aiMessageId,
-              contentToAppend: data.content,
-            });
-            sendClientSideUpdate({
-              kind: "update-content",
-              conversationId: state.conversationData.id,
-              messageId: aiMessageId,
-              contentToAppend: data.content,
-            });
-          }
+      let allDebouncers: Debouncer<any>[] = [];
+      let currentToolClientPreview: Debouncer<any> | null = null;
 
-          const toolId = data.tool_call_chunks?.[0]?.id;
-          if (toolId && toolId !== currentToolId) {
-            const name = aggregateChunk.tool_calls?.[0]?.name!;
-            const tool = toolsList.find((t) => t.name === name);
+      sendServerSideUpdate({
+        kind: "begin-new-ai-message-part",
+        conversationId: state.conversationData.id,
+        messageId: aiMessageId,
+      });
+      sendClientSideUpdate({
+        kind: "begin-new-ai-message-part",
+        conversationId: state.conversationData.id,
+        messageId: aiMessageId,
+      });
 
-            if (tool) {
+      for await (const chunk of stream) {
+        if (chunk.event === "on_chat_model_stream") {
+          const data = chunk.data.chunk;
+          if (isAIMessageChunk(data)) {
+            if (!aggregateChunk) {
+              aggregateChunk = data;
+            } else {
+              aggregateChunk = aggregateChunk.concat(data);
+            }
+
+            if (data.content.length > 0) {
+              sendServerSideUpdate({
+                kind: "update-content",
+                messageId: aiMessageId,
+                contentToAppend: data.content,
+              });
               sendClientSideUpdate({
-                kind: "begin-tool-call",
+                kind: "update-content",
                 conversationId: state.conversationData.id,
                 messageId: aiMessageId,
-                toolCallId: toolId,
-                toolCallName: name,
+                contentToAppend: data.content,
               });
-
-              currentToolId = toolId;
-              currentToolClientPreview = tool.makeDebouncedArgsMapper(
-                debounceMs,
-                (args) => {
-                  sendClientSideUpdate({
-                    kind: "update-tool-call",
-                    conversationId: state.conversationData.id,
-                    messageId: aiMessageId,
-                    toolCallId: toolId,
-                    newArgs: args,
-                  });
-                }
-              );
-              allDebouncers.push(currentToolClientPreview!);
             }
-          }
 
-          if (currentToolClientPreview && currentToolId) {
-            const toolCall = aggregateChunk.tool_call_chunks?.find(
-              (c) => c.id === currentToolId
-            );
+            const toolId = data.tool_call_chunks?.[0]?.id;
+            if (toolId && toolId !== currentToolId) {
+              const name = aggregateChunk.tool_calls?.[0]?.name!;
+              const tool = toolsList.find((t) => t.name === name);
 
-            if (toolCall?.args) {
-              try {
-                const json = parsePartialJson(toolCall.args);
-                if (json) {
-                  currentToolClientPreview?.debounce(json);
+              if (tool) {
+                sendClientSideUpdate({
+                  kind: "begin-tool-call",
+                  conversationId: state.conversationData.id,
+                  messageId: aiMessageId,
+                  toolCallId: toolId,
+                  toolCallName: name,
+                });
+
+                currentToolId = toolId;
+                currentToolClientPreview = tool.makeDebouncedArgsMapper(
+                  debounceMs,
+                  (args) => {
+                    sendClientSideUpdate({
+                      kind: "update-tool-call",
+                      conversationId: state.conversationData.id,
+                      messageId: aiMessageId,
+                      toolCallId: toolId,
+                      newArgs: args,
+                      newState: "loading",
+                    });
+                  }
+                );
+                allDebouncers.push(currentToolClientPreview!);
+              }
+            }
+
+            if (currentToolClientPreview && currentToolId) {
+              const toolCall = aggregateChunk.tool_call_chunks?.find(
+                (c) => c.id === currentToolId
+              );
+
+              if (toolCall?.args) {
+                try {
+                  const json = parsePartialJson(toolCall.args);
+                  if (json) {
+                    currentToolClientPreview?.debounce(json);
+                  }
+                } catch (e) {
+                  console.error("Error parsing tool args:", e);
                 }
-              } catch (e) {
-                console.error("Error parsing tool args:", e);
               }
             }
           }
         }
-      }
 
-      if (chunk.event === "on_chat_model_end") {
-        const data = chunk.data.output;
-        if (isAIMessageChunk(data)) {
-          aggregateChunk = data;
+        if (chunk.event === "on_chat_model_end") {
+          const data = chunk.data.output;
+          if (isAIMessageChunk(data)) {
+            aggregateChunk = data;
+          }
         }
       }
+
+      if (!aggregateChunk) {
+        console.error("No aggregate chunk, this is unexpected");
+        return;
+      }
+
+      // Flush all debouncers
+      allDebouncers.forEach((d) => d.flush());
+
+      // Flush tool calls with their args
+      const toolCalls = aggregateChunk.tool_calls ?? [];
+      await Promise.all(
+        toolCalls.map(async (toolCall) => {
+          const tool = toolsList.find((t) => t.name === toolCall.name)!;
+
+          const clientSideArgs = await tool.mapArgsForClient?.(toolCall.args);
+
+          // Make sure the args are up to date
+          sendServerSideUpdate({
+            kind: "begin-tool-call",
+            messageId: aiMessageId,
+            toolCallId: toolCall.id!,
+            toolCallName: toolCall.name,
+            newArgs: toolCall.args,
+            newClientArgs: clientSideArgs,
+          });
+          sendClientSideUpdate({
+            kind: "update-tool-call",
+            conversationId: state.conversationData.id,
+            messageId: aiMessageId,
+            toolCallId: toolCall.id!,
+            newArgs: toolCall.args,
+            newState: "loading",
+          });
+        })
+      );
+
+      return {
+        conversationData: stateConvo.data,
+      };
+    } catch (e) {
+      console.error(e);
+      throw e;
     }
-
-    if (!aggregateChunk) {
-      console.error("No aggregate chunk, this is unexpected");
-      return;
-    }
-
-    // Flush all debouncers
-    allDebouncers.forEach((d) => d.flush());
-
-    // Flush tool calls with their args
-    const toolCalls = aggregateChunk.tool_calls ?? [];
-    await Promise.all(
-      toolCalls.map(async (toolCall) => {
-        const tool = toolsList.find((t) => t.name === toolCall.name)!;
-
-        const clientSideArgs = await tool.mapArgsForClient?.(toolCall.args);
-
-        // Make sure the args are up to date
-        sendServerSideUpdate({
-          kind: "begin-tool-call",
-          conversationId: state.conversationData.id,
-          messageId: aiMessageId,
-          toolCallId: toolCall.id!,
-          toolCallName: toolCall.name,
-          newArgs: toolCall.args,
-          newClientArgs: clientSideArgs,
-        });
-        sendClientSideUpdate({
-          kind: "update-tool-call",
-          conversationId: state.conversationData.id,
-          messageId: aiMessageId,
-          toolCallId: toolCall.id!,
-          newArgs: toolCall.args,
-        });
-      })
-    );
-
-    return {
-      conversationData: stateConvo.data,
-    };
   };
 
   const callTools = async (state: AgentState, config: RunnableConfig) => {
@@ -435,6 +452,7 @@ export function createAdvancedReactAgent<
     }
 
     const sendServerSideUpdate = (update: ServerSideConversationUpdate) => {
+      sendServerSideUpdateToConfig(update, config);
       stateConvo.processMessageUpdate(update);
     };
 
@@ -456,43 +474,61 @@ export function createAdvancedReactAgent<
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
             newProgressStatus: progress,
+            newState: "loading",
           });
         });
 
         // Call the tool
-        const result = await tool.invoke(toolCall.args, {
-          callbacks: [
-            {
-              handleCustomEvent(name, data) {
-                if (name === "on_structured_tool_progress") {
-                  progressDebouncer.debounce(data);
-                }
+        try {
+          const result = await tool.invoke(toolCall.args, {
+            callbacks: [
+              {
+                handleCustomEvent(name, data) {
+                  if (name === "on_structured_tool_progress") {
+                    progressDebouncer.debounce(data);
+                  }
+                },
               },
-            },
-          ],
-        });
+            ],
+          });
+          console.log("Tool result", result);
 
-        console.log("Tool result", result);
+          const clientSideResult = await tool.mapResultForClient?.(result);
+          progressDebouncer.flush();
 
-        const clientSideResult = await tool.mapResultForClient?.(result);
-        progressDebouncer.flush();
-
-        // Make sure the result is up to date
-        sendServerSideUpdate({
-          kind: "update-tool-call",
-          conversationId: state.conversationData.id,
-          messageId: aiMessageId,
-          toolCallId: toolCall.id!,
-          newResult: result,
-          newClientResult: clientSideResult,
-        });
-        sendClientSideUpdate({
-          kind: "update-tool-call",
-          conversationId: state.conversationData.id,
-          messageId: aiMessageId,
-          toolCallId: toolCall.id!,
-          newResult: result,
-        });
+          // Make sure the result is up to date
+          sendServerSideUpdate({
+            kind: "update-tool-call",
+            messageId: aiMessageId,
+            toolCallId: toolCall.id!,
+            newResult: result,
+            newClientResult: clientSideResult,
+            newState: "complete",
+          });
+          sendClientSideUpdate({
+            kind: "update-tool-call",
+            conversationId: state.conversationData.id,
+            messageId: aiMessageId,
+            toolCallId: toolCall.id!,
+            newResult: result,
+            newState: "complete",
+          });
+        } catch (e) {
+          // Tool errored, abort it
+          sendServerSideUpdate({
+            kind: "update-tool-call",
+            messageId: aiMessageId,
+            toolCallId: toolCall.id!,
+            newState: "aborted",
+          });
+          sendClientSideUpdate({
+            kind: "update-tool-call",
+            conversationId: state.conversationData.id,
+            messageId: aiMessageId,
+            toolCallId: toolCall.id!,
+            newState: "aborted",
+          });
+        }
       })
     );
 
@@ -515,12 +551,6 @@ export function createAdvancedReactAgent<
       },
       config
     );
-
-    // Emit a finalize event
-    dispatchCustomEvent("on_conversation_finalize", {
-      conversationData: state.conversationData,
-      chatBranch: state.chatBranch,
-    } satisfies FinalizeConversationMessage<Tools>);
   };
 
   const workflow = new StateGraph(StateAnnotation)
@@ -548,47 +578,61 @@ const agent = createAdvancedReactAgent({
   debounceMs: 0,
 });
 
+const controller = new AbortController();
+
+const serverSideConversation = new ServerSideChatConversation<typeof allTools>(
+  ServerSideChatConversation.newConversationData("test")
+);
+let chatBranch: ChatBranch = [];
+
 const events = await agent.streamEvents(
   {
     humanMessageContent:
       "Try calling the greet function with an arbitrary 8 word long string for testing, I want to make sure it works.",
-    conversationData: ServerSideChatConversation.newConversationData("test"),
-    chatBranch: [],
+    conversationData: structuredClone(serverSideConversation.data),
+    chatBranch,
   },
   {
     version: "v2",
+    signal: controller.signal,
   }
 );
 
-for await (const event of events) {
-  try {
-    if (event.name === "on_conversation_update") {
-      console.log(event);
-      const eventData = event.data as ClientSideUpdate;
-      useConversationStore.getState().processClientEvent(eventData);
+try {
+  for await (const event of events) {
+    try {
+      if (event.name === "on_conversation_client_update") {
+        console.log(event);
+        const eventData = event.data as ClientSideUpdate;
+        useConversationStore.getState().processClientEvent(eventData);
+      }
+      if (event.name === "on_conversation_server_update") {
+        const eventData = event.data as ServerSideUpdate;
+
+        if (eventData.kind === "sync-conversation") {
+          chatBranch = eventData.tree;
+          serverSideConversation.data = eventData.conversationData;
+        } else {
+          serverSideConversation.processMessageUpdate(eventData);
+        }
+      }
+    } catch (e) {
+      console.error(e);
     }
-    if (event.name === "on_conversation_finalize") {
-      const eventData = event.data as FinalizeConversationMessage<
-        typeof allTools
-      >;
-      const convo = new ServerSideChatConversation(eventData.conversationData);
-      console.log(
-        JSON.stringify(
-          convo.getAIMessageAt(eventData.chatBranch)?.parts,
-          null,
-          2
-        )
-      );
-      console.log(
-        JSON.stringify(
-          useConversationStore.getState().conversations[convo.data.id].data
-            .aiMessages,
-          null,
-          2
-        )
-      );
-    }
-  } catch (e) {
-    console.error(e);
   }
+} catch (e) {
+  console.error(e);
 }
+
+serverSideConversation.abortAllPendingToolCalls();
+
+console.log(JSON.stringify(serverSideConversation.data, null, 2));
+console.log(
+  JSON.stringify(
+    useConversationStore.getState().conversations[
+      serverSideConversation.data.id
+    ].data.aiMessages,
+    null,
+    2
+  )
+);
