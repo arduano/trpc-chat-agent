@@ -1,13 +1,12 @@
 import { initTRPC } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { z } from "zod";
-import { chain, graph } from "./langchain";
 import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { createAdvancedReactAgent } from "../advancedReactAgent";
 import { StructuredChatTool } from "../tool";
 import {
-  ChatBranch,
+  ChatTree,
   chatBranchZod,
   ClientSideUpdate,
   ServerSideChatConversation,
@@ -92,7 +91,7 @@ const router = t.router({
 
         const runAgent = async () => {
           const conversation = serverSideConversation;
-          let chatBranch: ChatBranch = input.branch;
+          let chatBranch: ChatTree = input.branch;
 
           try {
             const events = await agent.streamEvents(
@@ -141,6 +140,12 @@ const router = t.router({
           controller.abort();
         };
       });
+    }),
+
+  getChatData: t.procedure
+    .input(z.object({ conversationId: z.string() }))
+    .query(({ input }) => {
+      return serverSideConversation.data;
     }),
 });
 
@@ -219,7 +224,7 @@ const allTools = [tool, tool2] as const;
 
 const controller = new AbortController();
 
-const agent = createAdvancedReactAgent({
+export const agent = createAdvancedReactAgent({
   llm: new ChatOpenAI({
     modelName: "gpt-4o",
   }),

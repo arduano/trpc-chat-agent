@@ -38,7 +38,11 @@ export type AdvancedToolCallFromToolsArray<
 
 export type AdvancedToolCallClientSide<Tool extends AnyStructuredChatTool> = {
   id: string;
-  name: Tool["TypeInfo"]["Name"];
+
+  name: string extends Tool["TypeInfo"]["Name"]
+    ? string
+    : Tool["TypeInfo"]["Name"]; // This hack is necessary because of some complex edge cases around the `any` type
+
   // May or may not be present. The name is known first, then the preview args get sent along after
   args?: Tool["TypeInfo"]["ArgsForClient"];
   // May or may not be present. May be sent along when the tool is being executed. Does not persist.
@@ -291,7 +295,7 @@ export const chatBranchZod = z.array(
     aiMessageIndex: z.number(),
   })
 );
-export type ChatBranch = z.infer<typeof chatBranchZod>;
+export type ChatTree = z.infer<typeof chatBranchZod>;
 
 export class ChatConversation<AIMessage extends { id: string }> {
   data: ConversationData<AIMessage>;
@@ -307,7 +311,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return this.data.messageIdCounter.toString();
   }
 
-  public getMessageIdPairAt(tree: ChatBranch) {
+  public getMessageIdPairAt(tree: ChatTree) {
     if (tree.length === 0) {
       return {
         human: null,
@@ -339,7 +343,43 @@ export class ChatConversation<AIMessage extends { id: string }> {
     };
   }
 
-  public getHumanMessageIdAt(tree: ChatBranch) {
+  public getDefaultTree(): ChatTree {
+    const tree: ChatTree = [];
+
+    let humanId = "";
+    let aiId = this.aiMessageRootId;
+
+    while (true) {
+      const humanList = this.data.aiMessageChildIds?.[aiId];
+      if (!humanList) {
+        break;
+      }
+      const humanIndex = humanList.length - 1;
+      if (humanIndex === -1) {
+        throw new Error("Invalid tree");
+      }
+      humanId = humanList[humanIndex];
+
+      const aiList = this.data.humanMessageChildIds?.[humanId];
+      if (!aiList) {
+        throw new Error("Invalid tree");
+      }
+      const aiIndex = aiList.length - 1;
+      if (aiIndex === -1) {
+        throw new Error("Invalid tree");
+      }
+      aiId = aiList[aiIndex];
+
+      tree.push({
+        humanMessageIndex: humanIndex,
+        aiMessageIndex: aiIndex,
+      });
+    }
+
+    return tree;
+  }
+
+  public getHumanMessageIdAt(tree: ChatTree) {
     const pair = this.getMessageIdPairAt(tree);
     if (!pair) {
       return null;
@@ -347,7 +387,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return pair.human;
   }
 
-  public getAIMessageIdAt(tree: ChatBranch) {
+  public getAIMessageIdAt(tree: ChatTree) {
     const pair = this.getMessageIdPairAt(tree);
     if (!pair) {
       return null;
@@ -355,7 +395,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return pair.ai;
   }
 
-  public getAIMessageAt(tree: ChatBranch) {
+  public getAIMessageAt(tree: ChatTree) {
     const aiId = this.getAIMessageIdAt(tree);
     if (!aiId) {
       return null;
@@ -387,10 +427,10 @@ export class ChatConversation<AIMessage extends { id: string }> {
   }
 
   public pushHumanAiMessagePair(
-    tree: ChatBranch,
+    tree: ChatTree,
     humanMessage: HumanMessageData,
     aiMessage: AIMessage
-  ): ChatBranch {
+  ): ChatTree {
     if (this.data.humanMessages[humanMessage.id]) {
       throw new Error("Human message already exists");
     }
@@ -424,7 +464,9 @@ export class ChatConversation<AIMessage extends { id: string }> {
     ];
   }
 
-  public asMessagesArray(tree: ChatBranch): (HumanMessageData | AIMessage)[] {
+  public asMessagesArray(tree: ChatTree): (HumanMessageData | AIMessage)[] {
+    console.log({ tree, data: this.data });
+
     const messages: (HumanMessageData | AIMessage)[] = [];
 
     if (tree.length === 0) {
@@ -476,7 +518,7 @@ export class ServerSideChatConversation<
     };
   }
 
-  public asLangChainMessagesArray(tree: ChatBranch): BaseMessage[] {
+  public asLangChainMessagesArray(tree: ChatTree): BaseMessage[] {
     return this.asMessagesArray(tree).flatMap((message) => {
       switch (message.kind) {
         case "ai":
@@ -615,6 +657,19 @@ export class ClientSideChatConversation<
     data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>
   ) {
     super(data);
+  }
+
+  public static makePlaceholderConversation<
+    Agent extends AdvancedReactAgent
+  >(): ClientSideChatConversation<Agent> {
+    return new ClientSideChatConversation({
+      aiMessageChildIds: {},
+      humanMessageChildIds: {},
+      humanMessages: {},
+      aiMessages: {},
+      id: "",
+      messageIdCounter: 0,
+    });
   }
 
   public processMessageUpdate(update: ClientSideConversationUpdate) {
@@ -756,7 +811,7 @@ export type ClientSyncConversation = {
   kind: "sync-conversation";
   conversationId: string;
   conversationData: ClientSideConversationData<any>;
-  tree: ChatBranch;
+  tree: ChatTree;
 };
 
 export type ClientSideConversationUpdate =
@@ -803,7 +858,7 @@ export type ServerBeginNewAIMessagePart = {
 export type ServerSyncConversation = {
   kind: "sync-conversation";
   conversationData: ServerSideConversationData<any>;
-  tree: ChatBranch;
+  tree: ChatTree;
 };
 
 export type ServerSideConversationUpdate =

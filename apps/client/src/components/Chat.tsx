@@ -1,65 +1,44 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { rawTrpc, trpc } from "../trpc";
-import { useConversationStore } from "../../../server/clientConversationStore";
-import { ChatBranch } from "../../../server/types";
-import { AdvancedReactAgent } from "../../../server/advancedReactAgent";
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+import { AdvancedReactAgent } from "../../../server/advancedReactAgent";
+import {
+  AdvancedAIMessageDataClientSide,
+  ChatTree,
+  ClientSideChatConversation,
+  ClientSideConversationData,
+  ClientSideUpdate,
+  HumanMessageData,
+} from "../../../server/types";
+import { useConversationStore } from "../../../server/clientConversationStore";
+import type { agent } from "../../../server/src/router";
+import { AnyStructuredChatTool } from "../../../server/tool";
 
 export function Chat() {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const { messages, beginMessage, isStreaming } = useConversation<typeof agent>(
+    {
+      conversationId: "test",
+      onUpdateConversationId: undefined,
+    }
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // useEffect(() => {
+  //   scrollToBottom();
+  // }, [messages]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim() || isStreaming) return;
+    e.stopPropagation();
 
-    // Add user message
-    const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    beginMessage(input);
     setInput("");
-    setIsStreaming(true);
-
-    // Add assistant message placeholder
-    const assistantMessage: Message = { role: "assistant", content: "" };
-    setMessages((prev) => [...prev, assistantMessage]);
-
-    // Start streaming
-    const subscription = rawTrpc.chat.subscribe(input, {
-      onData: (token) => {
-        console.log(token);
-        // setMessages(prev => {
-        //   const newMessages = [...prev];
-        //   const lastMessage = newMessages[newMessages.length - 1];
-        //   lastMessage.content += token;
-        //   return newMessages;
-        // });
-      },
-      onComplete: () => {
-        setIsStreaming(false);
-      },
-      onError: (err) => {
-        console.error("Chat error:", err);
-        setIsStreaming(false);
-      },
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   };
 
   return (
@@ -71,18 +50,23 @@ export function Chat() {
             <div className="divide-y divide-gray-200">
               <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
                 <div className="h-[400px] overflow-auto mb-4 space-y-4">
-                  {messages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg ${
-                        message.role === "user"
-                          ? "bg-blue-100 ml-8"
-                          : "bg-gray-100 mr-8"
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                  ))}
+                  <RenderMessages
+                    messages={messages}
+                    renderAiMessage={(message) => (
+                      <>
+                        {message.parts.map((part) => (
+                          <div className="p-4 rounded-lg bg-gray-100 mr-8">
+                            {part.content as string}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    renderHumanMessage={(message) => (
+                      <div className="p-4 rounded-lg bg-blue-100 ml-8">
+                        {message.content as string}
+                      </div>
+                    )}
+                  />
                   <div ref={messagesEndRef} />
                 </div>
                 <form onSubmit={handleSubmit} className="mt-4">
@@ -113,22 +97,195 @@ export function Chat() {
   );
 }
 
+function RenderMemoed<T>({
+  data,
+  render,
+}: {
+  data: T;
+  render: (data: T) => JSX.Element;
+}) {
+  const jsx = useMemo(() => render(data), [data]);
+  return <>{jsx}</>;
+}
+
+function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
+  messages,
+  renderAiMessage,
+  renderHumanMessage,
+}: {
+  messages: (AdvancedAIMessageDataClientSide<Tools> | HumanMessageData)[];
+  renderAiMessage: (
+    message: AdvancedAIMessageDataClientSide<Tools>
+  ) => JSX.Element;
+  renderHumanMessage: (message: HumanMessageData) => JSX.Element;
+}) {
+  return (
+    <>
+      {messages.map((message, index) => {
+        if (message.kind === "human") {
+          return (
+            <RenderMemoed
+              key={index}
+              data={message}
+              render={renderHumanMessage}
+            />
+          );
+        } else {
+          return (
+            <RenderMemoed key={index} data={message} render={renderAiMessage} />
+          );
+        }
+      })}
+    </>
+  );
+}
+
 type UseConversationArgs = {
   conversationId?: string;
+  onUpdateConversationId?: (conversationId: string) => void;
 };
 
-const useConversation = (args: UseConversationArgs) => {
-  const store = useConversationStore();
+function useConversation<Agent extends AdvancedReactAgent>({
+  conversationId,
+  onUpdateConversationId,
+}: UseConversationArgs) {
+  // Use the mutation functions in the store
+  const store = useConversationStore((data) => ({
+    ...data.mutate,
+    conversationFromStore:
+      conversationId === undefined
+        ? undefined
+        : data.get.conversation(conversationId),
+  }));
 
-  const [branch, setBranch] = useState<ChatBranch>([]);
+  const [branch, setBranch] = useState<ChatTree>([]);
   const [currentConversationId, setCurrentConversationId] = useState<
     string | undefined
-  >(args.conversationId);
-};
+  >(conversationId);
 
-function useConversationStreamer<Agent extends AdvancedReactAgent>() {
-  const store = useConversationStore<Agent>();
+  const [isConversationMissing, setIsConversationMissing] = useState(false);
 
+  const [placeholderConversation, setPlaceholderConversation] = useState<
+    ClientSideChatConversation<Agent>
+  >(() => ClientSideChatConversation.makePlaceholderConversation<Agent>());
+
+  const { beginStream, cancelStream, isStreaming } = useConversationStreamer(
+    (update) => {
+      store.processClientEvent(update);
+
+      // Ensure the conversation ID is in sync. For example, when
+      // the ID was undefined, but a new conversation was created
+      if (currentConversationId !== update.conversationId) {
+        onUpdateConversationId?.(update.conversationId);
+        setCurrentConversationId(update.conversationId);
+      }
+    }
+  );
+
+  useEffect(() => {
+    // Help make sure the conversation is in sync.
+    // If the ID changes in an unexpected way, reset the chat.
+    if (currentConversationId !== conversationId) {
+      cancelStream();
+      setCurrentConversationId(conversationId);
+      setBranch([]);
+      setPlaceholderConversation(
+        ClientSideChatConversation.makePlaceholderConversation<Agent>()
+      );
+    }
+
+    // Query the conversation to insert into the store if not present
+    setIsConversationMissing(false);
+    if (conversationId && !store.isConversationPresent(conversationId)) {
+      rawTrpc.getChatData
+        .query({ conversationId })
+        .then((conversation) => {
+          console.log("Got conversation ID:", conversationId);
+          if (!conversation) {
+            setIsConversationMissing(true);
+          } else {
+            const conversationClass = new ClientSideChatConversation(
+              conversation
+            );
+            store.setConversationIfNotPresent(
+              conversationId,
+              conversationClass
+            );
+            setBranch(conversationClass.getDefaultTree());
+          }
+        })
+        .catch(() => {
+          setIsConversationMissing(true);
+        });
+    }
+  }, [conversationId]);
+
+  // Is loading when the conversation isn't guaranteed to be missing,
+  // and the conversation isn't present in the store
+  const isLoadingConversation =
+    !isConversationMissing &&
+    conversationId &&
+    !store.isConversationPresent(conversationId);
+
+  // Can start a new message when the conversation isn't guaranteed to be missing,
+  // And when it's not loading
+  const canStartNewMessage = !isConversationMissing && !isLoadingConversation;
+
+  // Use the current conversation
+  const conversation = (store.conversationFromStore ??
+    placeholderConversation) as ClientSideChatConversation<Agent>;
+
+  const beginMessage = (humanMessage: string) => {
+    if (!canStartNewMessage) {
+      if (isLoadingConversation) {
+        throw new Error(
+          "Cannot start a new message while the conversation is loading"
+        );
+      }
+      if (isConversationMissing) {
+        throw new Error(
+          "Cannot start a new message while the conversation is missing"
+        );
+      }
+      throw new Error("Cannot start a new message");
+    }
+
+    // Set the placeholder conversation, in case the conversation doesn't exist yet
+    const placeholderConversation =
+      ClientSideChatConversation.makePlaceholderConversation<Agent>();
+    placeholderConversation.pushHumanAiMessagePair(
+      [],
+      {
+        content: humanMessage,
+        id: "-human-placeholder-",
+        kind: "human",
+      },
+      {
+        id: "-ai-placeholder-",
+        kind: "ai",
+        parts: [],
+      }
+    );
+    setPlaceholderConversation(placeholderConversation);
+
+    beginStream(conversationId, humanMessage, branch);
+  };
+
+  const messages = useMemo(() => {
+    return conversation.asMessagesArray(branch);
+  }, [conversation, branch]);
+
+  return {
+    beginMessage,
+    messages,
+    isStreaming,
+    cancelStream,
+    isLoadingConversation,
+    isConversationMissing,
+  };
+}
+
+function useConversationStreamer(onUpdate: (event: ClientSideUpdate) => void) {
   const [cancelCurrentStream, setCancelCurrentStream] = useState<
     (() => void) | undefined
   >(undefined);
@@ -143,7 +300,7 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>() {
   const beginStream = (
     conversationId: string | undefined,
     humanMessage: string,
-    branch: ChatBranch
+    branch: ChatTree
   ) => {
     const subscription = rawTrpc.chat2.subscribe(
       {
@@ -153,7 +310,14 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>() {
       },
       {
         onData: (updateEvent) => {
-          store.processClientEvent(updateEvent);
+          onUpdate(updateEvent);
+        },
+        onComplete: () => {
+          setCancelCurrentStream(undefined);
+        },
+        onError: (err) => {
+          console.error("Chat error:", err);
+          cancelStream();
         },
       }
     );
@@ -167,5 +331,11 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>() {
         subscription.unsubscribe();
       };
     });
+  };
+
+  return {
+    beginStream,
+    cancelStream,
+    isStreaming: !!cancelCurrentStream,
   };
 }

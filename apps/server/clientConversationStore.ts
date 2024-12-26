@@ -5,11 +5,14 @@ import { mergeKeepingOldReferences } from "./merge";
 import { AdvancedReactAgent } from "./advancedReactAgent";
 
 // Helper function for propagating the "Agent" type into the store
-function makeConversationStore<Agent extends AdvancedReactAgent>() {
+function makeConversationStore() {
   return create(
     combine(
       {
-        conversations: {} as Record<string, ClientSideChatConversation<Agent>>,
+        conversations: {} as Record<
+          string,
+          ClientSideChatConversation<AdvancedReactAgent> | undefined
+        >,
       },
       (set, get) => {
         const getConversation = (conversationId: string) => {
@@ -17,7 +20,7 @@ function makeConversationStore<Agent extends AdvancedReactAgent>() {
         };
         const setConversation = (
           conversationId: string,
-          conversation: ClientSideChatConversation<Agent>
+          conversation: ClientSideChatConversation<AdvancedReactAgent>
         ) => {
           set((state) => ({
             conversations: {
@@ -28,38 +31,56 @@ function makeConversationStore<Agent extends AdvancedReactAgent>() {
         };
 
         return {
-          processClientEvent: (event: ClientSideUpdate) => {
-            if (event.kind === "sync-conversation") {
-              const { conversationId, conversationData } = event;
-              const existingConversation = getConversation(conversationId);
-              if (existingConversation) {
-                // If an existing conversation exists, merge the data so that references are
-                // preserved if the underlying data is the same
-                const merged = mergeKeepingOldReferences(
-                  existingConversation.data,
-                  conversationData
-                );
-                setConversation(
-                  conversationId,
-                  new ClientSideChatConversation(merged)
-                );
+          mutate: {
+            processClientEvent: (event: ClientSideUpdate) => {
+              if (event.kind === "sync-conversation") {
+                const { conversationId, conversationData } = event;
+                const existingConversation = getConversation(conversationId);
+                if (existingConversation) {
+                  // If an existing conversation exists, merge the data so that references are
+                  // preserved if the underlying data is the same
+                  const merged = mergeKeepingOldReferences(
+                    existingConversation.data,
+                    conversationData
+                  );
+                  setConversation(
+                    conversationId,
+                    new ClientSideChatConversation(merged)
+                  );
+                } else {
+                  setConversation(
+                    conversationId,
+                    new ClientSideChatConversation(conversationData)
+                  );
+                }
               } else {
-                setConversation(
-                  conversationId,
-                  new ClientSideChatConversation(conversationData)
-                );
-              }
-            } else {
-              const conversation = getConversation(event.conversationId);
-              if (!conversation) {
-                console.error(
-                  `No conversation found for conversation ID ${event.conversationId}`
-                );
-                return;
-              }
+                const conversation = getConversation(event.conversationId);
+                if (!conversation) {
+                  console.error(
+                    `No conversation found for conversation ID ${event.conversationId}`
+                  );
+                  return;
+                }
 
-              conversation.processMessageUpdate(event);
-            }
+                conversation.processMessageUpdate(event);
+              }
+            },
+            isConversationPresent: (conversationId: string) => {
+              return !!getConversation(conversationId);
+            },
+            setConversationIfNotPresent: (
+              conversationId: string,
+              conversation: ClientSideChatConversation<AdvancedReactAgent>
+            ) => {
+              if (!!getConversation(conversationId)) {
+                setConversation(conversationId, conversation);
+              }
+            },
+          },
+          get: {
+            conversation: (conversationId: string) => {
+              return getConversation(conversationId);
+            },
           },
         };
       }
@@ -67,13 +88,4 @@ function makeConversationStore<Agent extends AdvancedReactAgent>() {
   );
 }
 
-const commonStore = makeConversationStore<AdvancedReactAgent>();
-
-export function useConversationStore<Agent extends AdvancedReactAgent>() {
-  // Map the inner conversation store type to the agent type
-
-  // TODO: Is there a cleaner way to get the store type?
-  return commonStore() as ReturnType<
-    ReturnType<typeof makeConversationStore<Agent>>["getState"]
-  >;
-}
+export const useConversationStore = makeConversationStore();

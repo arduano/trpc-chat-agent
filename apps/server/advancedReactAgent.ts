@@ -20,7 +20,7 @@ import { Debouncer } from "./src/debounce";
 import { AnyStructuredChatTool } from "./tool";
 import {
   ServerSideConversationData,
-  ChatBranch,
+  ChatTree,
   ClientSideUpdate,
   ServerSideUpdate,
   ServerSideChatConversation,
@@ -34,16 +34,17 @@ import {
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[]>() {
   return Annotation.Root({
     conversationData: Annotation<ServerSideConversationData<Tools>>,
-    chatBranch: Annotation<ChatBranch>,
+    chatBranch: Annotation<ChatTree>,
     humanMessageContent: Annotation<MessageContent>,
   });
 }
 
-export type AdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[] = any> =
-  {
-    // Not real data, just a marker type
-    __toolTypes?: Tools;
-  };
+export type AdvancedReactAgent<
+  Tools extends readonly AnyStructuredChatTool[] = any
+> = {
+  // Not real data, just a marker type
+  __toolTypes?: Tools;
+};
 
 export function createAdvancedReactAgent<
   const Tools extends readonly AnyStructuredChatTool[]

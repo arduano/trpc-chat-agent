@@ -38,7 +38,7 @@ import { Debouncer } from "./src/debounce";
 import { StructuredChatTool, AnyStructuredChatTool } from "./tool";
 import {
   AdvancedAIMessageData,
-  ChatBranch,
+  ChatTree,
   ClientSideChatConversation,
   ClientSideConversationUpdate,
   ClientSideUpdate,
@@ -139,7 +139,7 @@ const agent = createAdvancedReactAgent({
 const serverSideConversation = new ServerSideChatConversation<typeof agent>(
   ServerSideChatConversation.newConversationData("test")
 );
-let chatBranch: ChatBranch = [];
+let chatBranch: ChatTree = [];
 const events = await agent.streamEvents(
   {
     humanMessageContent:
