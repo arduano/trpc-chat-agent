@@ -11,7 +11,8 @@ import {
 import { AnyStructuredChatTool } from "./tool";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { UnreachableError } from "./unreachable";
-import { AdvancedReactAgentMarker, AgentTools } from "./advancedReactAgent";
+import { AdvancedReactAgent, AgentTools } from "./advancedReactAgent";
+import { z } from "zod";
 
 export type ToolCallState = "loading" | "complete" | "aborted";
 
@@ -284,12 +285,13 @@ export type ClientSideConversationData<
   Tools extends readonly AnyStructuredChatTool[]
 > = ConversationData<AdvancedAIMessageDataClientSide<Tools>>;
 
-export type ChatBranchSelection = {
-  humanMessageIndex: number;
-  aiMessageIndex: number;
-};
-
-export type ChatBranch = ChatBranchSelection[];
+export const chatBranchZod = z.array(
+  z.object({
+    humanMessageIndex: z.number(),
+    aiMessageIndex: z.number(),
+  })
+);
+export type ChatBranch = z.infer<typeof chatBranchZod>;
 
 export class ChatConversation<AIMessage extends { id: string }> {
   data: ConversationData<AIMessage>;
@@ -455,15 +457,15 @@ export class ChatConversation<AIMessage extends { id: string }> {
 }
 
 export class ServerSideChatConversation<
-  Agent extends AdvancedReactAgentMarker<any>
+  Agent extends AdvancedReactAgent<any>
 > extends ChatConversation<AdvancedAIMessageData<AgentTools<Agent>>> {
   constructor(data: ServerSideConversationData<AgentTools<Agent>>) {
     super(data);
   }
 
-  public static newConversationData<
-    Agent extends AdvancedReactAgentMarker<any>
-  >(id: string): ServerSideConversationData<AgentTools<Agent>> {
+  public static newConversationData<Agent extends AdvancedReactAgent<any>>(
+    id: string
+  ): ServerSideConversationData<AgentTools<Agent>> {
     return {
       id,
       messageIdCounter: 0,
@@ -607,9 +609,11 @@ export class ServerSideChatConversation<
 }
 
 export class ClientSideChatConversation<
-  Agent extends AdvancedReactAgentMarker<any>
+  Agent extends AdvancedReactAgent<any>
 > extends ChatConversation<AdvancedAIMessageDataClientSide<AgentTools<Agent>>> {
-  constructor(data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>) {
+  constructor(
+    data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>
+  ) {
     super(data);
   }
 

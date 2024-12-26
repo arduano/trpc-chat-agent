@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { rawTrpc, trpc } from "../trpc";
+import { useConversationStore } from "../../../server/clientConversationStore";
+import { ChatBranch } from "../../../server/types";
+import { AdvancedReactAgent } from "../../../server/advancedReactAgent";
 
 interface Message {
   role: "user" | "assistant";
@@ -108,4 +111,61 @@ export function Chat() {
       </div>
     </div>
   );
+}
+
+type UseConversationArgs = {
+  conversationId?: string;
+};
+
+const useConversation = (args: UseConversationArgs) => {
+  const store = useConversationStore();
+
+  const [branch, setBranch] = useState<ChatBranch>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | undefined
+  >(args.conversationId);
+};
+
+function useConversationStreamer<Agent extends AdvancedReactAgent>() {
+  const store = useConversationStore<Agent>();
+
+  const [cancelCurrentStream, setCancelCurrentStream] = useState<
+    (() => void) | undefined
+  >(undefined);
+
+  const cancelStream = () => {
+    if (cancelCurrentStream) {
+      cancelCurrentStream();
+      setCancelCurrentStream(undefined);
+    }
+  };
+
+  const beginStream = (
+    conversationId: string | undefined,
+    humanMessage: string,
+    branch: ChatBranch
+  ) => {
+    const subscription = rawTrpc.chat2.subscribe(
+      {
+        conversationId,
+        branch: branch,
+        humanMessageContent: humanMessage,
+      },
+      {
+        onData: (updateEvent) => {
+          store.processClientEvent(updateEvent);
+        },
+      }
+    );
+
+    setCancelCurrentStream((cancel) => {
+      if (cancel) {
+        cancel();
+      }
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    });
+  };
 }

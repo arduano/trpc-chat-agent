@@ -39,12 +39,11 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[]>() {
   });
 }
 
-export type AdvancedReactAgentMarker<
-  Tools extends readonly AnyStructuredChatTool[]
-> = {
-  // Not real data, just a marker type
-  __toolTypes?: Tools;
-};
+export type AdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[] = any> =
+  {
+    // Not real data, just a marker type
+    __toolTypes?: Tools;
+  };
 
 export function createAdvancedReactAgent<
   const Tools extends readonly AnyStructuredChatTool[]
@@ -485,18 +484,16 @@ export function createAdvancedReactAgent<
 
   const compiled = workflow.compile({});
 
-  return compiled as typeof compiled & AdvancedReactAgentMarker<Tools>;
+  return compiled as typeof compiled & AdvancedReactAgent<Tools>;
 }
 
-export type AgentTools<Agent extends AdvancedReactAgentMarker<any>> =
-  Agent extends AdvancedReactAgentMarker<infer Tools>
-    ? NonNullable<Tools>
-    : never;
+export type AgentTools<Agent extends AdvancedReactAgent<any>> =
+  Agent extends AdvancedReactAgent<infer Tools> ? NonNullable<Tools> : never;
 
 export type AdvancedReactAgentConversation<
-  Agent extends AdvancedReactAgentMarker<any>
+  Agent extends AdvancedReactAgent<any>
 > = ServerSideChatConversation<AgentTools<Agent>>;
 
 export type AdvancedReactAgentClientConversation<
-  Agent extends AdvancedReactAgentMarker<any>
+  Agent extends AdvancedReactAgent<any>
 > = ClientSideChatConversation<AgentTools<Agent>>;
