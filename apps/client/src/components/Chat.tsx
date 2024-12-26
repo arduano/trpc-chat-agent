@@ -15,13 +15,13 @@ import {
   HumanMessageData,
 } from "../../../server/types";
 import { useConversationStore } from "../../../server/clientConversationStore";
-import type { agent } from "../../../server/src/router";
 import {
   AnyStructuredChatTool,
   StructuredChatTool,
 } from "../../../server/tool";
 import React from "react";
 import { useConversation } from "./useConversation";
+import type { AgentType } from "../../../server/src/agent";
 
 export function Chat() {
   const [input, setInput] = useState("");
@@ -31,7 +31,7 @@ export function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const { messages, beginMessage, isStreaming } = useConversation<typeof agent>(
+  const { messages, beginMessage, isStreaming } = useConversation<AgentType>(
     {
       conversationId: "test",
       onUpdateConversationId: undefined,
@@ -116,7 +116,7 @@ export function Chat() {
 function RenderTool({
   tool,
 }: {
-  tool: AdvancedToolCallClientSideFromToolsArray<AgentTools<typeof agent>>;
+  tool: AdvancedToolCallClientSideFromToolsArray<AgentTools<AgentType>>;
 }) {
   console.log(tool);
 

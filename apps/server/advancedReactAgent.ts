@@ -6,7 +6,7 @@ import {
   isAIMessageChunk,
 } from "@langchain/core/messages";
 import { parsePartialJson } from "@langchain/core/output_parsers";
-import { RunnableLambda, RunnableConfig } from "@langchain/core/runnables";
+import { RunnableLambda, RunnableConfig, Runnable } from "@langchain/core/runnables";
 import {
   Annotation,
   MessagesAnnotation,
@@ -41,15 +41,25 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[]>() {
 
 export type AdvancedReactAgent<
   Tools extends readonly AnyStructuredChatTool[] = any
-> = {
+> = Runnable & {
   // Not real data, just a marker type
   __toolTypes?: Tools;
 };
 
+export type CreateAdvancedReactAgentArgs<
+  Tools extends readonly AnyStructuredChatTool[]
+> = {
+  llm: BaseChatModel;
+  tools: Tools;
+  debounceMs: number;
+};
+
 export function createAdvancedReactAgent<
-  const Tools extends readonly AnyStructuredChatTool[]
->(args: { llm: BaseChatModel; tools: Tools; debounceMs: number }) {
-  const { llm, tools, debounceMs } = args;
+  Tools extends readonly AnyStructuredChatTool[]
+>(args: CreateAdvancedReactAgentArgs<Tools>) {
+  const { llm, tools, debounceMs: _debounceMs } = args;
+  const debounceMs = _debounceMs || 100;
+
   const toolsList = tools as any as AnyStructuredChatTool[]; // Remove "readonly"
 
   const StateAnnotation = makeStateAnnotation();
@@ -434,7 +444,8 @@ export function createAdvancedReactAgent<
             kind: "update-tool-call",
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newResult: aiResult ?? "The tool has responded with an unexpected error",
+            newResult:
+              aiResult ?? "The tool has responded with an unexpected error",
             newState: "aborted",
           });
           sendClientSideUpdate({
