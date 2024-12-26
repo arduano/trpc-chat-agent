@@ -130,7 +130,7 @@ export function createAdvancedReactAgent<
         conversationData: new ServerSideChatConversation(
           stateConvo.data
         ).asClientSideConversation(),
-        tree: newBranch,
+        branch: newBranch,
       },
       config
     );
@@ -463,7 +463,7 @@ export function createAdvancedReactAgent<
         conversationData: new ServerSideChatConversation(
           state.conversationData
         ).asClientSideConversation(),
-        tree: state.chatBranch,
+        branch: state.chatBranch,
       },
       config
     );

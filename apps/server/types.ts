@@ -811,7 +811,7 @@ export type ClientSyncConversation = {
   kind: "sync-conversation";
   conversationId: string;
   conversationData: ClientSideConversationData<any>;
-  tree: ChatTree;
+  branch: ChatTree;
 };
 
 export type ClientSideConversationUpdate =

@@ -62,7 +62,17 @@ function makeConversationStore() {
                   return;
                 }
 
+                const oldData = conversation.data;
                 conversation.processMessageUpdate(event);
+
+                if (oldData !== conversation.data) {
+                  // Change the class instance if the data instance has changed.
+                  // This helps with state related stuff.
+                  setConversation(
+                    event.conversationId,
+                    new ClientSideChatConversation(conversation.data)
+                  );
+                }
               }
             },
             isConversationPresent: (conversationId: string) => {
@@ -72,7 +82,7 @@ function makeConversationStore() {
               conversationId: string,
               conversation: ClientSideChatConversation<AdvancedReactAgent>
             ) => {
-              if (!!getConversation(conversationId)) {
+              if (!getConversation(conversationId)) {
                 setConversation(conversationId, conversation);
               }
             },

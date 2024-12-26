@@ -101,9 +101,6 @@ const tool2 = new StructuredChatTool({
     name: z.string(),
     formal: z.boolean(),
   }),
-  toolProgressSchema: z.object({
-    message: z.string(),
-  }),
   description: "Greet the user",
   run: async ({ name, formal }) => {
     const greeting = formal ? "Hello" : "Hi";
