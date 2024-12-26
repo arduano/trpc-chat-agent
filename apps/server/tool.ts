@@ -53,6 +53,7 @@ export class StructuredChatTool<
         config?: RunnableConfigWithToolProgress<ToolProgressData>
       ) => Promise<Return>;
       mapResultForAI: (result: Return) => MessageContent;
+      mapErrorForAI?: (error: unknown) => MessageContent;
       mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
       mapResultForClient?: (result: Return) => ResultForClient;
     }
@@ -109,6 +110,10 @@ export class StructuredChatTool<
 
   get mapResultForAI() {
     return this.toolArgs.mapResultForAI;
+  }
+
+  get mapErrorForAI() {
+    return this.toolArgs.mapErrorForAI;
   }
 }
 

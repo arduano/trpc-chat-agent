@@ -427,11 +427,14 @@ export function createAdvancedReactAgent<
             newState: "complete",
           });
         } catch (e) {
+          const aiResult = await tool.mapErrorForAI?.(e);
+
           // Tool errored, abort it
           sendServerSideUpdate({
             kind: "update-tool-call",
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
+            newResult: aiResult ?? "The tool has responded with an unexpected error",
             newState: "aborted",
           });
           sendClientSideUpdate({
