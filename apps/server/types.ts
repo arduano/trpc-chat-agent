@@ -760,6 +760,7 @@ export class ClientSideChatConversation<
     if (update.newState !== undefined) {
       updatedToolCall.state = update.newState;
     }
+    console.log(update, updatedToolCall)
 
     lastPart.toolCalls[toolCallIndex] = updatedToolCall;
   }

@@ -16,67 +16,6 @@ import {
 export const t = initTRPC.create();
 
 const router = t.router({
-  greeting: t.procedure.input(z.string().optional()).query(({ input }) => {
-    return `Hello ${input ?? "World"}!`;
-  }),
-
-  // Example subscription
-  onMessage: t.procedure.subscription(() => {
-    return observable<string>((emit) => {
-      const timer = setInterval(() => {
-        emit.next("Server message " + new Date().toISOString());
-      }, 1000);
-
-      return () => {
-        clearInterval(timer);
-      };
-    });
-  }),
-
-  chat: t.procedure.input(z.string()).subscription(async ({ input }) => {
-    return observable<string>((emit) => {
-      // Start the chain
-      const runChain = async () => {
-        try {
-          const stream = await graph.streamEvents(
-            {
-              messages: [
-                {
-                  role: "user",
-                  content: input,
-                },
-              ],
-            },
-            {
-              streamMode: "values",
-              version: "v2",
-            }
-          );
-
-          // console.log(stream);
-          for await (const chunk of stream) {
-            const kind = chunk.event;
-            console.log(`${kind}: ${chunk.name}`);
-            emit.next(chunk);
-          }
-
-          emit.complete();
-        } catch (error) {
-          console.error("Error in chat stream:", error);
-          emit.error(error);
-        }
-      };
-
-      // Run the chain
-      runChain();
-
-      // Cleanup function
-      return () => {
-        // Any cleanup if needed
-      };
-    });
-  }),
-
   chat2: t.procedure
     .input(
       z.object({
@@ -132,7 +71,7 @@ const router = t.router({
 
           conversation.abortAllPendingToolCalls();
           serverSideConversation.data = conversation.data;
-          console.log(JSON.stringify(conversation.data));
+          emit.complete();
         };
 
         runAgent();
@@ -190,6 +129,9 @@ const tool = new StructuredChatTool({
       message: result,
     };
   },
+  mapResultForAI: (result) => {
+    return result;
+  },
 });
 
 const tool2 = new StructuredChatTool({
@@ -216,11 +158,12 @@ const tool2 = new StructuredChatTool({
       formal: args.formal,
     };
   },
+  mapResultForAI: (result) => {
+    return result.greeting;
+  },
 });
 
 const allTools = [tool, tool2] as const;
-
-const controller = new AbortController();
 
 export const agent = createAdvancedReactAgent({
   llm: new ChatOpenAI({

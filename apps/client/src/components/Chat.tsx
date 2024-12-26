@@ -20,6 +20,7 @@ import {
   AnyStructuredChatTool,
   StructuredChatTool,
 } from "../../../server/tool";
+import React from "react";
 
 export function Chat() {
   const [input, setInput] = useState("");
@@ -116,6 +117,8 @@ function RenderTool({
 }: {
   tool: AdvancedToolCallClientSideFromToolsArray<AgentTools<typeof agent>>;
 }) {
+  console.log(tool);
+
   const getStatusColor = (state: typeof tool.state) => {
     switch (state) {
       case "loading":
@@ -138,7 +141,7 @@ function RenderTool({
               <span className="font-semibold">Name:</span>
               <span>{tool.args?.name}</span>
             </div>
-            {tool.progressStatus?.loading && (
+            {tool.state !== 'complete' && tool.progressStatus?.loading && (
               <div className="mt-1 flex items-center gap-2">
                 <div className="h-1 flex-grow rounded-full bg-gray-200">
                   <div
@@ -215,18 +218,22 @@ function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
 }) {
   return (
     <>
-      {messages.map((message, index) => {
+      {messages.map((message) => {
         if (message.kind === "human") {
           return (
             <RenderMemoed
-              key={index}
+              key={message.id}
               data={message}
               render={renderHumanMessage}
             />
           );
         } else {
           return (
-            <RenderMemoed key={index} data={message} render={renderAiMessage} />
+            <RenderMemoed
+              key={message.id}
+              data={message}
+              render={renderAiMessage}
+            />
           );
         }
       })}
@@ -370,9 +377,6 @@ function useConversation<Agent extends AdvancedReactAgent>({
   const messages = useMemo(() => {
     return conversation.asMessagesArray(branch);
   }, [conversation, branch]);
-
-  console.log(conversation);
-  console.log(branch);
 
   return {
     beginMessage,

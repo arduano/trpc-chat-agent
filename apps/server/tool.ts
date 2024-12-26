@@ -106,6 +106,10 @@ export class StructuredChatTool<
   get mapResultForClient() {
     return this.toolArgs.mapResultForClient;
   }
+
+  get mapResultForAI() {
+    return this.toolArgs.mapResultForAI;
+  }
 }
 
 export type AnyStructuredChatTool = StructuredChatTool<

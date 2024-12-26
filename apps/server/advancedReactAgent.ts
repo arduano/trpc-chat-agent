@@ -247,9 +247,9 @@ export function createAdvancedReactAgent<
             }
 
             const toolId = data.tool_call_chunks?.[0]?.id;
-            if (toolId && toolId !== currentToolId) {
-              const name = aggregateChunk.tool_calls?.[0]?.name!;
-              const tool = toolsList.find((t) => t.name === name);
+            const toolName = data.tool_call_chunks?.[0]?.name;
+            if (toolId && toolName && toolId !== currentToolId) {
+              const tool = toolsList.find((t) => t.name === toolName);
 
               if (tool) {
                 sendClientSideUpdate({
@@ -257,7 +257,7 @@ export function createAdvancedReactAgent<
                   conversationId: state.conversationData.id,
                   messageId: aiMessageId,
                   toolCallId: toolId,
-                  toolCallName: name,
+                  toolCallName: toolName,
                 });
 
                 currentToolId = toolId;
@@ -376,12 +376,9 @@ export function createAdvancedReactAgent<
       sendClientSideUpdateToConfig(update, config);
     };
 
-    console.log("Calling tools");
     await Promise.all(
       lastPart.toolCalls.map(async (toolCall) => {
         const tool = toolsList.find((t) => t.name === toolCall.name)!;
-
-        console.log("Calling tool", tool.name);
 
         const progressDebouncer = new Debouncer(debounceMs, (progress) => {
           sendClientSideUpdate({
@@ -407,9 +404,9 @@ export function createAdvancedReactAgent<
               },
             ],
           });
-          console.log("Tool result", result);
 
           const clientSideResult = await tool.mapResultForClient?.(result);
+          const aiResult = await tool.mapResultForAI(result);
           progressDebouncer.flush();
 
           // Make sure the result is up to date
@@ -417,7 +414,7 @@ export function createAdvancedReactAgent<
             kind: "update-tool-call",
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newResult: result,
+            newResult: aiResult,
             newClientResult: clientSideResult,
             newState: "complete",
           });
@@ -447,8 +444,6 @@ export function createAdvancedReactAgent<
         }
       })
     );
-
-    console.log("Done calling tools");
 
     return {
       conversationData: stateConvo.data,
