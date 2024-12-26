@@ -26,8 +26,6 @@ const router = t.router({
 
   chat: t.procedure.input(z.string()).subscription(async ({ input }) => {
     return observable<string>((emit) => {
-      let fullResponse = "";
-
       // Start the chain
       const runChain = async () => {
         try {

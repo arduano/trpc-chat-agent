@@ -3,6 +3,7 @@ import { RunnableConfig } from "@langchain/core/runnables";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { ZodType, z } from "zod";
 import { Debouncer } from "./src/debounce";
+import { dispatchCustomEvent } from "@langchain/core/callbacks/dispatch";
 
 type DeepPartial<T> = T extends Record<string, infer U>
   ? { [K in keyof T]?: DeepPartial<U> }
@@ -54,8 +55,10 @@ export class StructuredChatTool<
       mapResultForClient?: (result: Return) => ResultForClient;
     }
   ) {
-    // Called if the dynamic tool is executed directly from the Runnable interface.
-    // Generally, this should not be used.
+    type ToolProgress = ToolProgressData extends null
+      ? null
+      : z.infer<NonNullable<ToolProgressData>>;
+
     const callInternal = (
       args: z.infer<Args>,
       runManager?: CallbackManagerForToolRun,
@@ -63,10 +66,12 @@ export class StructuredChatTool<
     ) => {
       const configWithToolProgress = {
         ...config,
-        sendProgress: (data: any) => {},
+        sendProgress: ((data: ToolProgress) => {
+          dispatchCustomEvent("on_structured_tool_progress", data, config);
+        }) as any,
       };
 
-      return this.func(args, runManager, configWithToolProgress);
+      return toolArgs.run(args, runManager, configWithToolProgress);
     };
 
     super({

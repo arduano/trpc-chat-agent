@@ -2,6 +2,7 @@ import {
   AIMessage,
   BaseMessage,
   HumanMessage,
+  MessageContent,
   MessageContentComplex,
   MessageContentText,
   ToolMessage,
@@ -15,10 +16,12 @@ export type AdvancedToolCall<Tool extends AnyStructuredChatTool> = {
   id: string;
   name: Tool["TypeInfo"]["Name"];
   args: Tool["TypeInfo"]["Args"];
-  result: Tool["TypeInfo"]["Return"];
+  // May or may not be present. Generally present when the tool finishes executing. Will be missing if execution was cancelled before completion.
+  result?: MessageContent;
   client: {
     args: Tool["TypeInfo"]["ArgsForClient"];
-    result: Tool["TypeInfo"]["ResultForClient"];
+    // May or may not be present. Generally present when the tool finishes executing. Will be missing if execution was cancelled before completion.
+    result?: Tool["TypeInfo"]["ResultForClient"];
   };
 };
 
@@ -31,8 +34,12 @@ export type AdvancedToolCallFromToolsArray<
 export type AdvancedToolCallClientSide<Tool extends AnyStructuredChatTool> = {
   id: string;
   name: Tool["TypeInfo"]["Name"];
-  args: Tool["TypeInfo"]["ArgsForClient"];
-  result: Tool["TypeInfo"]["ResultForClient"];
+  // May or may not be present. The name is known first, then the preview args get sent along after
+  args?: Tool["TypeInfo"]["ArgsForClient"];
+  // May or may not be present. May be sent along when the tool is being executed. Does not persist.
+  progressStatus?: Tool["TypeInfo"]["ToolProgress"];
+  // May or may not be present. Generally present when the tool finishes executing.
+  result?: Tool["TypeInfo"]["ResultForClient"];
 };
 
 export type AdvancedToolCallClientSideFromToolsArray<
@@ -41,15 +48,21 @@ export type AdvancedToolCallClientSideFromToolsArray<
   [K in keyof Tools]: AdvancedToolCallClientSide<Tools[K]>;
 }[number];
 
+export type AdvancedAIMessagePartData<
+  Tools extends readonly AnyStructuredChatTool[]
+> = {
+  content: MessageContent;
+  toolCalls: AdvancedToolCallFromToolsArray<Tools>[];
+  responseMetadata?: Record<string, any>;
+  usageMetadata?: UsageMetadata;
+};
+
 export type AdvancedAIMessageData<
   Tools extends readonly AnyStructuredChatTool[]
 > = {
   kind: "ai";
   id: string;
-  content: string | MessageContentComplex[];
-  toolCalls: AdvancedToolCallFromToolsArray<Tools>[];
-  responseMetadata?: Record<string, any>;
-  usageMetadata?: UsageMetadata;
+  parts: AdvancedAIMessagePartData<Tools>[];
 };
 
 export class ChatAdvancedAIMessage<
@@ -65,80 +78,104 @@ export class ChatAdvancedAIMessage<
     return this.data.kind;
   }
 
-  public get content() {
-    return this.data.content;
+  public get lastPart() {
+    return this.data.parts[this.data.parts.length - 1];
+  }
+
+  public get lastPartContent() {
+    return this.lastPart.content;
   }
 
   // Makes sure that the content returned is always a string.
   // When non-string content is present, it will be replaced with '\n\n'
-  public get contentString(): string {
-    if (typeof this.data.content === "string") {
-      return this.data.content;
+  public get lastPartContentString(): string {
+    const content = this.lastPartContent;
+    if (typeof content === "string") {
+      return content;
     } else {
-      return this.data.content
+      return content
         .filter((c): c is MessageContentText => c.type === "text")
         .map((c) => c.text)
         .join("\n\n");
     }
   }
 
-  public set content(content: string | MessageContentComplex[]) {
-    this.data.content = content;
-  }
-
-  public get toolCalls() {
-    return this.data.toolCalls;
-  }
-
-  public getToolCallById(id: string) {
-    return this.data.toolCalls.find((tc) => tc.id === id);
-  }
-
-  public addToolCall(toolCall: AdvancedToolCallFromToolsArray<Tools>) {
-    this.data.toolCalls.push(toolCall);
-  }
-
-  public updateToolCall(toolCall: AdvancedToolCallFromToolsArray<Tools>) {
-    const index = this.data.toolCalls.findIndex((tc) => tc.id === toolCall.id);
+  public updateLastPartToolCall(
+    toolCall: AdvancedToolCallFromToolsArray<Tools>
+  ) {
+    const lastPart = this.lastPart;
+    const index = lastPart.toolCalls.findIndex((tc) => tc.id === toolCall.id);
     if (index === -1) {
-      this.data.toolCalls.push(toolCall);
+      lastPart.toolCalls.push(toolCall);
     } else {
-      this.data.toolCalls[index] = toolCall;
+      lastPart.toolCalls[index] = toolCall;
     }
   }
 
   public asLangChainMessages(): BaseMessage[] {
-    const aiMessage = new AIMessage({
-      content: this.content,
-      tool_calls: this.toolCalls.map<ToolCall>((tc) => ({
-        name: tc.name,
-        args: tc.args,
-        id: tc.id,
-        type: "tool_call",
-      })),
-      response_metadata: this.data.responseMetadata,
-      usage_metadata: this.data.usageMetadata,
-    });
+    function partAsLangchainMessages(
+      part: AdvancedAIMessagePartData<Tools>
+    ): BaseMessage[] {
+      const aiMessage = new AIMessage({
+        content: part.content,
+        tool_calls: part.toolCalls.map<ToolCall>((tc) => ({
+          name: tc.name,
+          args: tc.args,
+          id: tc.id,
+          type: "tool_call",
+        })),
+        response_metadata: part.responseMetadata,
+        usage_metadata: part.usageMetadata,
+      });
 
-    const toolResponseMessages = this.toolCalls.map<ToolMessage>(
-      (tc) =>
-        new ToolMessage({
-          content: tc.result,
-          tool_call_id: tc.id,
+      const toolResponseMessages = part.toolCalls.map<ToolMessage>(
+        (tc) =>
+          new ToolMessage({
+            content: tc.result ?? "Tool execution cancelled before completion.",
+            tool_call_id: tc.id,
+          })
+      );
+
+      return [aiMessage, ...toolResponseMessages];
+    }
+
+    return this.data.parts.flatMap(partAsLangchainMessages);
+  }
+
+  public asClientSideMessageData(): AdvancedAIMessageDataClientSide<Tools> {
+    return {
+      id: this.data.id,
+      kind: this.data.kind,
+      parts: this.data.parts.map<AdvancedAIMessageDataPartClientSide<Tools>>(
+        (part) => ({
+          content: part.content,
+          toolCalls: part.toolCalls.map<
+            AdvancedToolCallClientSideFromToolsArray<Tools>
+          >((tc) => ({
+            id: tc.id,
+            name: tc.name,
+            args: tc.client.args,
+            result: tc.client.result,
+          })),
         })
-    );
-
-    return [aiMessage, ...toolResponseMessages];
+      ),
+    };
   }
 }
+
+export type AdvancedAIMessageDataPartClientSide<
+  Tools extends readonly AnyStructuredChatTool[]
+> = {
+  content: MessageContent;
+  toolCalls: AdvancedToolCallClientSideFromToolsArray<Tools>[];
+};
 
 export type AdvancedAIMessageDataClientSide<
   Tools extends readonly AnyStructuredChatTool[]
 > = {
   kind: "ai";
   id: string;
-  content: string | MessageContentComplex[];
-  toolCalls: AdvancedToolCallClientSideFromToolsArray<Tools>[];
+  parts: AdvancedAIMessageDataPartClientSide<Tools>[];
 };
 
 export class ChatAdvancedAIMessageClientSide<
@@ -154,48 +191,25 @@ export class ChatAdvancedAIMessageClientSide<
     return this.data.kind;
   }
 
-  public get content() {
-    return this.data.content;
+  public get lastPart() {
+    return this.data.parts[this.data.parts.length - 1];
+  }
+
+  public get lastPartContent() {
+    return this.lastPart.content;
   }
 
   // Makes sure that the content returned is always a string.
   // When non-string content is present, it will be replaced with '\n\n'
-  public get contentString(): string {
-    if (typeof this.data.content === "string") {
-      return this.data.content;
-    }
-    return this.data.content
-      .map((content) => {
-        if ("text" in content) {
-          return content.text;
-        }
-        return "\n\n";
-      })
-      .join("");
-  }
-
-  public get toolCalls() {
-    return this.data.toolCalls;
-  }
-
-  public getToolCallById(id: string) {
-    return this.data.toolCalls.find((tc) => tc.id === id);
-  }
-
-  public addToolCall(
-    toolCall: AdvancedToolCallClientSideFromToolsArray<Tools>
-  ) {
-    this.data.toolCalls.push(toolCall);
-  }
-
-  public updateToolCall(
-    toolCall: AdvancedToolCallClientSideFromToolsArray<Tools>
-  ) {
-    const index = this.data.toolCalls.findIndex((tc) => tc.id === toolCall.id);
-    if (index === -1) {
-      this.data.toolCalls.push(toolCall);
+  public get lastPartContentString(): string {
+    const content = this.lastPartContent;
+    if (typeof content === "string") {
+      return content;
     } else {
-      this.data.toolCalls[index] = toolCall;
+      return content
+        .filter((c): c is MessageContentText => c.type === "text")
+        .map((c) => c.text)
+        .join("\n\n");
     }
   }
 }
@@ -203,7 +217,7 @@ export class ChatAdvancedAIMessageClientSide<
 export type HumanMessageData = {
   kind: "human";
   id: string;
-  content: string | MessageContentComplex[];
+  content: MessageContent;
 };
 
 export class ChatHumanMessage {
@@ -245,7 +259,9 @@ export class ChatHumanMessage {
 }
 
 export type ConversationData<AIMessage> = {
-  idCounter: number;
+  id: string;
+
+  messageIdCounter: number;
 
   aiMessages: Record<string, AIMessage>;
   humanMessages: Record<string, HumanMessageData>;
@@ -253,6 +269,14 @@ export type ConversationData<AIMessage> = {
   aiMessageChildIds: Record<string, string[]>;
   humanMessageChildIds: Record<string, string[]>;
 };
+
+export type ServerSideConversationData<
+  Tools extends readonly AnyStructuredChatTool[]
+> = ConversationData<AdvancedAIMessageData<Tools>>;
+
+export type ClientSideConversationData<
+  Tools extends readonly AnyStructuredChatTool[]
+> = ConversationData<AdvancedAIMessageDataClientSide<Tools>>;
 
 export type ChatBranchSelection = {
   humanMessageIndex: number;
@@ -262,13 +286,17 @@ export type ChatBranchSelection = {
 export type ChatBranch = ChatBranchSelection[];
 
 export class ChatConversation<AIMessage extends { id: string }> {
-  constructor(readonly data: ConversationData<AIMessage>) {}
+  data: ConversationData<AIMessage>;
+
+  constructor(data: ConversationData<AIMessage>) {
+    this.data = data;
+  }
 
   readonly aiMessageRootId = "_root_";
 
-  private generateId() {
-    this.data.idCounter += 1;
-    return this.data.idCounter.toString();
+  public generateId() {
+    this.data.messageIdCounter += 1;
+    return this.data.messageIdCounter.toString();
   }
 
   public getMessageIdPairAt(tree: ChatBranch) {
@@ -319,6 +347,14 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return pair.ai;
   }
 
+  public getAIMessageAt(tree: ChatBranch) {
+    const aiId = this.getAIMessageIdAt(tree);
+    if (!aiId) {
+      return null;
+    }
+    return this.data.aiMessages?.[aiId];
+  }
+
   private pushNewIndexforHumanMessageChildren(
     humanId: string,
     childAiId: string
@@ -359,8 +395,8 @@ export class ChatConversation<AIMessage extends { id: string }> {
       throw new Error("Invalid tree");
     }
 
-    const humanId = this.generateId();
-    const aiId = this.generateId();
+    const humanId = humanMessage.id;
+    const aiId = aiMessage.id;
 
     const newHumanIndex = this.pushNewIndexforAIMessageChildren(
       parentAiId,
@@ -383,19 +419,29 @@ export class ChatConversation<AIMessage extends { id: string }> {
   public asMessagesArray(tree: ChatBranch): (HumanMessageData | AIMessage)[] {
     const messages: (HumanMessageData | AIMessage)[] = [];
 
+    if (tree.length === 0) {
+      return messages;
+    }
+
+    let humanId = "";
+    let aiId = this.aiMessageRootId;
+
     for (const selection of tree) {
-      const humanId = this.getHumanMessageIdAt(tree);
-      const aiId = this.getAIMessageIdAt(tree);
-      if (!humanId || !aiId) {
+      const nextHumanId =
+        this.data.aiMessageChildIds[aiId]?.[selection.humanMessageIndex];
+      if (!nextHumanId) {
         throw new Error("Invalid tree");
       }
-      const humanMessage = this.data.humanMessages?.[humanId];
-      const aiMessage = this.data.aiMessages?.[aiId];
-      if (!humanMessage || !aiMessage) {
+      humanId = nextHumanId;
+      const nextAiId =
+        this.data.humanMessageChildIds[humanId]?.[selection.aiMessageIndex];
+      if (!nextAiId) {
         throw new Error("Invalid tree");
       }
-      messages.push(humanMessage);
-      messages.push(aiMessage);
+      aiId = nextAiId;
+
+      messages.push(this.data.humanMessages[humanId]);
+      messages.push(this.data.aiMessages[aiId]);
     }
 
     return messages;
@@ -405,8 +451,21 @@ export class ChatConversation<AIMessage extends { id: string }> {
 export class ServerSideChatConversation<
   Tools extends readonly AnyStructuredChatTool[]
 > extends ChatConversation<AdvancedAIMessageData<Tools>> {
-  constructor(data: ConversationData<AdvancedAIMessageData<Tools>>) {
+  constructor(data: ServerSideConversationData<Tools>) {
     super(data);
+  }
+
+  public static newConversationData<
+    Tools extends readonly AnyStructuredChatTool[]
+  >(id: string): ServerSideConversationData<Tools> {
+    return {
+      id,
+      messageIdCounter: 0,
+      aiMessages: {},
+      humanMessages: {},
+      aiMessageChildIds: {},
+      humanMessageChildIds: {},
+    };
   }
 
   public asLangChainMessagesArray(tree: ChatBranch): BaseMessage[] {
@@ -426,6 +485,103 @@ export class ServerSideChatConversation<
       }
     });
   }
+
+  public processMessageUpdate(update: ServerSideConversationUpdate) {
+    switch (update.kind) {
+      case "update-content":
+        return this.updateMessageContent(update);
+      case "begin-tool-call":
+        return this.updateMessageBeginToolCall(update);
+      case "update-tool-call":
+        return this.updateMessageToolCall(update);
+      case "begin-new-ai-message-part":
+        return this.beginNewAIMessagePart(update);
+      default:
+        throw new UnreachableError(
+          update,
+          `Invalid update kind "${(update as any).kind}"`
+        );
+    }
+  }
+
+  private getAIMessageById(id: string) {
+    const message = this.data.aiMessages?.[id];
+    if (!message) {
+      throw new Error(`Message with ID ${id} not found`);
+    }
+    return message;
+  }
+
+  private getPartsForAIMessageId(id: string) {
+    const aiMessage = this.getAIMessageById(id);
+    return aiMessage.parts;
+  }
+
+  private getLastPartForAIMessageId(id: string) {
+    const parts = this.getPartsForAIMessageId(id);
+    return parts[parts.length - 1];
+  }
+
+  private updateMessageContent(update: ServerUpdateMessageContent) {
+    const lastPart = this.getLastPartForAIMessageId(update.messageId);
+
+    lastPart.content = concatMessageContent(
+      lastPart.content,
+      update.contentToAppend
+    );
+  }
+
+  private updateMessageBeginToolCall(update: ServerUpdateBeginToolCall) {
+    const lastPart = this.getLastPartForAIMessageId(update.messageId);
+    lastPart.toolCalls.push({
+      id: update.toolCallId,
+      name: update.toolCallName,
+      args: update.newArgs,
+      client: {
+        args: update.newClientArgs,
+      },
+    });
+  }
+
+  private updateMessageToolCall(update: ServerUpdateMessageToolCall) {
+    const lastPart = this.getLastPartForAIMessageId(update.messageId);
+    let toolCall = lastPart.toolCalls.find((tc) => tc.id === update.toolCallId);
+    if (!toolCall) {
+      throw new Error(`Tool call with ID ${update.toolCallId} not found`);
+    }
+
+    if (update.newResult !== undefined) {
+      toolCall.result = update.newResult;
+    }
+    if (update.newClientArgs !== undefined) {
+      toolCall.client.args = update.newClientArgs;
+    }
+    if (update.newClientResult !== undefined) {
+      toolCall.client.result = update.newClientResult;
+    }
+  }
+
+  private beginNewAIMessagePart(update: ServerBeginNewAIMessagePart) {
+    const parts = this.getPartsForAIMessageId(update.messageId);
+    parts.push({
+      content: "",
+      toolCalls: [],
+    });
+  }
+
+  public asClientSideConversation(): ConversationData<
+    AdvancedAIMessageDataClientSide<Tools>
+  > {
+    return {
+      ...this.data,
+      aiMessages: Object.fromEntries(
+        Object.entries(this.data.aiMessages).map(([id, aiMessage]) => [
+          id,
+          new ChatAdvancedAIMessage(aiMessage).asClientSideMessageData(),
+        ])
+      ),
+    };
+  }
 }
 
 export class ClientSideChatConversation<
@@ -433,5 +589,222 @@ export class ClientSideChatConversation<
 > extends ChatConversation<AdvancedAIMessageDataClientSide<Tools>> {
   constructor(data: ConversationData<AdvancedAIMessageDataClientSide<Tools>>) {
     super(data);
+  }
+
+  public processMessageUpdate(update: ClientSideConversationUpdate) {
+    switch (update.kind) {
+      case "update-content":
+        return this.updateMessageContent(update);
+      case "begin-tool-call":
+        return this.updateMessageBeginToolCall(update);
+      case "update-tool-call":
+        return this.updateMessageToolCall(update);
+      case "begin-new-ai-message-part":
+        return this.beginNewAIMessagePart(update);
+      default:
+        throw new UnreachableError(
+          update,
+          `Invalid update kind "${(update as any).kind}"`
+        );
+    }
+  }
+
+  private getAIMessageById(id: string) {
+    const message = this.data.aiMessages?.[id];
+    if (!message) {
+      throw new Error(`Message with ID ${id} not found`);
+    }
+    return message;
+  }
+
+  // Walks down the objects and clones everything until the parts list of the specified AI message.
+  // Then, the part is returned, so it can be modified.
+  // This is necessary so that client-side UI code knows what was updated.
+  private forceClonePartsForAIMessageId(id: string) {
+    this.data = { ...this.data };
+    this.data.aiMessages = { ...this.data.aiMessages };
+    const aiMessage = { ...this.getAIMessageById(id) };
+    this.data.aiMessages[id] = aiMessage;
+    const parts = [...aiMessage.parts];
+    aiMessage.parts = parts;
+    return parts;
+  }
+
+  // Walks down the objects and clones everything until the last part of the specified AI message.
+  // Then, the part is returned, so it can be modified.
+  // This is necessary so that client-side UI code knows what was updated.
+  private forceCloneLastPartForAIMessageId(id: string) {
+    const parts = this.forceClonePartsForAIMessageId(id);
+    const lastPart = { ...parts[parts.length - 1] };
+    parts[parts.length - 1] = lastPart;
+    return lastPart;
+  }
+
+  private updateMessageContent(update: ClientUpdateMessageContent) {
+    const lastPart = this.forceCloneLastPartForAIMessageId(update.messageId);
+
+    lastPart.content = concatMessageContent(
+      lastPart.content,
+      update.contentToAppend
+    );
+  }
+
+  private updateMessageBeginToolCall(update: ClientUpdateMessageBeginToolCall) {
+    const lastPart = this.forceCloneLastPartForAIMessageId(update.messageId);
+    lastPart.toolCalls.push({
+      id: update.toolCallId,
+      name: update.toolCallName,
+    });
+  }
+
+  private updateMessageToolCall(update: ClientUpdateMessageToolCall) {
+    const lastPart = this.forceCloneLastPartForAIMessageId(update.messageId);
+    const toolCallIndex = lastPart.toolCalls.findIndex(
+      (tc) => tc.id === update.toolCallId
+    );
+    if (toolCallIndex === -1) {
+      throw new Error(`Tool call with ID ${update.toolCallId} not found`);
+    }
+
+    const updatedToolCall = { ...lastPart.toolCalls[toolCallIndex] };
+
+    if (update.newArgs !== undefined) {
+      updatedToolCall.args = update.newArgs;
+    }
+    if (update.newProgressStatus !== undefined) {
+      updatedToolCall.progressStatus = update.newProgressStatus;
+    }
+    if (update.newResult !== undefined) {
+      updatedToolCall.result = update.newResult;
+    }
+
+    lastPart.toolCalls[toolCallIndex] = updatedToolCall;
+  }
+
+  private beginNewAIMessagePart(update: ClientBeginNewAIMessagePart) {
+    const parts = this.forceClonePartsForAIMessageId(update.messageId);
+    parts.push({
+      content: "",
+      toolCalls: [],
+    });
+  }
+}
+
+export type ClientUpdateMessageContent = {
+  kind: "update-content";
+  conversationId: string;
+  messageId: string;
+  contentToAppend: MessageContent;
+};
+
+export type ClientUpdateMessageBeginToolCall = {
+  kind: "begin-tool-call";
+  conversationId: string;
+  messageId: string;
+  toolCallId: string;
+  toolCallName: string;
+};
+
+export type ClientUpdateMessageToolCall = {
+  kind: "update-tool-call";
+  conversationId: string;
+  messageId: string;
+  toolCallId: string;
+  newArgs?: any;
+  newProgressStatus?: any;
+  newResult?: any;
+};
+
+export type ClientBeginNewAIMessagePart = {
+  kind: "begin-new-ai-message-part";
+  conversationId: string;
+  messageId: string;
+};
+
+export type ClientSyncConversation = {
+  kind: "sync-conversation";
+  conversationId: string;
+  conversationData: ClientSideConversationData<any>;
+  tree: ChatBranch;
+};
+
+export type ClientSideConversationUpdate =
+  | ClientUpdateMessageBeginToolCall
+  | ClientUpdateMessageContent
+  | ClientUpdateMessageToolCall
+  | ClientBeginNewAIMessagePart;
+
+export type ClientSideUpdate =
+  | ClientSyncConversation
+  | ClientSideConversationUpdate;
+
+export type ServerUpdateMessageContent = {
+  kind: "update-content";
+  conversationId: string;
+  messageId: string;
+  contentToAppend: MessageContent;
+};
+
+export type ServerUpdateBeginToolCall = {
+  kind: "begin-tool-call";
+  conversationId: string;
+  messageId: string;
+  toolCallId: string;
+  toolCallName: string;
+  newArgs?: any;
+  newClientArgs?: any;
+};
+
+export type ServerUpdateMessageToolCall = {
+  kind: "update-tool-call";
+  conversationId: string;
+  messageId: string;
+  toolCallId: string;
+  newResult?: any;
+  newClientArgs?: any;
+  newClientResult?: any;
+};
+
+export type ServerBeginNewAIMessagePart = {
+  kind: "begin-new-ai-message-part";
+  conversationId: string;
+  messageId: string;
+};
+
+export type ServerSideConversationUpdate =
+  | ServerUpdateBeginToolCall
+  | ServerUpdateMessageContent
+  | ServerUpdateMessageToolCall
+  | ServerBeginNewAIMessagePart;
+
+function concatMessageContent(
+  messageContent: MessageContent,
+  contentToAppend: MessageContent
+): MessageContent {
+  // Handle mismatches between string and non-string content
+  if (typeof contentToAppend === "string") {
+    if (typeof messageContent === "string") {
+      return messageContent + contentToAppend;
+    } else {
+      return [
+        ...messageContent,
+        {
+          type: "text",
+          text: contentToAppend,
+        },
+      ];
+    }
+  } else {
+    if (typeof messageContent === "string") {
+      return [
+        {
+          type: "text",
+          text: messageContent,
+        },
+        ...contentToAppend,
+      ];
+    } else {
+      return messageContent.concat(contentToAppend);
+    }
   }
 }
