@@ -56,6 +56,9 @@ importers:
 
   apps/client:
     dependencies:
+      '@arduano/trpc-langchain-agent':
+        specifier: workspace:*
+        version: link:../../packages/trpc-langchain-agent
       '@tanstack/react-query':
         specifier: 4.36.1
         version: 4.36.1(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -102,6 +105,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@arduano/trpc-langchain-agent':
+        specifier: workspace:*
+        version: link:../../packages/trpc-langchain-agent
       '@langchain/anthropic':
         specifier: ^0.3.11
         version: 0.3.11(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
@@ -146,70 +152,6 @@ importers:
         specifier: ^5.7.2
         version: 5.7.2
 
-  packages/client:
-    dependencies:
-      '@arduano/trpc-langchain-agent-common':
-        specifier: workspace:*
-        version: link:../common
-    devDependencies:
-      typescript:
-        specifier: ^5.0.0
-        version: 5.7.2
-
-  packages/common:
-    dependencies:
-      '@langchain/core':
-        specifier: ^0.3.26
-        version: 0.3.26(openai@4.77.0(zod@3.24.1))
-      '@langchain/langgraph':
-        specifier: ^0.2.36
-        version: 0.2.36(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
-      zod:
-        specifier: ^3.24.1
-        version: 3.24.1
-    devDependencies:
-      rollup:
-        specifier: ^4.29.1
-        version: 4.29.1
-      typescript:
-        specifier: ^5.0.0
-        version: 5.7.2
-
-  packages/main:
-    dependencies:
-      '@langchain/core':
-        specifier: ^0.3.26
-        version: 0.3.26(openai@4.77.0(zod@3.24.1))
-      '@langchain/langgraph':
-        specifier: ^0.2.36
-        version: 0.2.36(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
-      '@trpc/client':
-        specifier: ^10.45.2
-        version: 10.45.2(@trpc/server@10.45.2)
-      '@trpc/server':
-        specifier: ^10.45.2
-        version: 10.45.2
-      zod:
-        specifier: ^3.24.1
-        version: 3.24.1
-      zustand:
-        specifier: ^5.0.2
-        version: 5.0.2(@types/react@18.2.43)(react@18.2.0)(use-sync-external-store@1.4.0(react@18.2.0))
-    devDependencies:
-      typescript:
-        specifier: ^5.0.0
-        version: 5.7.2
-
-  packages/server:
-    dependencies:
-      '@arduano/trpc-langchain-agent-common':
-        specifier: workspace:*
-        version: link:../common
-    devDependencies:
-      typescript:
-        specifier: ^5.0.0
-        version: 5.7.2
-
   packages/trpc-langchain-agent:
     dependencies:
       '@langchain/core':
@@ -234,6 +176,12 @@ importers:
         specifier: ^5.0.2
         version: 5.0.2(@types/react@18.2.43)(react@18.2.0)(use-sync-external-store@1.4.0(react@18.2.0))
     devDependencies:
+      '@types/react':
+        specifier: 18.2.43
+        version: 18.2.43
+      rollup:
+        specifier: ^4.29.1
+        version: 4.29.1
       typescript:
         specifier: ^5.0.0
         version: 5.7.2

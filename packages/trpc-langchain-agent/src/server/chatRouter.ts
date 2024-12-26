@@ -1,6 +1,7 @@
 import type { initTRPC } from '@trpc/server';
-import type { AdvancedReactAgent, AgentTools } from '../common/advancedReactAgent';
+import type { AgentTools } from '../common/agentTypes';
 import type { ChatTree, ClientSideUpdate, ServerSideConversationData, ServerSideUpdate } from '../common/types';
+import type { AdvancedReactAgent } from './advancedReactAgent';
 import { observable } from '@trpc/server/observable';
 import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversation } from '../common/types';

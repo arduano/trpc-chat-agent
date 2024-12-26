@@ -1,7 +1,7 @@
 import type { createTRPCProxyClient } from '@trpc/client';
-import type { AdvancedReactAgent } from '../common/advancedReactAgent';
 import type { ChatTree, ClientSideUpdate } from '../common/types';
 import type { makeChatRouterForAgent } from '../server';
+import type { AdvancedReactAgent } from '../server/advancedReactAgent';
 import { useEffect, useMemo, useState } from 'react';
 import { ClientSideChatConversation } from '../common/types';
 import { useConversationStore } from './clientConversationStore';

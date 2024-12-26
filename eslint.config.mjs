@@ -34,6 +34,7 @@ export default antfu(
       'node/prefer-global/buffer': 'off',
       'no-console': ['warn', { allow: ['info', 'warn', 'error'] }],
       'perfectionist/sort-imports': 'warn',
+      'perfectionist/sort-exports': 'warn',
       'perfectionist/sort-named-imports': 'warn',
       'prettier/prettier': 'warn',
       'ts/no-use-before-define': 'off',
@@ -42,6 +43,7 @@ export default antfu(
       'style/jsx-curly-newline': 'off',
       'style/multiline-ternary': 'off',
       'react-hooks/exhaustive-deps': 'off',
+      'jsonc/sort-keys': 'warn',
     },
   },
   {

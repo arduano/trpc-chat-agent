@@ -1,15 +1,14 @@
-import type { AgentTools } from '../../../server/advancedReactAgent';
-import type { AgentType } from '../../../server/src/agent';
-
-import type { AnyStructuredChatTool } from '../../../server/tool';
 import type {
   AdvancedAIMessageDataClientSide,
   AdvancedToolCallClientSideFromToolsArray,
+  AgentTools,
+  AnyStructuredChatTool,
   HumanMessageData,
-} from '../../../server/types';
+} from '@arduano/trpc-langchain-agent/common';
+import type { AgentType } from '../../../server/src/agent';
+import { useConversation } from '@arduano/trpc-langchain-agent/client';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { rawTrpc } from '../trpc';
-import { useConversation } from './useConversation';
 
 export function Chat() {
   const [input, setInput] = useState('');
@@ -97,8 +96,6 @@ export function Chat() {
 }
 
 function RenderTool({ tool }: { tool: AdvancedToolCallClientSideFromToolsArray<AgentTools<AgentType>> }) {
-  console.log(tool);
-
   const getStatusColor = (state: typeof tool.state) => {
     switch (state) {
       case 'loading':

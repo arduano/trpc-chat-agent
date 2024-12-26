@@ -2,25 +2,24 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import type { AIMessageChunk, MessageContent } from '@langchain/core/messages';
 import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
-import type { AnyStructuredChatTool } from './tool';
+import type { AnyStructuredChatTool } from '../common/tool';
 import type {
   AdvancedAIMessageData,
   ChatTree,
-  ClientSideChatConversation,
   ClientSideConversationUpdate,
   ClientSideUpdate,
   HumanMessageData,
   ServerSideConversationData,
   ServerSideConversationUpdate,
   ServerSideUpdate,
-} from './types';
+} from '../common/types';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { isAIMessageChunk } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
-import { Debouncer } from './debounce';
-import { ServerSideChatConversation } from './types';
+import { Debouncer } from '../common/debounce';
+import { ServerSideChatConversation } from '../common/types';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[]>() {
   return Annotation.Root({
@@ -454,14 +453,3 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
 
   return compiled as typeof compiled & AdvancedReactAgent<Tools>;
 }
-
-export type AgentTools<Agent extends AdvancedReactAgent<any>> =
-  Agent extends AdvancedReactAgent<infer Tools> ? NonNullable<Tools> : never;
-
-export type AdvancedReactAgentConversation<Agent extends AdvancedReactAgent<any>> = ServerSideChatConversation<
-  AgentTools<Agent>
->;
-
-export type AdvancedReactAgentClientConversation<Agent extends AdvancedReactAgent<any>> = ClientSideChatConversation<
-  AgentTools<Agent>
->;

@@ -1,5 +1,5 @@
-import type { AdvancedReactAgent } from '../common/advancedReactAgent';
 import type { ClientSideUpdate } from '../common/types';
+import type { AdvancedReactAgent } from '../server/advancedReactAgent';
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
 import { ClientSideChatConversation } from '../common/types';
