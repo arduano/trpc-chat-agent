@@ -19,7 +19,7 @@ const router = t.router({
 });
 
 const serverSideConversation = new ServerSideChatConversation<typeof agent>(
-  ServerSideChatConversation<typeof agent>.newConversationData('test')
+  ServerSideChatConversation.newConversationData<typeof agent>('test')
 );
 
 export type AppRouter = typeof router;
