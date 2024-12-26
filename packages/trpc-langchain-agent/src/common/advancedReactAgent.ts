@@ -19,7 +19,7 @@ import { isAIMessageChunk } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
-import { Debouncer } from './src/debounce';
+import { Debouncer } from './debounce';
 import { ServerSideChatConversation } from './types';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[]>() {

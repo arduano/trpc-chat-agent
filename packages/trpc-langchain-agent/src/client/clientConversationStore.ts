@@ -1,9 +1,9 @@
-import type { AdvancedReactAgent } from './advancedReactAgent';
-import type { ClientSideUpdate } from './types';
+import type { AdvancedReactAgent } from '../common/advancedReactAgent';
+import type { ClientSideUpdate } from '../common/types';
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
+import { ClientSideChatConversation } from '../common/types';
 import { mergeKeepingOldReferences } from './merge';
-import { ClientSideChatConversation } from './types';
 
 // Helper function for propagating the "Agent" type into the store
 function makeConversationStore() {

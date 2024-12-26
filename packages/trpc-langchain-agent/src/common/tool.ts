@@ -4,7 +4,7 @@ import type { RunnableConfig } from '@langchain/core/runnables';
 import type { z, ZodType } from 'zod';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { DynamicStructuredTool } from '@langchain/core/tools';
-import { Debouncer } from './src/debounce';
+import { Debouncer } from './debounce';
 
 type DeepPartial<T> = T extends Record<string, infer U> ? { [K in keyof T]?: DeepPartial<U> } : T;
 

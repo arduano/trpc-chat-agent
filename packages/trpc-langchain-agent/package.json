@@ -1,0 +1,23 @@
+{
+  "name": "@arduano/trpc-langchain-agent",
+  "version": "0.1.0",
+  "private": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rollup --config rollup.config.ts --configPlugin rollup-plugin-swc3",
+    "dev": "pnpm build --watch"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.26",
+    "@langchain/langgraph": "^0.2.36",
+    "@trpc/client": "^10.45.2",
+    "@trpc/server": "^10.45.2",
+    "react": "18.2.0",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,10 +1,10 @@
 import type { createTRPCProxyClient } from '@trpc/client';
-import type { AdvancedReactAgent } from '../../../server/advancedReactAgent';
-import type { makeChatRouterForAgent } from '../../../server/chatRouter';
-import type { ChatTree, ClientSideUpdate } from '../../../server/types';
+import type { AdvancedReactAgent } from '../common/advancedReactAgent';
+import type { ChatTree, ClientSideUpdate } from '../common/types';
+import type { makeChatRouterForAgent } from '../server';
 import { useEffect, useMemo, useState } from 'react';
-import { useConversationStore } from '../../../server/clientConversationStore';
-import { ClientSideChatConversation } from '../../../server/types';
+import { ClientSideChatConversation } from '../common/types';
+import { useConversationStore } from './clientConversationStore';
 
 type UseConversationArgs<Agent extends AdvancedReactAgent> = {
   conversationId?: string;
@@ -189,5 +189,5 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>(
 }
 
 type RouterTypeFromAgent<Agent extends AdvancedReactAgent> = ReturnType<
-  typeof createTRPCProxyClient<ReturnType<typeof makeChatRouterForAgent<Agent>>>
+  typeof createTRPCProxyClient<ReturnType<typeof makeChatRouterForAgent<Agent, any>>>
 >;

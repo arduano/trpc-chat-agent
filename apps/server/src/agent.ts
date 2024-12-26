@@ -1,7 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
-import { createAdvancedReactAgent } from '../advancedReactAgent';
-import { StructuredChatTool } from '../tool';
+import { createAdvancedReactAgent } from '../../../packages/trpc-langchain-agent/src/common/advancedReactAgent';
+import { StructuredChatTool } from '../../../packages/trpc-langchain-agent/src/common/tool';
 
 const tool = new StructuredChatTool({
   name: 'greet',

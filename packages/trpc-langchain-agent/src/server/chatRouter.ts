@@ -1,12 +1,13 @@
-import type { AdvancedReactAgent, AgentTools } from './advancedReactAgent';
-import type { ChatTree, ClientSideUpdate, ServerSideConversationData, ServerSideUpdate } from './types';
+import type { initTRPC } from '@trpc/server';
+import type { AdvancedReactAgent, AgentTools } from '../common/advancedReactAgent';
+import type { ChatTree, ClientSideUpdate, ServerSideConversationData, ServerSideUpdate } from '../common/types';
 import { observable } from '@trpc/server/observable';
 import { z } from 'zod';
-import { t } from './src/router';
-import { chatBranchZod, ServerSideChatConversation } from './types';
+import { chatBranchZod, ServerSideChatConversation } from '../common/types';
 
-type MakeChatRouterForAgentArgs<Agent extends AdvancedReactAgent> = {
+type MakeChatRouterForAgentArgs<Agent extends AdvancedReactAgent, Context extends object | ContextCallback> = {
   agent: Agent;
+  t: TrpcWithContext<Context>;
   getConversation: (conversationId: string) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
   saveConversation: (
     conversationId: string,
@@ -14,11 +15,17 @@ type MakeChatRouterForAgentArgs<Agent extends AdvancedReactAgent> = {
   ) => Promise<void>;
 };
 
-export function makeChatRouterForAgent<Agent extends AdvancedReactAgent>({
+type ContextCallback = (...args: any[]) => object | Promise<object>;
+type TrpcWithContext<Context extends object | ContextCallback> = ReturnType<
+  ReturnType<typeof initTRPC.context<Context>>['create']
+>;
+
+export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context extends object | ContextCallback>({
   agent,
   getConversation,
   saveConversation,
-}: MakeChatRouterForAgentArgs<Agent>) {
+  t,
+}: MakeChatRouterForAgentArgs<Agent, Context>) {
   const router = t.router({
     promptChat: t.procedure
       .input(

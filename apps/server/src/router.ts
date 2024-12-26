@@ -1,6 +1,6 @@
 import { initTRPC } from '@trpc/server';
-import { makeChatRouterForAgent } from '../chatRouter';
-import { ServerSideChatConversation } from '../types';
+import { ServerSideChatConversation } from '../../../packages/trpc-langchain-agent/src/common/types';
+import { makeChatRouterForAgent } from '../../../packages/trpc-langchain-agent/src/server/chatRouter';
 import { agent } from './agent';
 
 export const t = initTRPC.create();
@@ -11,6 +11,7 @@ const router = t.router({
     getConversation: async () => {
       return serverSideConversation.data;
     },
+    t,
     saveConversation: async (id, data) => {
       serverSideConversation.data = data;
     },
