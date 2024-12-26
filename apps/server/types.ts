@@ -11,6 +11,7 @@ import {
 import { AnyStructuredChatTool } from "./tool";
 import { ToolCall } from "@langchain/core/messages/tool";
 import { UnreachableError } from "./unreachable";
+import { AdvancedReactAgentMarker, AgentTools } from "./advancedReactAgent";
 
 export type ToolCallState = "loading" | "complete" | "aborted";
 
@@ -454,15 +455,15 @@ export class ChatConversation<AIMessage extends { id: string }> {
 }
 
 export class ServerSideChatConversation<
-  Tools extends readonly AnyStructuredChatTool[]
-> extends ChatConversation<AdvancedAIMessageData<Tools>> {
-  constructor(data: ServerSideConversationData<Tools>) {
+  Agent extends AdvancedReactAgentMarker<any>
+> extends ChatConversation<AdvancedAIMessageData<AgentTools<Agent>>> {
+  constructor(data: ServerSideConversationData<AgentTools<Agent>>) {
     super(data);
   }
 
   public static newConversationData<
-    Tools extends readonly AnyStructuredChatTool[]
-  >(id: string): ServerSideConversationData<Tools> {
+    Agent extends AdvancedReactAgentMarker<any>
+  >(id: string): ServerSideConversationData<AgentTools<Agent>> {
     return {
       id,
       messageIdCounter: 0,
@@ -477,7 +478,7 @@ export class ServerSideChatConversation<
     return this.asMessagesArray(tree).flatMap((message) => {
       switch (message.kind) {
         case "ai":
-          return new ChatAdvancedAIMessage<Tools>(
+          return new ChatAdvancedAIMessage<AgentTools<Agent>>(
             message
           ).asLangChainMessages();
         case "human":
@@ -591,7 +592,7 @@ export class ServerSideChatConversation<
   }
 
   public asClientSideConversation(): ConversationData<
-    AdvancedAIMessageDataClientSide<Tools>
+    AdvancedAIMessageDataClientSide<AgentTools<Agent>>
   > {
     return {
       ...this.data,
@@ -606,9 +607,9 @@ export class ServerSideChatConversation<
 }
 
 export class ClientSideChatConversation<
-  Tools extends readonly AnyStructuredChatTool[]
-> extends ChatConversation<AdvancedAIMessageDataClientSide<Tools>> {
-  constructor(data: ConversationData<AdvancedAIMessageDataClientSide<Tools>>) {
+  Agent extends AdvancedReactAgentMarker<any>
+> extends ChatConversation<AdvancedAIMessageDataClientSide<AgentTools<Agent>>> {
+  constructor(data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>) {
     super(data);
   }
 
