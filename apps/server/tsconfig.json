@@ -4,9 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "types": ["bun-types"],
-    "esModuleInterop": true,
     "strict": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
   }
 }

@@ -1,13 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
-import { AdvancedReactAgent } from "../../../server/advancedReactAgent";
-import { useConversationStore } from "../../../server/clientConversationStore";
-import {
-  ChatTree,
-  ClientSideChatConversation,
-  ClientSideUpdate,
-} from "../../../server/types";
-import { createTRPCProxyClient } from "@trpc/client";
-import { makeChatRouterForAgent } from "../../../server/chatRouter";
+import type { createTRPCProxyClient } from '@trpc/client';
+import type { AdvancedReactAgent } from '../../../server/advancedReactAgent';
+import type { makeChatRouterForAgent } from '../../../server/chatRouter';
+import type { ChatTree, ClientSideUpdate } from '../../../server/types';
+import { useEffect, useMemo, useState } from 'react';
+import { useConversationStore } from '../../../server/clientConversationStore';
+import { ClientSideChatConversation } from '../../../server/types';
 
 type UseConversationArgs<Agent extends AdvancedReactAgent> = {
   conversationId?: string;
@@ -23,39 +20,32 @@ export function useConversation<Agent extends AdvancedReactAgent>({
   // Use the mutation functions in the store
   const store = useConversationStore((data) => data.mutate);
   const conversationFromStore = useConversationStore((data) =>
-    conversationId === undefined
-      ? undefined
-      : data.get.conversation(conversationId)
+    conversationId === undefined ? undefined : data.get.conversation(conversationId)
   );
 
   const [branch, setBranch] = useState<ChatTree>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<
-    string | undefined
-  >(conversationId);
+  const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(conversationId);
 
   const [isConversationMissing, setIsConversationMissing] = useState(false);
 
-  const [placeholderConversation, setPlaceholderConversation] = useState<
-    ClientSideChatConversation<Agent>
-  >(() => ClientSideChatConversation.makePlaceholderConversation<Agent>());
-
-  const { beginStream, cancelStream, isStreaming } = useConversationStreamer(
-    router,
-    (update) => {
-      store.processClientEvent(update);
-
-      if (update.kind === "sync-conversation") {
-        setBranch(update.branch);
-      }
-
-      // Ensure the conversation ID is in sync. For example, when
-      // the ID was undefined, but a new conversation was created
-      if (currentConversationId !== update.conversationId) {
-        onUpdateConversationId?.(update.conversationId);
-        setCurrentConversationId(update.conversationId);
-      }
-    }
+  const [placeholderConversation, setPlaceholderConversation] = useState<ClientSideChatConversation<Agent>>(() =>
+    ClientSideChatConversation.makePlaceholderConversation<Agent>()
   );
+
+  const { beginStream, cancelStream, isStreaming } = useConversationStreamer(router, (update) => {
+    store.processClientEvent(update);
+
+    if (update.kind === 'sync-conversation') {
+      setBranch(update.branch);
+    }
+
+    // Ensure the conversation ID is in sync. For example, when
+    // the ID was undefined, but a new conversation was created
+    if (currentConversationId !== update.conversationId) {
+      onUpdateConversationId?.(update.conversationId);
+      setCurrentConversationId(update.conversationId);
+    }
+  });
 
   useEffect(() => {
     // Help make sure the conversation is in sync.
@@ -64,9 +54,7 @@ export function useConversation<Agent extends AdvancedReactAgent>({
       cancelStream();
       setCurrentConversationId(conversationId);
       setBranch([]);
-      setPlaceholderConversation(
-        ClientSideChatConversation.makePlaceholderConversation<Agent>()
-      );
+      setPlaceholderConversation(ClientSideChatConversation.makePlaceholderConversation<Agent>());
     }
 
     // Query the conversation to insert into the store if not present
@@ -81,10 +69,7 @@ export function useConversation<Agent extends AdvancedReactAgent>({
             const conversationClass = new ClientSideChatConversation(
               conversation as any // Necessary because of deeply nested typescript generic issues
             );
-            store.setConversationIfNotPresent(
-              conversationId,
-              conversationClass
-            );
+            store.setConversationIfNotPresent(conversationId, conversationClass);
             setBranch(conversationClass.getDefaultTree());
           }
         })
@@ -97,46 +82,38 @@ export function useConversation<Agent extends AdvancedReactAgent>({
   // Is loading when the conversation isn't guaranteed to be missing,
   // and the conversation isn't present in the store
   const isLoadingConversation =
-    !isConversationMissing &&
-    conversationId &&
-    !store.isConversationPresent(conversationId);
+    !isConversationMissing && conversationId && !store.isConversationPresent(conversationId);
 
   // Can start a new message when the conversation isn't guaranteed to be missing,
   // And when it's not loading
   const canStartNewMessage = !isConversationMissing && !isLoadingConversation;
 
   // Use the current conversation
-  const conversation = (conversationFromStore ??
-    placeholderConversation) as ClientSideChatConversation<Agent>;
+  const conversation = (conversationFromStore ?? placeholderConversation) as ClientSideChatConversation<Agent>;
 
   const beginMessage = (humanMessage: string) => {
     if (!canStartNewMessage) {
       if (isLoadingConversation) {
-        throw new Error(
-          "Cannot start a new message while the conversation is loading"
-        );
+        throw new Error('Cannot start a new message while the conversation is loading');
       }
       if (isConversationMissing) {
-        throw new Error(
-          "Cannot start a new message while the conversation is missing"
-        );
+        throw new Error('Cannot start a new message while the conversation is missing');
       }
-      throw new Error("Cannot start a new message");
+      throw new Error('Cannot start a new message');
     }
 
     // Set the placeholder conversation, in case the conversation doesn't exist yet
-    const placeholderConversation =
-      ClientSideChatConversation.makePlaceholderConversation<Agent>();
+    const placeholderConversation = ClientSideChatConversation.makePlaceholderConversation<Agent>();
     placeholderConversation.pushHumanAiMessagePair(
       [],
       {
         content: humanMessage,
-        id: "-human-placeholder-",
-        kind: "human",
+        id: '-human-placeholder-',
+        kind: 'human',
       },
       {
-        id: "-ai-placeholder-",
-        kind: "ai",
+        id: '-ai-placeholder-',
+        kind: 'ai',
         parts: [],
       }
     );
@@ -163,9 +140,7 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>(
   router: RouterTypeFromAgent<Agent>,
   onUpdate: (event: ClientSideUpdate) => void
 ) {
-  const [cancelCurrentStream, setCancelCurrentStream] = useState<
-    (() => void) | undefined
-  >(undefined);
+  const [cancelCurrentStream, setCancelCurrentStream] = useState<(() => void) | undefined>(undefined);
 
   const cancelStream = () => {
     if (cancelCurrentStream) {
@@ -174,15 +149,11 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>(
     }
   };
 
-  const beginStream = (
-    conversationId: string | undefined,
-    humanMessage: string,
-    branch: ChatTree
-  ) => {
+  const beginStream = (conversationId: string | undefined, humanMessage: string, branch: ChatTree) => {
     const subscription = router.promptChat.subscribe(
       {
         conversationId,
-        branch: branch,
+        branch,
         humanMessageContent: humanMessage,
       },
       {
@@ -193,7 +164,7 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>(
           setCancelCurrentStream(undefined);
         },
         onError: (err) => {
-          console.error("Chat error:", err);
+          console.error('Chat error:', err);
           cancelStream();
         },
       }
@@ -217,15 +188,6 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>(
   };
 }
 
-function asRouter<Agent extends AdvancedReactAgent>() {
-  const router = makeChatRouterForAgent<Agent>(null as any);
-  const rawTrpc = createTRPCProxyClient<typeof router>({
-    links: [],
-  });
-
-  return rawTrpc;
-}
-
 type RouterTypeFromAgent<Agent extends AdvancedReactAgent> = ReturnType<
-  typeof asRouter<Agent>
+  typeof createTRPCProxyClient<ReturnType<typeof makeChatRouterForAgent<Agent>>>
 >;

@@ -1,8 +1,8 @@
 {
   "name": "server",
+  "type": "module",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts"
   },
@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@types/ws": "^8.5.13",
-    "typescript": "^5.7.2",
-    "bun-types": "^1.1.42"
+    "bun-types": "^1.1.42",
+    "typescript": "^5.7.2"
   }
 }

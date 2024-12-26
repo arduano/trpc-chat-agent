@@ -1,28 +1,27 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { rawTrpc } from "../trpc";
+import type { AgentTools } from '../../../server/advancedReactAgent';
+import type { AgentType } from '../../../server/src/agent';
 
-import { AgentTools } from "../../../server/advancedReactAgent";
-import {
+import type { AnyStructuredChatTool } from '../../../server/tool';
+import type {
   AdvancedAIMessageDataClientSide,
   AdvancedToolCallClientSideFromToolsArray,
   HumanMessageData,
-} from "../../../server/types";
-import { AnyStructuredChatTool } from "../../../server/tool";
-import React from "react";
-import { useConversation } from "./useConversation";
-import type { AgentType } from "../../../server/src/agent";
+} from '../../../server/types';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { rawTrpc } from '../trpc';
+import { useConversation } from './useConversation';
 
 export function Chat() {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const { messages, beginMessage, isStreaming } = useConversation<AgentType>({
     router: rawTrpc.chat,
-    conversationId: "test",
+    conversationId: 'test',
     onUpdateConversationId: undefined,
   });
 
@@ -35,7 +34,7 @@ export function Chat() {
     e.stopPropagation();
 
     beginMessage(input);
-    setInput("");
+    setInput('');
   };
 
   return (
@@ -51,24 +50,20 @@ export function Chat() {
                     messages={messages}
                     renderAiMessage={(message) => (
                       <>
-                        {message.parts.map((part) => (
-                          <>
+                        {message.parts.map((part, i) => (
+                          <React.Fragment key={i}>
                             {part.content && (
-                              <div className="p-4 rounded-lg bg-gray-100 mr-8">
-                                {part.content as string}
-                              </div>
+                              <div className="p-4 rounded-lg bg-gray-100 mr-8">{part.content as string}</div>
                             )}
                             {part.toolCalls.map((toolCall) => (
-                              <RenderTool tool={toolCall} />
+                              <RenderTool key={toolCall.id} tool={toolCall} />
                             ))}
-                          </>
+                          </React.Fragment>
                         ))}
                       </>
                     )}
                     renderHumanMessage={(message) => (
-                      <div className="p-4 rounded-lg bg-blue-100 ml-8">
-                        {message.content as string}
-                      </div>
+                      <div className="p-4 rounded-lg bg-blue-100 ml-8">{message.content as string}</div>
                     )}
                   />
                   <div ref={messagesEndRef} />
@@ -101,36 +96,32 @@ export function Chat() {
   );
 }
 
-function RenderTool({
-  tool,
-}: {
-  tool: AdvancedToolCallClientSideFromToolsArray<AgentTools<AgentType>>;
-}) {
+function RenderTool({ tool }: { tool: AdvancedToolCallClientSideFromToolsArray<AgentTools<AgentType>> }) {
   console.log(tool);
 
   const getStatusColor = (state: typeof tool.state) => {
     switch (state) {
-      case "loading":
-        return "bg-blue-500";
-      case "complete":
-        return "bg-green-500";
-      case "aborted":
-        return "bg-red-500";
+      case 'loading':
+        return 'bg-blue-500';
+      case 'complete':
+        return 'bg-green-500';
+      case 'aborted':
+        return 'bg-red-500';
       default:
-        return "bg-gray-500";
+        return 'bg-gray-500';
     }
   };
 
   const renderToolContent = () => {
     switch (tool.name) {
-      case "greet":
+      case 'greet':
         return (
           <>
             <div className="flex gap-2">
               <span className="font-semibold">Name:</span>
               <span>{tool.args?.name}</span>
             </div>
-            {tool.state !== "complete" && tool.progressStatus?.loading && (
+            {tool.state !== 'complete' && tool.progressStatus?.loading && (
               <div className="mt-1 flex items-center gap-2">
                 <div className="h-1 flex-grow rounded-full bg-gray-200">
                   <div
@@ -138,30 +129,24 @@ function RenderTool({
                     style={{ width: `${tool.progressStatus.loading}%` }}
                   />
                 </div>
-                <span className="text-sm text-gray-600">
-                  {tool.progressStatus.loading}%
-                </span>
+                <span className="text-sm text-gray-600">{tool.progressStatus.loading}%</span>
               </div>
             )}
             {tool.result && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2">
-                {tool.result.message}
-              </div>
+              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2">{tool.result.message}</div>
             )}
           </>
         );
 
-      case "greet2":
+      case 'greet2':
         return (
           <>
             <div className="flex gap-2">
               <span className="font-semibold">Formal Mode:</span>
-              <span>{tool.args?.formal ? "Yes" : "No"}</span>
+              <span>{tool.args?.formal ? 'Yes' : 'No'}</span>
             </div>
             {tool.result && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2">
-                {tool.result.greeting}
-              </div>
+              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2">{tool.result.greeting}</div>
             )}
           </>
         );
@@ -183,13 +168,7 @@ function RenderTool({
   );
 }
 
-function RenderMemoed<T>({
-  data,
-  render,
-}: {
-  data: T;
-  render: (data: T) => JSX.Element;
-}) {
+function RenderMemoed<T>({ data, render }: { data: T; render: (data: T) => JSX.Element }) {
   const jsx = useMemo(() => render(data), [data]);
   return <>{jsx}</>;
 }
@@ -200,30 +179,16 @@ function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
   renderHumanMessage,
 }: {
   messages: (AdvancedAIMessageDataClientSide<Tools> | HumanMessageData)[];
-  renderAiMessage: (
-    message: AdvancedAIMessageDataClientSide<Tools>
-  ) => JSX.Element;
+  renderAiMessage: (message: AdvancedAIMessageDataClientSide<Tools>) => JSX.Element;
   renderHumanMessage: (message: HumanMessageData) => JSX.Element;
 }) {
   return (
     <>
       {messages.map((message) => {
-        if (message.kind === "human") {
-          return (
-            <RenderMemoed
-              key={message.id}
-              data={message}
-              render={renderHumanMessage}
-            />
-          );
+        if (message.kind === 'human') {
+          return <RenderMemoed key={message.id} data={message} render={renderHumanMessage} />;
         } else {
-          return (
-            <RenderMemoed
-              key={message.id}
-              data={message}
-              render={renderAiMessage}
-            />
-          );
+          return <RenderMemoed key={message.id} data={message} render={renderAiMessage} />;
         }
       })}
     </>

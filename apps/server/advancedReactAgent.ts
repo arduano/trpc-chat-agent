@@ -1,35 +1,26 @@
-import { dispatchCustomEvent } from "@langchain/core/callbacks/dispatch";
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import {
-  MessageContent,
-  AIMessageChunk,
-  isAIMessageChunk,
-} from "@langchain/core/messages";
-import { parsePartialJson } from "@langchain/core/output_parsers";
-import { RunnableLambda, RunnableConfig, Runnable } from "@langchain/core/runnables";
-import {
-  Annotation,
-  MessagesAnnotation,
-  interrupt,
-  StateGraph,
-  START,
-  END,
-} from "@langchain/langgraph";
-import { ChatOpenAI } from "@langchain/openai";
-import { Debouncer } from "./src/debounce";
-import { AnyStructuredChatTool } from "./tool";
-import {
-  ServerSideConversationData,
-  ChatTree,
-  ClientSideUpdate,
-  ServerSideUpdate,
-  ServerSideChatConversation,
-  HumanMessageData,
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import type { AIMessageChunk, MessageContent } from '@langchain/core/messages';
+import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
+import type { MessagesAnnotation } from '@langchain/langgraph';
+import type { AnyStructuredChatTool } from './tool';
+import type {
   AdvancedAIMessageData,
-  ServerSideConversationUpdate,
-  ClientSideConversationUpdate,
+  ChatTree,
   ClientSideChatConversation,
-} from "./types";
+  ClientSideConversationUpdate,
+  ClientSideUpdate,
+  HumanMessageData,
+  ServerSideConversationData,
+  ServerSideConversationUpdate,
+  ServerSideUpdate,
+} from './types';
+import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
+import { isAIMessageChunk } from '@langchain/core/messages';
+import { parsePartialJson } from '@langchain/core/output_parsers';
+import { RunnableLambda } from '@langchain/core/runnables';
+import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
+import { Debouncer } from './src/debounce';
+import { ServerSideChatConversation } from './types';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[]>() {
   return Annotation.Root({
@@ -39,24 +30,20 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[]>() {
   });
 }
 
-export type AdvancedReactAgent<
-  Tools extends readonly AnyStructuredChatTool[] = any
-> = Runnable & {
+export type AdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable & {
   // Not real data, just a marker type
   __toolTypes?: Tools;
 };
 
-export type CreateAdvancedReactAgentArgs<
-  Tools extends readonly AnyStructuredChatTool[]
-> = {
+export type CreateAdvancedReactAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   llm: BaseChatModel;
   tools: Tools;
   debounceMs: number;
 };
 
-export function createAdvancedReactAgent<
-  Tools extends readonly AnyStructuredChatTool[]
->(args: CreateAdvancedReactAgentArgs<Tools>) {
+export function createAdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[]>(
+  args: CreateAdvancedReactAgentArgs<Tools>
+) {
   const { llm, tools, debounceMs: _debounceMs } = args;
   const debounceMs = _debounceMs || 100;
 
@@ -65,29 +52,23 @@ export function createAdvancedReactAgent<
   const StateAnnotation = makeStateAnnotation();
   type AgentState = typeof StateAnnotation.State;
 
-  if (!("bindTools" in llm) || typeof llm.bindTools !== "function") {
+  if (!('bindTools' in llm) || typeof llm.bindTools !== 'function') {
     throw new Error(`llm ${llm} must define bindTools method.`);
   }
   const modelWithTools = llm.bindTools(toolsList);
 
   const stateModifierRunnable = RunnableLambda.from(
     (state: typeof MessagesAnnotation.State) => state.messages
-  ).withConfig({ runName: "state_modifier" });
+  ).withConfig({ runName: 'state_modifier' });
 
   const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
 
-  const sendClientSideUpdateToConfig = (
-    update: ClientSideUpdate,
-    config: RunnableConfig
-  ) => {
-    dispatchCustomEvent("on_conversation_client_update", update, config);
+  const sendClientSideUpdateToConfig = (update: ClientSideUpdate, config: RunnableConfig) => {
+    dispatchCustomEvent('on_conversation_client_update', update, config);
   };
 
-  const sendServerSideUpdateToConfig = (
-    update: ServerSideUpdate,
-    config: RunnableConfig
-  ) => {
-    dispatchCustomEvent("on_conversation_server_update", update, config);
+  const sendServerSideUpdateToConfig = (update: ServerSideUpdate, config: RunnableConfig) => {
+    dispatchCustomEvent('on_conversation_server_update', update, config);
   };
 
   const handleErrors = (fn: (...args: any[]) => any) => {
@@ -97,56 +78,45 @@ export function createAdvancedReactAgent<
       } catch (e) {
         console.error(e);
         interrupt({
-          kind: "error",
+          kind: 'error',
           error: e,
         });
       }
     };
   };
 
-  const initializeNewMessage = async (
-    state: AgentState,
-    config: RunnableConfig
-  ): Promise<Partial<AgentState>> => {
-    const stateConvo = new ServerSideChatConversation(
-      structuredClone(state.conversationData)
-    );
+  const initializeNewMessage = async (state: AgentState, config: RunnableConfig): Promise<Partial<AgentState>> => {
+    const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
 
-    const aiMessageId = "ai-" + stateConvo.generateId();
-    const humanMessageId = "human-" + stateConvo.generateId();
+    const aiMessageId = 'ai-' + stateConvo.generateId();
+    const humanMessageId = 'human-' + stateConvo.generateId();
 
     const newHumanMessage: HumanMessageData = {
-      kind: "human",
+      kind: 'human',
       id: humanMessageId,
       content: state.humanMessageContent,
     };
 
     const newAIMessage: AdvancedAIMessageData<Tools> = {
-      kind: "ai",
+      kind: 'ai',
       id: aiMessageId,
       parts: [],
     };
 
-    const newBranch = stateConvo.pushHumanAiMessagePair(
-      state.chatBranch,
-      newHumanMessage,
-      newAIMessage
-    );
+    const newBranch = stateConvo.pushHumanAiMessagePair(state.chatBranch, newHumanMessage, newAIMessage);
 
     sendClientSideUpdateToConfig(
       {
-        kind: "sync-conversation",
+        kind: 'sync-conversation',
         conversationId: state.conversationData.id,
-        conversationData: new ServerSideChatConversation(
-          stateConvo.data
-        ).asClientSideConversation(),
+        conversationData: new ServerSideChatConversation(stateConvo.data).asClientSideConversation(),
         branch: newBranch,
       },
       config
     );
     sendServerSideUpdateToConfig(
       {
-        kind: "sync-conversation",
+        kind: 'sync-conversation',
         conversationData: stateConvo.data,
         tree: newBranch,
       },
@@ -164,34 +134,32 @@ export function createAdvancedReactAgent<
     const lastMessage = stateConvo.getAIMessageAt(state.chatBranch);
 
     if (!lastMessage) {
-      console.error("No last message, this is unexpected");
-      return "end";
+      console.error('No last message, this is unexpected');
+      return 'end';
     }
 
     const lastPart = lastMessage.parts[lastMessage.parts.length - 1];
     if (!lastPart) {
-      console.error("No last part, this is unexpected");
-      return "end";
+      console.error('No last part, this is unexpected');
+      return 'end';
     }
 
     const toolCalls = lastPart.toolCalls;
     if (toolCalls && toolCalls.length > 0) {
-      return "continue";
+      return 'continue';
     } else {
-      return "end";
+      return 'end';
     }
   };
 
   const callModel = async (state: AgentState, config: RunnableConfig) => {
-    const stateConvo = new ServerSideChatConversation(
-      structuredClone(state.conversationData)
-    );
+    const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
 
     const messageList = stateConvo.asLangChainMessagesArray(state.chatBranch);
 
     const aiMessage = stateConvo.getAIMessageAt(state.chatBranch);
     if (!aiMessage) {
-      console.error("No AI message for ID, this is unexpected");
+      console.error('No AI message for ID, this is unexpected');
       return;
     }
 
@@ -211,29 +179,29 @@ export function createAdvancedReactAgent<
         { messages: messageList },
         {
           ...config,
-          version: "v2",
+          version: 'v2',
         }
       );
 
       let aggregateChunk: AIMessageChunk | undefined;
       let currentToolId: string | undefined;
 
-      let allDebouncers: Debouncer<any>[] = [];
+      const allDebouncers: Debouncer<any>[] = [];
       let currentToolClientPreview: Debouncer<any> | null = null;
 
       sendServerSideUpdate({
-        kind: "begin-new-ai-message-part",
+        kind: 'begin-new-ai-message-part',
         conversationId: state.conversationData.id,
         messageId: aiMessageId,
       });
       sendClientSideUpdate({
-        kind: "begin-new-ai-message-part",
+        kind: 'begin-new-ai-message-part',
         conversationId: state.conversationData.id,
         messageId: aiMessageId,
       });
 
       for await (const chunk of stream) {
-        if (chunk.event === "on_chat_model_stream") {
+        if (chunk.event === 'on_chat_model_stream') {
           const data = chunk.data.chunk;
           if (isAIMessageChunk(data)) {
             if (!aggregateChunk) {
@@ -244,12 +212,12 @@ export function createAdvancedReactAgent<
 
             if (data.content.length > 0) {
               sendServerSideUpdate({
-                kind: "update-content",
+                kind: 'update-content',
                 messageId: aiMessageId,
                 contentToAppend: data.content,
               });
               sendClientSideUpdate({
-                kind: "update-content",
+                kind: 'update-content',
                 conversationId: state.conversationData.id,
                 messageId: aiMessageId,
                 contentToAppend: data.content,
@@ -263,7 +231,7 @@ export function createAdvancedReactAgent<
 
               if (tool) {
                 sendClientSideUpdate({
-                  kind: "begin-tool-call",
+                  kind: 'begin-tool-call',
                   conversationId: state.conversationData.id,
                   messageId: aiMessageId,
                   toolCallId: toolId,
@@ -271,27 +239,22 @@ export function createAdvancedReactAgent<
                 });
 
                 currentToolId = toolId;
-                currentToolClientPreview = tool.makeDebouncedArgsMapper(
-                  debounceMs,
-                  (args) => {
-                    sendClientSideUpdate({
-                      kind: "update-tool-call",
-                      conversationId: state.conversationData.id,
-                      messageId: aiMessageId,
-                      toolCallId: toolId,
-                      newArgs: args,
-                      newState: "loading",
-                    });
-                  }
-                );
+                currentToolClientPreview = tool.makeDebouncedArgsMapper(debounceMs, (args) => {
+                  sendClientSideUpdate({
+                    kind: 'update-tool-call',
+                    conversationId: state.conversationData.id,
+                    messageId: aiMessageId,
+                    toolCallId: toolId,
+                    newArgs: args,
+                    newState: 'loading',
+                  });
+                });
                 allDebouncers.push(currentToolClientPreview!);
               }
             }
 
             if (currentToolClientPreview && currentToolId) {
-              const toolCall = aggregateChunk.tool_call_chunks?.find(
-                (c) => c.id === currentToolId
-              );
+              const toolCall = aggregateChunk.tool_call_chunks?.find((c) => c.id === currentToolId);
 
               if (toolCall?.args) {
                 try {
@@ -300,14 +263,14 @@ export function createAdvancedReactAgent<
                     currentToolClientPreview?.debounce(json);
                   }
                 } catch (e) {
-                  console.error("Error parsing tool args:", e);
+                  console.error('Error parsing tool args:', e);
                 }
               }
             }
           }
         }
 
-        if (chunk.event === "on_chat_model_end") {
+        if (chunk.event === 'on_chat_model_end') {
           const data = chunk.data.output;
           if (isAIMessageChunk(data)) {
             aggregateChunk = data;
@@ -316,7 +279,7 @@ export function createAdvancedReactAgent<
       }
 
       if (!aggregateChunk) {
-        console.error("No aggregate chunk, this is unexpected");
+        console.error('No aggregate chunk, this is unexpected');
         return;
       }
 
@@ -333,7 +296,7 @@ export function createAdvancedReactAgent<
 
           // Make sure the args are up to date
           sendServerSideUpdate({
-            kind: "begin-tool-call",
+            kind: 'begin-tool-call',
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
             toolCallName: toolCall.name,
@@ -341,12 +304,12 @@ export function createAdvancedReactAgent<
             newClientArgs: clientSideArgs,
           });
           sendClientSideUpdate({
-            kind: "update-tool-call",
+            kind: 'update-tool-call',
             conversationId: state.conversationData.id,
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
             newArgs: toolCall.args,
-            newState: "loading",
+            newState: 'loading',
           });
         })
       );
@@ -361,19 +324,17 @@ export function createAdvancedReactAgent<
   };
 
   const callTools = async (state: AgentState, config: RunnableConfig) => {
-    const stateConvo = new ServerSideChatConversation(
-      structuredClone(state.conversationData)
-    );
+    const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
     const lastMessage = stateConvo.getAIMessageAt(state.chatBranch);
     if (!lastMessage) {
-      console.error("No last message, this is unexpected");
+      console.error('No last message, this is unexpected');
       return;
     }
     const aiMessageId = lastMessage.id;
 
     const lastPart = lastMessage.parts[lastMessage.parts.length - 1];
     if (!lastPart) {
-      console.error("No last part, this is unexpected");
+      console.error('No last part, this is unexpected');
       return;
     }
 
@@ -392,12 +353,12 @@ export function createAdvancedReactAgent<
 
         const progressDebouncer = new Debouncer(debounceMs, (progress) => {
           sendClientSideUpdate({
-            kind: "update-tool-call",
+            kind: 'update-tool-call',
             conversationId: state.conversationData.id,
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
             newProgressStatus: progress,
-            newState: "loading",
+            newState: 'loading',
           });
         });
 
@@ -407,7 +368,7 @@ export function createAdvancedReactAgent<
             callbacks: [
               {
                 handleCustomEvent(name, data) {
-                  if (name === "on_structured_tool_progress") {
+                  if (name === 'on_structured_tool_progress') {
                     progressDebouncer.debounce(data);
                   }
                 },
@@ -421,39 +382,38 @@ export function createAdvancedReactAgent<
 
           // Make sure the result is up to date
           sendServerSideUpdate({
-            kind: "update-tool-call",
+            kind: 'update-tool-call',
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
             newResult: aiResult,
             newClientResult: clientSideResult,
-            newState: "complete",
+            newState: 'complete',
           });
           sendClientSideUpdate({
-            kind: "update-tool-call",
+            kind: 'update-tool-call',
             conversationId: state.conversationData.id,
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
             newResult: clientSideResult,
-            newState: "complete",
+            newState: 'complete',
           });
         } catch (e) {
           const aiResult = await tool.mapErrorForAI?.(e);
 
           // Tool errored, abort it
           sendServerSideUpdate({
-            kind: "update-tool-call",
+            kind: 'update-tool-call',
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newResult:
-              aiResult ?? "The tool has responded with an unexpected error",
-            newState: "aborted",
+            newResult: aiResult ?? 'The tool has responded with an unexpected error',
+            newState: 'aborted',
           });
           sendClientSideUpdate({
-            kind: "update-tool-call",
+            kind: 'update-tool-call',
             conversationId: state.conversationData.id,
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newState: "aborted",
+            newState: 'aborted',
           });
         }
       })
@@ -467,11 +427,9 @@ export function createAdvancedReactAgent<
   const finalizeChat = async (state: AgentState, config: RunnableConfig) => {
     sendClientSideUpdateToConfig(
       {
-        kind: "sync-conversation",
+        kind: 'sync-conversation',
         conversationId: state.conversationData.id,
-        conversationData: new ServerSideChatConversation(
-          state.conversationData
-        ).asClientSideConversation(),
+        conversationData: new ServerSideChatConversation(state.conversationData).asClientSideConversation(),
         branch: state.chatBranch,
       },
       config
@@ -479,18 +437,18 @@ export function createAdvancedReactAgent<
   };
 
   const workflow = new StateGraph(StateAnnotation)
-    .addNode("init", handleErrors(initializeNewMessage))
-    .addNode("agent", handleErrors(callModel))
-    .addNode("tools", handleErrors(callTools))
-    .addNode("finalize", handleErrors(finalizeChat))
-    .addEdge(START, "init")
-    .addConditionalEdges("agent", handleErrors(shouldContinue), {
-      continue: "tools",
-      end: "finalize",
+    .addNode('init', handleErrors(initializeNewMessage))
+    .addNode('agent', handleErrors(callModel))
+    .addNode('tools', handleErrors(callTools))
+    .addNode('finalize', handleErrors(finalizeChat))
+    .addEdge(START, 'init')
+    .addConditionalEdges('agent', handleErrors(shouldContinue), {
+      continue: 'tools',
+      end: 'finalize',
     })
-    .addEdge("init", "agent")
-    .addEdge("tools", "agent")
-    .addEdge("finalize", END);
+    .addEdge('init', 'agent')
+    .addEdge('tools', 'agent')
+    .addEdge('finalize', END);
 
   const compiled = workflow.compile({});
 
@@ -500,10 +458,10 @@ export function createAdvancedReactAgent<
 export type AgentTools<Agent extends AdvancedReactAgent<any>> =
   Agent extends AdvancedReactAgent<infer Tools> ? NonNullable<Tools> : never;
 
-export type AdvancedReactAgentConversation<
-  Agent extends AdvancedReactAgent<any>
-> = ServerSideChatConversation<AgentTools<Agent>>;
+export type AdvancedReactAgentConversation<Agent extends AdvancedReactAgent<any>> = ServerSideChatConversation<
+  AgentTools<Agent>
+>;
 
-export type AdvancedReactAgentClientConversation<
-  Agent extends AdvancedReactAgent<any>
-> = ClientSideChatConversation<AgentTools<Agent>>;
+export type AdvancedReactAgentClientConversation<Agent extends AdvancedReactAgent<any>> = ClientSideChatConversation<
+  AgentTools<Agent>
+>;

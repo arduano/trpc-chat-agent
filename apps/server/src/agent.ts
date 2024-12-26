@@ -1,17 +1,17 @@
-import { ChatOpenAI } from "@langchain/openai";
-import { z } from "zod";
-import { createAdvancedReactAgent } from "../advancedReactAgent";
-import { StructuredChatTool } from "../tool";
+import { ChatOpenAI } from '@langchain/openai';
+import { z } from 'zod';
+import { createAdvancedReactAgent } from '../advancedReactAgent';
+import { StructuredChatTool } from '../tool';
 
 const tool = new StructuredChatTool({
-  name: "greet",
+  name: 'greet',
   schema: z.object({
     name: z.string(),
   }),
   toolProgressSchema: z.object({
     loading: z.number(),
   }),
-  description: "Greet the user",
+  description: 'Greet the user',
   run: async ({ name }, manager, config) => {
     const wait = () => new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -49,14 +49,14 @@ const tool = new StructuredChatTool({
 });
 
 const tool2 = new StructuredChatTool({
-  name: "greet2",
+  name: 'greet2',
   schema: z.object({
     name: z.string(),
     formal: z.boolean(),
   }),
-  description: "Greet the user",
+  description: 'Greet the user',
   run: async ({ name, formal }) => {
-    const greeting = formal ? "Hello" : "Hi";
+    const greeting = formal ? 'Hello' : 'Hi';
     return {
       greeting: `${greeting} ${name}`,
       isFormal: formal,
@@ -80,7 +80,7 @@ const tool2 = new StructuredChatTool({
 const allTools = [tool, tool2] as const;
 
 export const agent = createAdvancedReactAgent({
-  llm: new ChatOpenAI({ model: "gpt-4o" }),
+  llm: new ChatOpenAI({ model: 'gpt-4o' }),
   tools: allTools,
   debounceMs: 0,
 });

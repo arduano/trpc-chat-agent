@@ -11,12 +11,7 @@ export function mergeKeepingOldReferences<T>(oldValue: T, newValue: T): T {
 
   // If either is primitive (string, number, boolean, null, undefined)
   // or if they have different types, just return newValue
-  if (
-    oldValue === null ||
-    newValue === null ||
-    typeof oldValue !== "object" ||
-    typeof newValue !== "object"
-  ) {
+  if (oldValue === null || newValue === null || typeof oldValue !== 'object' || typeof newValue !== 'object') {
     return newValue;
   }
 
@@ -48,10 +43,7 @@ export function mergeKeepingOldReferences<T>(oldValue: T, newValue: T): T {
     const newKeys = Object.keys(newValue) as (keyof T)[];
 
     // If the set of keys changed, we have to use newValue
-    if (
-      oldKeys.length !== newKeys.length ||
-      newKeys.some((k) => !oldKeys.includes(k))
-    ) {
+    if (oldKeys.length !== newKeys.length || newKeys.some((k) => !oldKeys.includes(k))) {
       return newValue;
     }
 

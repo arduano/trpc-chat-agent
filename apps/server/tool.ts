@@ -1,21 +1,16 @@
-import { CallbackManagerForToolRun } from "@langchain/core/callbacks/manager";
-import { RunnableConfig } from "@langchain/core/runnables";
-import { DynamicStructuredTool } from "@langchain/core/tools";
-import { ZodType, z } from "zod";
-import { Debouncer } from "./src/debounce";
-import { dispatchCustomEvent } from "@langchain/core/callbacks/dispatch";
-import { MessageContent } from "@langchain/core/messages";
+import type { CallbackManagerForToolRun } from '@langchain/core/callbacks/manager';
+import type { MessageContent } from '@langchain/core/messages';
+import type { RunnableConfig } from '@langchain/core/runnables';
+import type { z, ZodType } from 'zod';
+import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { Debouncer } from './src/debounce';
 
-type DeepPartial<T> = T extends Record<string, infer U>
-  ? { [K in keyof T]?: DeepPartial<U> }
-  : T;
+type DeepPartial<T> = T extends Record<string, infer U> ? { [K in keyof T]?: DeepPartial<U> } : T;
 
-type RunnableConfigWithToolProgress<T extends ZodType<any> | null> =
-  RunnableConfig & {
-    sendProgress: T extends null
-      ? never
-      : (data: z.infer<NonNullable<T>>) => void;
-  };
+type RunnableConfigWithToolProgress<T extends ZodType<any> | null> = RunnableConfig & {
+  sendProgress: T extends null ? never : (data: z.infer<NonNullable<T>>) => void;
+};
 
 type ZodObjectAny = z.ZodObject<any, any, any, any>;
 
@@ -25,7 +20,7 @@ export class StructuredChatTool<
   ToolProgressData extends ZodType<any> | null = null,
   Return = null,
   ArgsForClient = null,
-  ResultForClient = null
+  ResultForClient = null,
 > extends DynamicStructuredTool<Args> {
   // Helpers for type inference. These don't actually exist as values.
   TypeInfo: {
@@ -33,9 +28,7 @@ export class StructuredChatTool<
     Schema: Args;
     Args: z.infer<Args>;
     ToolProgressSchema: ToolProgressData;
-    ToolProgress: ToolProgressData extends null
-      ? null
-      : z.infer<NonNullable<ToolProgressData>>;
+    ToolProgress: ToolProgressData extends null ? null : z.infer<NonNullable<ToolProgressData>>;
     Return: Return;
     ArgsForClient: ArgsForClient;
     ResultForClient: ResultForClient;
@@ -58,19 +51,13 @@ export class StructuredChatTool<
       mapResultForClient?: (result: Return) => ResultForClient;
     }
   ) {
-    type ToolProgress = ToolProgressData extends null
-      ? null
-      : z.infer<NonNullable<ToolProgressData>>;
+    type ToolProgress = ToolProgressData extends null ? null : z.infer<NonNullable<ToolProgressData>>;
 
-    const callInternal = (
-      args: z.infer<Args>,
-      runManager?: CallbackManagerForToolRun,
-      config?: RunnableConfig
-    ) => {
+    const callInternal = (args: z.infer<Args>, runManager?: CallbackManagerForToolRun, config?: RunnableConfig) => {
       const configWithToolProgress = {
         ...config,
         sendProgress: ((data: ToolProgress) => {
-          dispatchCustomEvent("on_structured_tool_progress", data, config);
+          dispatchCustomEvent('on_structured_tool_progress', data, config);
         }) as any,
       };
 
@@ -89,10 +76,7 @@ export class StructuredChatTool<
     return this.toolArgs.mapArgsForClient;
   }
 
-  makeDebouncedArgsMapper(
-    debounceMs: number,
-    send: (args: ArgsForClient) => void
-  ) {
+  makeDebouncedArgsMapper(debounceMs: number, send: (args: ArgsForClient) => void) {
     const mapArgs = this.mapArgsForClient;
     if (!mapArgs) {
       return null;
@@ -117,11 +101,4 @@ export class StructuredChatTool<
   }
 }
 
-export type AnyStructuredChatTool = StructuredChatTool<
-  string,
-  any,
-  any,
-  any,
-  any,
-  any
->;
+export type AnyStructuredChatTool = StructuredChatTool<string, any, any, any, any, any>;

@@ -1,6 +1,6 @@
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
-import { WebSocketServer } from 'ws';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
+import { WebSocketServer } from 'ws';
 import router from './router';
 
 // Create HTTP server

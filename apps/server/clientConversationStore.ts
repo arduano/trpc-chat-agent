@@ -1,18 +1,16 @@
-import { create } from "zustand";
-import { combine } from "zustand/middleware";
-import { ClientSideChatConversation, ClientSideUpdate } from "./types";
-import { mergeKeepingOldReferences } from "./merge";
-import { AdvancedReactAgent } from "./advancedReactAgent";
+import type { AdvancedReactAgent } from './advancedReactAgent';
+import type { ClientSideUpdate } from './types';
+import { create } from 'zustand';
+import { combine } from 'zustand/middleware';
+import { mergeKeepingOldReferences } from './merge';
+import { ClientSideChatConversation } from './types';
 
 // Helper function for propagating the "Agent" type into the store
 function makeConversationStore() {
   return create(
     combine(
       {
-        conversations: {} as Record<
-          string,
-          ClientSideChatConversation<AdvancedReactAgent> | undefined
-        >,
+        conversations: {} as Record<string, ClientSideChatConversation<AdvancedReactAgent> | undefined>,
       },
       (set, get) => {
         const getConversation = (conversationId: string) => {
@@ -33,32 +31,21 @@ function makeConversationStore() {
         return {
           mutate: {
             processClientEvent: (event: ClientSideUpdate) => {
-              if (event.kind === "sync-conversation") {
+              if (event.kind === 'sync-conversation') {
                 const { conversationId, conversationData } = event;
                 const existingConversation = getConversation(conversationId);
                 if (existingConversation) {
                   // If an existing conversation exists, merge the data so that references are
                   // preserved if the underlying data is the same
-                  const merged = mergeKeepingOldReferences(
-                    existingConversation.data,
-                    conversationData
-                  );
-                  setConversation(
-                    conversationId,
-                    new ClientSideChatConversation(merged)
-                  );
+                  const merged = mergeKeepingOldReferences(existingConversation.data, conversationData);
+                  setConversation(conversationId, new ClientSideChatConversation(merged));
                 } else {
-                  setConversation(
-                    conversationId,
-                    new ClientSideChatConversation(conversationData)
-                  );
+                  setConversation(conversationId, new ClientSideChatConversation(conversationData));
                 }
               } else {
                 const conversation = getConversation(event.conversationId);
                 if (!conversation) {
-                  console.error(
-                    `No conversation found for conversation ID ${event.conversationId}`
-                  );
+                  console.error(`No conversation found for conversation ID ${event.conversationId}`);
                   return;
                 }
 
@@ -68,10 +55,7 @@ function makeConversationStore() {
                 if (oldData !== conversation.data) {
                   // Change the class instance if the data instance has changed.
                   // This helps with state related stuff.
-                  setConversation(
-                    event.conversationId,
-                    new ClientSideChatConversation(conversation.data)
-                  );
+                  setConversation(event.conversationId, new ClientSideChatConversation(conversation.data));
                 }
               }
             },

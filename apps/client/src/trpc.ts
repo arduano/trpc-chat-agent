@@ -1,11 +1,11 @@
-import { createTRPCReact } from "@trpc/react-query";
-import { createTRPCProxyClient, createWSClient, wsLink } from "@trpc/client";
-import type { AppRouter } from "../../server/src/router";
+import type { AppRouter } from '../../server/src/router';
+import { createTRPCProxyClient, createWSClient, wsLink } from '@trpc/client';
+import { createTRPCReact } from '@trpc/react-query';
 
 export const trpc = createTRPCReact<AppRouter>();
 
 const wsClient = createWSClient({
-  url: "ws://localhost:3000",
+  url: 'ws://localhost:3000',
 });
 
 export const trpcClient = trpc.createClient({

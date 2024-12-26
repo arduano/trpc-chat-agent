@@ -1,6 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { trpc, trpcClient } from "./trpc";
-import { Chat } from "./components/Chat";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Chat } from './components/Chat';
+import { trpc, trpcClient } from './trpc';
 
 const queryClient = new QueryClient({
   defaultOptions: {
