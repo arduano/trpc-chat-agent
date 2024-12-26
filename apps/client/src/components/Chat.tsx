@@ -1,24 +1,13 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { rawTrpc, trpc } from "../trpc";
+import { rawTrpc } from "../trpc";
 
-import {
-  AdvancedReactAgent,
-  AgentTools,
-} from "../../../server/advancedReactAgent";
+import { AgentTools } from "../../../server/advancedReactAgent";
 import {
   AdvancedAIMessageDataClientSide,
   AdvancedToolCallClientSideFromToolsArray,
-  ChatTree,
-  ClientSideChatConversation,
-  ClientSideConversationData,
-  ClientSideUpdate,
   HumanMessageData,
 } from "../../../server/types";
-import { useConversationStore } from "../../../server/clientConversationStore";
-import {
-  AnyStructuredChatTool,
-  StructuredChatTool,
-} from "../../../server/tool";
+import { AnyStructuredChatTool } from "../../../server/tool";
 import React from "react";
 import { useConversation } from "./useConversation";
 import type { AgentType } from "../../../server/src/agent";
@@ -31,12 +20,11 @@ export function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const { messages, beginMessage, isStreaming } = useConversation<AgentType>(
-    {
-      conversationId: "test",
-      onUpdateConversationId: undefined,
-    }
-  );
+  const { messages, beginMessage, isStreaming } = useConversation<AgentType>({
+    router: rawTrpc.chat,
+    conversationId: "test",
+    onUpdateConversationId: undefined,
+  });
 
   useEffect(() => {
     scrollToBottom();

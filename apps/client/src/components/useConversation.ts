@@ -1,18 +1,25 @@
 import { useState, useEffect, useMemo } from "react";
 import { AdvancedReactAgent } from "../../../server/advancedReactAgent";
 import { useConversationStore } from "../../../server/clientConversationStore";
-import { ChatTree, ClientSideChatConversation, ClientSideUpdate } from "../../../server/types";
-import { rawTrpc } from "../trpc";
+import {
+  ChatTree,
+  ClientSideChatConversation,
+  ClientSideUpdate,
+} from "../../../server/types";
+import { createTRPCProxyClient } from "@trpc/client";
+import { makeChatRouterForAgent } from "../../../server/chatRouter";
 
-type UseConversationArgs = {
+type UseConversationArgs<Agent extends AdvancedReactAgent> = {
   conversationId?: string;
+  router: RouterTypeFromAgent<Agent>;
   onUpdateConversationId?: (conversationId: string) => void;
 };
 
 export function useConversation<Agent extends AdvancedReactAgent>({
   conversationId,
+  router,
   onUpdateConversationId,
-}: UseConversationArgs) {
+}: UseConversationArgs<Agent>) {
   // Use the mutation functions in the store
   const store = useConversationStore((data) => data.mutate);
   const conversationFromStore = useConversationStore((data) =>
@@ -33,6 +40,7 @@ export function useConversation<Agent extends AdvancedReactAgent>({
   >(() => ClientSideChatConversation.makePlaceholderConversation<Agent>());
 
   const { beginStream, cancelStream, isStreaming } = useConversationStreamer(
+    router,
     (update) => {
       store.processClientEvent(update);
 
@@ -64,14 +72,14 @@ export function useConversation<Agent extends AdvancedReactAgent>({
     // Query the conversation to insert into the store if not present
     setIsConversationMissing(false);
     if (conversationId && !store.isConversationPresent(conversationId)) {
-      rawTrpc.getChatData
+      router.getChat
         .query({ conversationId })
         .then((conversation) => {
           if (!conversation) {
             setIsConversationMissing(true);
           } else {
             const conversationClass = new ClientSideChatConversation(
-              conversation
+              conversation as any // Necessary because of deeply nested typescript generic issues
             );
             store.setConversationIfNotPresent(
               conversationId,
@@ -151,7 +159,10 @@ export function useConversation<Agent extends AdvancedReactAgent>({
   };
 }
 
-function useConversationStreamer(onUpdate: (event: ClientSideUpdate) => void) {
+function useConversationStreamer<Agent extends AdvancedReactAgent>(
+  router: RouterTypeFromAgent<Agent>,
+  onUpdate: (event: ClientSideUpdate) => void
+) {
   const [cancelCurrentStream, setCancelCurrentStream] = useState<
     (() => void) | undefined
   >(undefined);
@@ -168,7 +179,7 @@ function useConversationStreamer(onUpdate: (event: ClientSideUpdate) => void) {
     humanMessage: string,
     branch: ChatTree
   ) => {
-    const subscription = rawTrpc.chat2.subscribe(
+    const subscription = router.promptChat.subscribe(
       {
         conversationId,
         branch: branch,
@@ -205,3 +216,16 @@ function useConversationStreamer(onUpdate: (event: ClientSideUpdate) => void) {
     isStreaming: !!cancelCurrentStream,
   };
 }
+
+function asRouter<Agent extends AdvancedReactAgent>() {
+  const router = makeChatRouterForAgent<Agent>(null as any);
+  const rawTrpc = createTRPCProxyClient<typeof router>({
+    links: [],
+  });
+
+  return rawTrpc;
+}
+
+type RouterTypeFromAgent<Agent extends AdvancedReactAgent> = ReturnType<
+  typeof asRouter<Agent>
+>;
