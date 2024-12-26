@@ -426,7 +426,7 @@ export function createAdvancedReactAgent<
             conversationId: state.conversationData.id,
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newResult: result,
+            newResult: clientSideResult,
             newState: "complete",
           });
         } catch (e) {

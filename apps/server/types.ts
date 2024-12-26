@@ -635,9 +635,7 @@ export class ServerSideChatConversation<
     });
   }
 
-  public asClientSideConversation(): ConversationData<
-    AdvancedAIMessageDataClientSide<AgentTools<Agent>>
-  > {
+  public asClientSideConversation(): ClientSideConversationData<AgentTools<Agent>> {
     return {
       ...this.data,
       aiMessages: Object.fromEntries(

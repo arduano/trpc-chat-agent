@@ -4,6 +4,7 @@ import { DynamicStructuredTool } from "@langchain/core/tools";
 import { ZodType, z } from "zod";
 import { Debouncer } from "./src/debounce";
 import { dispatchCustomEvent } from "@langchain/core/callbacks/dispatch";
+import { MessageContent } from "@langchain/core/messages";
 
 type DeepPartial<T> = T extends Record<string, infer U>
   ? { [K in keyof T]?: DeepPartial<U> }
@@ -51,6 +52,7 @@ export class StructuredChatTool<
         runManager?: CallbackManagerForToolRun,
         config?: RunnableConfigWithToolProgress<ToolProgressData>
       ) => Promise<Return>;
+      mapResultForAI: (result: Return) => MessageContent;
       mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
       mapResultForClient?: (result: Return) => ResultForClient;
     }

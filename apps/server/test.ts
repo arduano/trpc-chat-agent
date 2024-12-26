@@ -93,6 +93,9 @@ const tool = new StructuredChatTool({
       message: result,
     };
   },
+  mapResultForAI: (result) => {
+    return result;
+  },
 });
 
 const tool2 = new StructuredChatTool({
@@ -118,6 +121,9 @@ const tool2 = new StructuredChatTool({
     return {
       formal: args.formal,
     };
+  },
+  mapResultForAI: (result) => {
+    return result.greeting;
   },
 });
 

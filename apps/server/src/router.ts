@@ -132,6 +132,7 @@ const router = t.router({
 
           conversation.abortAllPendingToolCalls();
           serverSideConversation.data = conversation.data;
+          console.log(JSON.stringify(conversation.data));
         };
 
         runAgent();
@@ -145,7 +146,7 @@ const router = t.router({
   getChatData: t.procedure
     .input(z.object({ conversationId: z.string() }))
     .query(({ input }) => {
-      return serverSideConversation.data;
+      return serverSideConversation.asClientSideConversation();
     }),
 });
 
