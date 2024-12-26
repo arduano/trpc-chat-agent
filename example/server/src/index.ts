@@ -14,5 +14,5 @@ applyWSSHandler({ wss, router });
 
 // Start server
 listen(3000);
-console.log('Server listening on http://localhost:3000');
-console.log('WebSocket server listening on ws://localhost:3000');
+console.info('Server listening on http://localhost:3000');
+console.info('WebSocket server listening on ws://localhost:3000');

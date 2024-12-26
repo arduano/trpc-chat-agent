@@ -420,8 +420,6 @@ export class ChatConversation<AIMessage extends { id: string }> {
   }
 
   public asMessagesArray(tree: ChatTree): (HumanMessageData | AIMessage)[] {
-    console.log({ tree, data: this.data });
-
     const messages: (HumanMessageData | AIMessage)[] = [];
 
     if (tree.length === 0) {
@@ -690,7 +688,6 @@ export class ClientSideChatConversation<Agent extends AdvancedReactAgent<any>> e
     if (update.newState !== undefined) {
       updatedToolCall.state = update.newState;
     }
-    console.log(update, updatedToolCall);
 
     lastPart.toolCalls[toolCallIndex] = updatedToolCall;
   }
