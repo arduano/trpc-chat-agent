@@ -44,6 +44,7 @@ export default antfu(
       'style/multiline-ternary': 'off',
       'react-hooks/exhaustive-deps': 'off',
       'jsonc/sort-keys': 'warn',
+      'antfu/consistent-list-newline': 'off',
     },
   },
   {

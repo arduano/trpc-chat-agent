@@ -6,10 +6,13 @@ import type {
 import type { AgentType } from '../../../server/src/agent';
 import { useConversation } from '@arduano/trpc-langchain-agent/client';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { rawTrpc } from '../trpc';
 import { RenderTool } from './RenderTool';
 
 export function Chat() {
+  const { id: conversationId } = useParams();
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -19,8 +22,10 @@ export function Chat() {
 
   const { messages, beginMessage, isStreaming } = useConversation<AgentType>({
     router: rawTrpc.chat,
-    conversationId: 'test',
-    onUpdateConversationId: undefined,
+    conversationId,
+    onUpdateConversationId: (newId) => {
+      navigate(`/chat/${newId}`, { replace: true });
+    },
   });
 
   useEffect(() => {

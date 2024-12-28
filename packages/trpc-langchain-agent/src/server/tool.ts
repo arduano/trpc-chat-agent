@@ -1,5 +1,6 @@
 import type { MessageContent } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import type { DeepPartial } from '@trpc/server';
 import type { z, ZodType } from 'zod';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import {
@@ -11,9 +12,25 @@ import { BaseLangChain } from '@langchain/core/language_models/base';
 import { ToolInputParsingException } from '@langchain/core/tools';
 import { Debouncer } from '../common/debounce';
 
-type DeepPartial<T> = T extends Record<string, infer U> ? { [K in keyof T]?: DeepPartial<U> } : T;
+export type ZodObjectAny = z.ZodObject<any, any, any, any>;
 
-type ZodObjectAny = z.ZodObject<any, any, any, any>;
+export type ToolRunFn<
+  Args extends ZodObjectAny,
+  Context,
+  Callbacks,
+  ToolProgressData extends ZodType<any> | undefined,
+  Return,
+  ResultForClient,
+> = (
+  args: {
+    input: z.infer<Args>;
+    ctx: Context;
+    callbacks: Callbacks;
+    sendProgress: ToolProgressData extends undefined ? never : (data: z.infer<NonNullable<ToolProgressData>>) => void;
+  },
+  runManager?: CallbackManagerForToolRun,
+  config?: RunnableConfig
+) => Promise<{ response: Return; clientResult: ResultForClient }>;
 
 export class StructuredChatTool<
   Name extends string,
@@ -52,18 +69,7 @@ export class StructuredChatTool<
       schema: Args;
       toolProgressSchema?: ToolProgressData;
       description: string;
-      run: (
-        args: {
-          input: z.infer<Args>;
-          ctx: Context;
-          callbacks: Callbacks;
-          sendProgress: ToolProgressData extends undefined
-            ? never
-            : (data: z.infer<NonNullable<ToolProgressData>>) => void;
-        },
-        runManager?: CallbackManagerForToolRun,
-        config?: RunnableConfig
-      ) => Promise<{ response: Return; clientResult: ResultForClient }>;
+      run: ToolRunFn<Args, Context, Callbacks, ToolProgressData, Return, ResultForClient>;
       mapErrorForAI?: (error: unknown) => MessageContent;
       mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
     }

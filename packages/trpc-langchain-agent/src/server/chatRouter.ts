@@ -9,10 +9,12 @@ import { chatBranchZod, ServerSideChatConversation } from '../common/types';
 type MakeChatRouterForAgentArgs<Agent extends AdvancedReactAgent, Context extends object | ContextCallback> = {
   agent: Agent;
   t: TrpcWithContext<Context>;
-  getConversation: (conversationId: string) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
+  createConversation: (ctx: Context) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
+  getConversation: (conversationId: string, ctx: Context) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
   saveConversation: (
     conversationId: string,
-    conversation: ServerSideConversationData<AgentTools<Agent>>
+    conversation: ServerSideConversationData<AgentTools<Agent>>,
+    ctx: Context
   ) => Promise<void>;
 };
 
@@ -25,6 +27,7 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
   agent,
   getConversation,
   saveConversation,
+  createConversation,
   t,
 }: MakeChatRouterForAgentArgs<Agent, Context>) {
   const router = t.router({
@@ -41,7 +44,13 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
           const controller = new AbortController();
 
           const runAgent = async () => {
-            const conversationData = await getConversation(input.conversationId || '');
+            let conversationData: ServerSideConversationData<AgentTools<Agent>>;
+            if (input.conversationId) {
+              conversationData = await getConversation(input.conversationId, ctx as any);
+            } else {
+              conversationData = await createConversation(ctx as any);
+            }
+
             const conversation = new ServerSideChatConversation(conversationData);
 
             let chatBranch: ChatTree = input.branch;
@@ -81,16 +90,17 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
                   console.error(e);
                 }
               }
-            } catch (e) {
-              console.error(e);
+            } finally {
+              conversation.abortAllPendingToolCalls();
+              emit.complete();
+              await saveConversation(conversation.data.id, conversation.data, ctx as any);
             }
-
-            conversation.abortAllPendingToolCalls();
-            emit.complete();
-            await saveConversation(conversation.data.id, conversation.data);
           };
 
-          runAgent();
+          runAgent().catch((e) => {
+            console.error(e);
+            emit.error(e);
+          });
 
           return () => {
             controller.abort();
@@ -98,8 +108,8 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
         });
       }),
 
-    getChat: t.procedure.input(z.object({ conversationId: z.string() })).query(async ({ input }) => {
-      const conversationData = await getConversation(input.conversationId);
+    getChat: t.procedure.input(z.object({ conversationId: z.string() })).query(async ({ input, ctx }) => {
+      const conversationData = await getConversation(input.conversationId, ctx as any);
 
       return new ServerSideChatConversation(conversationData).asClientSideConversation();
     }),

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@arduano/trpc-langchain-agent": "workspace:*",
+    "@kvs/env": "^2.2.0",
     "@langchain/anthropic": "^0.3.11",
     "@langchain/core": "^0.3.26",
     "@langchain/langgraph": "^0.2.36",
@@ -15,6 +16,7 @@
     "@trpc/server": "^10.45.0",
     "@types/xml2js": "^0.4.14",
     "dotenv": "^16.4.7",
+    "nanoid": "^5.0.9",
     "ws": "^8.18.0",
     "xml2js": "^0.6.2",
     "zod": "^3.24.1",

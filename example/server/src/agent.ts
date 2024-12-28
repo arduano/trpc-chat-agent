@@ -1,12 +1,18 @@
-import { StructuredChatTool } from '@arduano/trpc-langchain-agent/common';
 import { createAdvancedReactAgent } from '@arduano/trpc-langchain-agent/server';
 import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
+import { ai } from './context';
 
 // Simple in-memory store for todo items
 const todos: string[] = [];
 
-const calculatorTool = new StructuredChatTool({
+async function _makeContext() {
+  return {
+    foo: 'bar',
+  } as const;
+}
+
+const calculatorTool = ai.tool({
   name: 'calculator',
   schema: z.object({
     operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
@@ -42,7 +48,7 @@ const calculatorTool = new StructuredChatTool({
   mapErrorForAI: (error) => `An error occurred: ${error}`,
 });
 
-const weatherTool = new StructuredChatTool({
+const weatherTool = ai.tool({
   name: 'weather',
   schema: z.object({
     city: z.string(),
@@ -71,7 +77,7 @@ const weatherTool = new StructuredChatTool({
   mapErrorForAI: (error) => `Failed to get weather data: ${error}`,
 });
 
-const todoTool = new StructuredChatTool({
+const todoTool = ai.tool({
   name: 'todos',
   schema: z.object({
     action: z.enum(['add', 'list', 'clear']),
@@ -107,7 +113,7 @@ const todoTool = new StructuredChatTool({
   mapErrorForAI: (error) => `Todo operation failed: ${error}`,
 });
 
-const timerTool = new StructuredChatTool({
+const timerTool = ai.tool({
   name: 'timer',
   schema: z.object({
     seconds: z.number().min(1).max(10),

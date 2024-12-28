@@ -1,26 +1,30 @@
-import { initTRPC } from '@trpc/server';
+import { nanoid } from 'nanoid';
 import { ServerSideChatConversation } from '../../../packages/trpc-langchain-agent/src/common/types';
 import { makeChatRouterForAgent } from '../../../packages/trpc-langchain-agent/src/server/chatRouter';
 import { agent } from './agent';
-
-export const t = initTRPC.create();
+import { t } from './context';
 
 const router = t.router({
   chat: makeChatRouterForAgent({
     agent,
-    getConversation: async () => {
-      return serverSideConversation.data;
+    createConversation: async (_ctx) => {
+      const id = nanoid();
+      return ServerSideChatConversation.newConversationData<typeof agent>(id);
+    },
+    getConversation: async (id, ctx) => {
+      const data = await ctx.conversations.get(id);
+      if (!data) {
+        throw new Error('Conversation not found');
+      }
+
+      return data as any;
     },
     t,
-    saveConversation: async (id, data) => {
-      serverSideConversation.data = data;
+    saveConversation: async (id, data, ctx) => {
+      await ctx.conversations.set(id, data);
     },
   }),
 });
-
-const serverSideConversation = new ServerSideChatConversation<typeof agent>(
-  ServerSideChatConversation.newConversationData<typeof agent>('test')
-);
 
 export type AppRouter = typeof router;
 export default router;

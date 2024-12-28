@@ -1,16 +1,18 @@
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import { WebSocketServer } from 'ws';
+import { createContext } from './context';
 import router from './router';
 
 // Create HTTP server
 const { server, listen } = createHTTPServer({
   router,
+  createContext,
 });
 
 // Create WebSocket server
 const wss = new WebSocketServer({ server });
-applyWSSHandler({ wss, router });
+applyWSSHandler({ wss, router, createContext });
 
 // Start server
 listen(3000);
