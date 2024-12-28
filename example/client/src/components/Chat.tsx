@@ -1,7 +1,5 @@
 import type {
   AdvancedAIMessageDataClientSide,
-  AdvancedToolCallClientSideFromToolsArray,
-  AgentTools,
   AnyStructuredChatTool,
   HumanMessageData,
 } from '@arduano/trpc-langchain-agent/common';
@@ -9,6 +7,7 @@ import type { AgentType } from '../../../server/src/agent';
 import { useConversation } from '@arduano/trpc-langchain-agent/client';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { rawTrpc } from '../trpc';
+import { RenderTool } from './RenderTool';
 
 export function Chat() {
   const [input, setInput] = useState('');
@@ -91,76 +90,6 @@ export function Chat() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function RenderTool({ tool }: { tool: AdvancedToolCallClientSideFromToolsArray<AgentTools<AgentType>> }) {
-  const getStatusColor = (state: typeof tool.state) => {
-    switch (state) {
-      case 'loading':
-        return 'bg-blue-500';
-      case 'complete':
-        return 'bg-green-500';
-      case 'aborted':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const renderToolContent = () => {
-    switch (tool.name) {
-      case 'greet':
-        return (
-          <>
-            <div className="flex gap-2">
-              <span className="font-semibold">Name:</span>
-              <span>{tool.args?.name}</span>
-            </div>
-            {tool.state !== 'complete' && tool.progressStatus?.loading && (
-              <div className="mt-1 flex items-center gap-2">
-                <div className="h-1 flex-grow rounded-full bg-gray-200">
-                  <div
-                    className="h-full rounded-full bg-blue-500 transition-all"
-                    style={{ width: `${tool.progressStatus.loading}%` }}
-                  />
-                </div>
-                <span className="text-sm text-gray-600">{tool.progressStatus.loading}%</span>
-              </div>
-            )}
-            {tool.result && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2">{tool.result.message}</div>
-            )}
-          </>
-        );
-
-      case 'greet2':
-        return (
-          <>
-            <div className="flex gap-2">
-              <span className="font-semibold">Formal Mode:</span>
-              <span>{tool.args?.formal ? 'Yes' : 'No'}</span>
-            </div>
-            {tool.result && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2">{tool.result.greeting}</div>
-            )}
-          </>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="my-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-2 flex items-center gap-2">
-        <div className={`h-2 w-2 rounded-full ${getStatusColor(tool.state)}`} />
-        <h3 className="font-medium capitalize">{tool.name}</h3>
-        <span className="text-sm text-gray-500">({tool.state})</span>
-      </div>
-      {renderToolContent()}
     </div>
   );
 }
