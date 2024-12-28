@@ -1,13 +1,13 @@
 import type { BaseMessage, MessageContent, MessageContentText, UsageMetadata } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
+import type { Draft, WritableDraft } from 'immer';
 import type { AdvancedReactAgent } from '../server/advancedReactAgent';
 import type { AnyStructuredChatTool } from '../server/tool';
 import type { AgentTools } from './agentTypes';
 import { AIMessage, HumanMessage, ToolMessage } from '@langchain/core/messages';
+import { castDraft, produce } from 'immer';
 import { z } from 'zod';
 import { UnreachableError } from './unreachable';
-import { CallbackAddress } from '../server';
-import { castDraft, Draft, produce, WritableDraft } from 'immer';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
 
@@ -159,40 +159,6 @@ export type AdvancedAIMessageDataClientSide<Tools extends readonly AnyStructured
   id: string;
   parts: AdvancedAIMessageDataPartClientSide<Tools>[];
 };
-
-export class ChatAdvancedAIMessageClientSide<Tools extends readonly AnyStructuredChatTool[]> {
-  constructor(readonly data: AdvancedAIMessageDataClientSide<Tools>) {}
-
-  public get id() {
-    return this.data.id;
-  }
-
-  public get kind() {
-    return this.data.kind;
-  }
-
-  public get lastPart() {
-    return this.data.parts[this.data.parts.length - 1];
-  }
-
-  public get lastPartContent() {
-    return this.lastPart.content;
-  }
-
-  // Makes sure that the content returned is always a string.
-  // When non-string content is present, it will be replaced with '\n\n'
-  public get lastPartContentString(): string {
-    const content = this.lastPartContent;
-    if (typeof content === 'string') {
-      return content;
-    } else {
-      return content
-        .filter((c): c is MessageContentText => c.type === 'text')
-        .map((c) => c.text)
-        .join('\n\n');
-    }
-  }
-}
 
 export type HumanMessageData = {
   kind: 'human';

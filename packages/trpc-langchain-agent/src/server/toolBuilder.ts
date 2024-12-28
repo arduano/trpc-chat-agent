@@ -1,9 +1,9 @@
 import type { MessageContent } from '@langchain/core/messages';
 import type { DeepPartial } from '@trpc/server';
 import type { z, ZodType } from 'zod';
+import type { AnyToolCallback, ToolCallback } from './callback';
 import type { ToolRunFn } from './tool';
 import { StructuredChatTool } from './tool';
-import { AnyToolCallback, ToolCallback } from './callback';
 
 export class InitAgents<Context = any> {
   constructor() {}
@@ -27,8 +27,7 @@ class AgentBuilder<Context> {
     Return = undefined,
     ArgsForClient = undefined,
     ResultForClient = undefined,
-    // eslint-disable-next-line ts/no-empty-object-type
-    Callbacks extends Record<string, AnyToolCallback> = {},
+    Callbacks extends Record<string, AnyToolCallback> = Record<string, never>, // This default type is the only one that seems to work, {} breaks things
   >(args: {
     name: Name;
     schema: Args;

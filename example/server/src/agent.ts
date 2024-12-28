@@ -148,7 +148,7 @@ const toolWithCallback = ai.tool({
   description: 'Get the user to respond to a prompt',
   callbacks: {
     getResponse: ai.callback({
-      schema: z.object({
+      args: z.object({
         question: z.string(),
       }),
       response: z.object({

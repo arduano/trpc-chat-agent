@@ -1,14 +1,14 @@
-import { z } from 'zod';
+import type { z } from 'zod';
 
 export type ToolCallback<Args extends z.ZodTypeAny, Return extends z.ZodTypeAny> = {
-  schema: Args;
+  args: Args;
   response: Return;
 };
 
 export type AnyToolCallback = ToolCallback<z.ZodTypeAny, z.ZodTypeAny>;
 
 export type CallbackFunctions<Callbacks extends Record<string, AnyToolCallback>> = {
-  [K in keyof Callbacks]: (args: z.infer<Callbacks[K]['schema']>) => Promise<z.infer<Callbacks[K]['response']>>;
+  [K in keyof Callbacks]: (args: z.infer<Callbacks[K]['args']>) => Promise<z.infer<Callbacks[K]['response']>>;
 };
 
 export type CallbackAddress = {

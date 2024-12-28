@@ -45,6 +45,7 @@ export default antfu(
       'react-hooks/exhaustive-deps': 'off',
       'jsonc/sort-keys': 'warn',
       'antfu/consistent-list-newline': 'off',
+      'react-dom/no-missing-button-type': 'off',
     },
   },
   {

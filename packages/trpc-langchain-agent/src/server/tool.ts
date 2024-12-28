@@ -2,6 +2,7 @@ import type { MessageContent } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { DeepPartial } from '@trpc/server';
 import type { z } from 'zod';
+import type { AnyToolCallback, CallbackFunctions } from './callback';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import {
   CallbackManager,
@@ -11,7 +12,6 @@ import {
 import { BaseLangChain } from '@langchain/core/language_models/base';
 import { ToolInputParsingException } from '@langchain/core/tools';
 import { Debouncer } from '../common/debounce';
-import { AnyToolCallback, CallbackFunctions } from './callback';
 
 export type ToolRunFn<
   Args extends z.AnyZodObject,
@@ -59,8 +59,7 @@ export class StructuredChatTool<
   ArgsForClient = undefined,
   ResultForClient = undefined,
   Context = any,
-  // eslint-disable-next-line ts/no-empty-object-type
-  Callbacks extends Record<string, AnyToolCallback> = {},
+  Callbacks extends Record<string, AnyToolCallback> = Record<string, never>, // This default type is the only one that seems to work, {} breaks things
 > extends BaseLangChain<ToolCallInput<Args, Context>, ToolCallOutput<Return, ResultForClient>> {
   // Helpers for type inference. These don't actually exist as values.
   TypeInfo: {
@@ -166,7 +165,7 @@ export class StructuredChatTool<
             (callArgs: any) =>
               args.callbackInvoker({
                 callbackArgs: callArgs,
-                responseSchema: callback.schema,
+                responseSchema: callback.response,
                 toolCallId: args.toolCallId,
                 toolName: this.name,
                 callbackName: name,
@@ -197,4 +196,4 @@ export class StructuredChatTool<
   }
 }
 
-export type AnyStructuredChatTool = StructuredChatTool<string, any, any, any, any, any>;
+export type AnyStructuredChatTool = StructuredChatTool<string, any, any, any, any, any, any, any>;
