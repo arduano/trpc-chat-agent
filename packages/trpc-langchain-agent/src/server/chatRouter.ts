@@ -36,7 +36,7 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
           branch: chatBranchZod,
         })
       )
-      .subscription(async ({ input }) => {
+      .subscription(async ({ input, ctx }) => {
         return observable<ClientSideUpdate>((emit) => {
           const controller = new AbortController();
 
@@ -52,6 +52,8 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
                   humanMessageContent: input.humanMessageContent,
                   conversationData: structuredClone(conversation.data),
                   chatBranch,
+                  ctx,
+                  callbacks: null as any,
                 },
                 {
                   version: 'v2',

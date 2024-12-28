@@ -14,22 +14,32 @@ const calculatorTool = new StructuredChatTool({
     b: z.number(),
   }),
   description: 'Perform basic math operations',
-  run: async ({ operation, a, b }) => {
+  run: async ({ input: { operation, a, b } }) => {
+    let response;
     switch (operation) {
       case 'add':
-        return { result: a + b };
+        response = { result: a + b };
+        break;
       case 'subtract':
-        return { result: a - b };
+        response = { result: a - b };
+        break;
       case 'multiply':
-        return { result: a * b };
+        response = { result: a * b };
+        break;
       case 'divide':
-        return b === 0 ? { error: 'Cannot divide by zero' } : { result: a / b };
+        response = b === 0 ? { error: 'Cannot divide by zero' } : { result: a / b };
+        break;
+      default:
+        throw new Error('Invalid operation');
     }
+
+    return {
+      response: JSON.stringify(response, null, 2),
+      clientResult: response,
+    };
   },
   mapArgsForClient: (args) => args,
-  mapResultForClient: (result) => result,
-  mapResultForAI: (result) =>
-    'error' in result ? (result.error ?? 'An error occurred') : `The result is ${result.result}`,
+  mapErrorForAI: (error) => `An error occurred: ${error}`,
 });
 
 const weatherTool = new StructuredChatTool({
@@ -41,22 +51,24 @@ const weatherTool = new StructuredChatTool({
     status: z.string(),
   }),
   description: 'Get mock weather data for a city',
-  run: async ({ city }, manager, config) => {
+  run: async ({ input: { city }, sendProgress }) => {
     const cities: Record<string, { temp: number; condition: string }> = {
       'new york': { temp: 20, condition: 'sunny' },
       london: { temp: 15, condition: 'rainy' },
       tokyo: { temp: 25, condition: 'cloudy' },
     };
 
-    config?.sendProgress({ status: 'Fetching weather data...' });
+    sendProgress({ status: 'Fetching weather data...' });
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const weather = cities[city.toLowerCase()] ?? { temp: 22, condition: 'unknown' };
-    return weather;
+    const response = cities[city.toLowerCase()] ?? { temp: 22, condition: 'unknown' };
+    return {
+      response: JSON.stringify(response, null, 2),
+      clientResult: response,
+    };
   },
   mapArgsForClient: (args) => args,
-  mapResultForClient: (result) => result,
-  mapResultForAI: (result) => `The temperature is ${result.temp}°C and it's ${result.condition}`,
+  mapErrorForAI: (error) => `Failed to get weather data: ${error}`,
 });
 
 const todoTool = new StructuredChatTool({
@@ -66,25 +78,33 @@ const todoTool = new StructuredChatTool({
     task: z.string().optional(),
   }),
   description: 'Manage a todo list',
-  run: async ({ action, task }) => {
+  run: async ({ input: { action, task } }) => {
+    let response;
     switch (action) {
       case 'add':
         if (task) {
           todos.push(task);
         }
-        return { todos, action: 'added' } as const;
+        response = { todos, action: 'added' } as const;
+        break;
       case 'list':
-        return { todos, action: 'listed' } as const;
+        response = { todos, action: 'listed' } as const;
+        break;
       case 'clear':
         todos.length = 0;
-        return { todos, action: 'cleared' } as const;
+        response = { todos, action: 'cleared' } as const;
+        break;
       default:
         throw new Error('Invalid action');
     }
+
+    return {
+      response: JSON.stringify(response, null, 2),
+      clientResult: response,
+    };
   },
   mapArgsForClient: (args) => args,
-  mapResultForClient: (result) => result,
-  mapResultForAI: (result) => `Todos ${result.action}. Current list: ${result.todos.join(', ') || 'empty'}`,
+  mapErrorForAI: (error) => `Todo operation failed: ${error}`,
 });
 
 const timerTool = new StructuredChatTool({
@@ -97,24 +117,27 @@ const timerTool = new StructuredChatTool({
     message: z.string(),
   }),
   description: 'Start a timer with progress updates',
-  run: async ({ seconds }, manager, config) => {
+  run: async ({ input: { seconds }, sendProgress }) => {
     const startTime = Date.now();
     const endTime = startTime + seconds * 1000;
 
     while (Date.now() < endTime) {
       const progress = ((Date.now() - startTime) / (seconds * 1000)) * 100;
-      config?.sendProgress({
+      sendProgress({
         progress: Math.min(progress, 100),
         message: `Timer running... ${Math.round(progress)}%`,
       });
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
-    return { completed: true, duration: seconds };
+    const response = { completed: true, duration: seconds };
+    return {
+      response: JSON.stringify(response, null, 2),
+      clientResult: response,
+    };
   },
   mapArgsForClient: (args) => args,
-  mapResultForClient: (result) => result,
-  mapResultForAI: (result) => `Timer completed after ${result.duration} seconds`,
+  mapErrorForAI: (error) => `Timer failed: ${error}`,
 });
 
 const allTools = [calculatorTool, weatherTool, todoTool, timerTool] as const;

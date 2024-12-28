@@ -2,7 +2,6 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import type { AIMessageChunk, MessageContent } from '@langchain/core/messages';
 import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
-import type { AnyStructuredChatTool } from '../common/tool';
 import type {
   AdvancedAIMessageData,
   ChatTree,
@@ -13,6 +12,7 @@ import type {
   ServerSideConversationUpdate,
   ServerSideUpdate,
 } from '../common/types';
+import type { AnyStructuredChatTool } from './tool';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { isAIMessageChunk } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
@@ -21,23 +21,35 @@ import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgr
 import { Debouncer } from '../common/debounce';
 import { ServerSideChatConversation } from '../common/types';
 
-function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[]>() {
+function makeStateAnnotation<
+  Tools extends readonly AnyStructuredChatTool[],
+  Context = any,
+  Callbacks extends Record<string, any> = Record<string, any>,
+>() {
   return Annotation.Root({
     conversationData: Annotation<ServerSideConversationData<Tools>>,
     chatBranch: Annotation<ChatTree>,
     humanMessageContent: Annotation<MessageContent>,
+    ctx: Annotation<Context>,
+    callbacks: Annotation<Callbacks>,
   });
 }
 
-export type AdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable & {
-  // Not real data, just a marker type
-  __toolTypes?: Tools;
-};
+type StateAnnotationForTools<Tools extends readonly AnyStructuredChatTool[]> = ReturnType<
+  typeof makeStateAnnotation<Tools>
+>['State'];
 
 export type CreateAdvancedReactAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   llm: BaseChatModel;
   tools: Tools;
   debounceMs: number;
+};
+
+export type AdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable<
+  StateAnnotationForTools<Tools>
+> & {
+  // Not real data, just a marker type
+  __toolTypes?: Tools;
 };
 
 export function createAdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[]>(
@@ -363,20 +375,21 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
 
         // Call the tool
         try {
-          const result = await tool.invoke(toolCall.args, {
-            callbacks: [
-              {
-                handleCustomEvent(name, data) {
-                  if (name === 'on_structured_tool_progress') {
-                    progressDebouncer.debounce(data);
-                  }
+          const { response, clientResult } = await tool.invoke(
+            { input: toolCall.args, ctx: state.ctx, callbacks: state.callbacks },
+            {
+              callbacks: [
+                {
+                  handleCustomEvent(name, data) {
+                    if (name === 'on_structured_tool_progress') {
+                      progressDebouncer.debounce(data);
+                    }
+                  },
                 },
-              },
-            ],
-          });
+              ],
+            }
+          );
 
-          const clientSideResult = await tool.mapResultForClient?.(result);
-          const aiResult = await tool.mapResultForAI(result);
           progressDebouncer.flush();
 
           // Make sure the result is up to date
@@ -384,8 +397,8 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
             kind: 'update-tool-call',
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newResult: aiResult,
-            newClientResult: clientSideResult,
+            newResult: response,
+            newClientResult: clientResult,
             newState: 'complete',
           });
           sendClientSideUpdate({
@@ -393,10 +406,12 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
             conversationId: state.conversationData.id,
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newResult: clientSideResult,
+            newResult: clientResult,
             newState: 'complete',
           });
         } catch (e) {
+          console.error(e);
+
           const aiResult = await tool.mapErrorForAI?.(e);
 
           // Tool errored, abort it

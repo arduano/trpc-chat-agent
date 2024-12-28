@@ -1,8 +1,8 @@
 import type { BaseMessage, MessageContent, MessageContentText, UsageMetadata } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type { AdvancedReactAgent } from '../server/advancedReactAgent';
+import type { AnyStructuredChatTool } from '../server/tool';
 import type { AgentTools } from './agentTypes';
-import type { AnyStructuredChatTool } from './tool';
 import { AIMessage, HumanMessage, ToolMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { UnreachableError } from './unreachable';
