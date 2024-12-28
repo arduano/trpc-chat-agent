@@ -34,11 +34,12 @@ export function RenderTool({
                 {tool.args?.a} and {tool.args?.b}
               </span>
             </div>
-            {tool.result && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-4">
-                {'error' in tool.result ? (
-                  <div className="flex items-center gap-2 text-red-500">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {tool.result &&
+              ('error' in tool.result ? (
+                <ToolResultWrapper
+                  color="red"
+                  icon={
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -46,28 +47,27 @@ export function RenderTool({
                         d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <span>{tool.result.error}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-500">
-                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500">Result</div>
-                      <div className="text-lg font-semibold">{tool.result.result}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  }
+                >
+                  <span>{tool.result.error}</span>
+                </ToolResultWrapper>
+              ) : (
+                <ToolResultWrapper
+                  color="green"
+                  icon={
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                      />
+                    </svg>
+                  }
+                  subtitle="Result"
+                  title={String(tool.result.result)}
+                />
+              ))}
           </>
         );
 
@@ -82,32 +82,30 @@ export function RenderTool({
               <div className="mt-1 text-sm text-gray-600">{tool.progressStatus.status}</div>
             )}
             {tool.result && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-500">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-                      />
-                    </svg>
+              <ToolResultWrapper
+                color="blue"
+                icon={
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                    />
+                  </svg>
+                }
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-sm text-gray-500">Temperature</div>
+                    <div className="text-lg font-semibold">{tool.result.temp}°C</div>
                   </div>
-                  <div className="flex-1">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <div className="text-sm text-gray-500">Temperature</div>
-                        <div className="text-lg font-semibold">{tool.result.temp}°C</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-gray-500">Condition</div>
-                        <div className="text-lg font-semibold capitalize">{tool.result.condition}</div>
-                      </div>
-                    </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Condition</div>
+                    <div className="text-lg font-semibold capitalize">{tool.result.condition}</div>
                   </div>
                 </div>
-              </div>
+              </ToolResultWrapper>
             )}
           </>
         );
@@ -126,39 +124,37 @@ export function RenderTool({
               )}
             </div>
             {tool.result && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-500">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="mb-2 text-sm text-gray-500">
-                      Last action: <span className="font-medium capitalize">{tool.result.action}</span>
-                    </div>
-                    {tool.result.todos.length === 0 ? (
-                      <div className="text-gray-500 italic">No todos</div>
-                    ) : (
-                      <ul className="space-y-1">
-                        {tool.result.todos.map((todo, i) => (
-                          <li key={i} className="flex items-center gap-2">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-purple-200 bg-purple-50 text-xs text-purple-500">
-                              {i + 1}
-                            </div>
-                            <span>{todo}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+              <ToolResultWrapper
+                color="purple"
+                icon={
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                }
+              >
+                <div className="mb-2 text-sm text-gray-500">
+                  Last action: <span className="font-medium capitalize">{tool.result.action}</span>
                 </div>
-              </div>
+                {tool.result.todos.length === 0 ? (
+                  <div className="text-gray-500 italic">No todos</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {tool.result.todos.map((todo, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full border border-purple-200 bg-purple-50 text-xs text-purple-500">
+                          {i + 1}
+                        </div>
+                        <span>{todo}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </ToolResultWrapper>
             )}
           </>
         );
@@ -184,25 +180,21 @@ export function RenderTool({
               </div>
             )}
             {tool.result && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 text-yellow-500">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm text-gray-500">Duration</div>
-                    <div className="text-lg font-semibold">{tool.result.duration} seconds</div>
-                    <div className="mt-1 text-sm text-green-500">Completed successfully</div>
-                  </div>
-                </div>
-              </div>
+              <ToolResultWrapper
+                color="yellow"
+                icon={
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                }
+                subtitle="Duration"
+                title={`${tool.result.duration} seconds`}
+              />
             )}
           </>
         );
@@ -211,23 +203,22 @@ export function RenderTool({
         return (
           <>
             {tool.callbacks.map((callback) => (
-              <div key={callback.callbackId} className="mt-2 rounded border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-500">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm text-gray-500">User Input Required</div>
-                    <div className="text-lg font-semibold">Please provide a response</div>
-                  </div>
-                </div>
+              <ToolResultWrapper
+                key={callback.callbackId}
+                color="purple"
+                icon={
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                }
+                subtitle="User Input Required"
+                title="Please provide a response"
+              >
                 <div className="mt-4">
                   <PromptUserInput
                     onSubmit={(response) => {
@@ -237,7 +228,7 @@ export function RenderTool({
                     }}
                   />
                 </div>
-              </div>
+              </ToolResultWrapper>
             ))}
           </>
         );
@@ -255,6 +246,33 @@ export function RenderTool({
         <span className="text-sm text-gray-500">({tool.state})</span>
       </div>
       {renderToolContent()}
+    </div>
+  );
+}
+
+type IconColor = 'green' | 'blue' | 'yellow' | 'purple' | 'red';
+
+interface ToolResultWrapperProps {
+  icon: React.ReactNode;
+  color: IconColor;
+  title?: string;
+  subtitle?: string;
+  children?: React.ReactNode;
+}
+
+function ToolResultWrapper({ icon, color, title, subtitle, children }: ToolResultWrapperProps) {
+  return (
+    <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-4">
+      <div className="flex items-center gap-3">
+        <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-${color}-100 text-${color}-500`}>
+          {icon}
+        </div>
+        <div className="flex-1">
+          {subtitle && <div className="text-sm text-gray-500">{subtitle}</div>}
+          {title && <div className="text-lg font-semibold">{title}</div>}
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

@@ -45,7 +45,7 @@ export function Chat() {
           <div className="max-w-screen-md mx-auto">
             <div className="divide-y divide-gray-200">
               <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                <div className="h-[800px] overflow-auto mb-4 space-y-4">
+                <div className="h-[60vh] overflow-auto mb-4 space-y-4 pr-4">
                   <RenderMessages
                     messages={messages}
                     renderAiMessage={(message) => (

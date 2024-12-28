@@ -46,6 +46,7 @@ export default antfu(
       'jsonc/sort-keys': 'warn',
       'antfu/consistent-list-newline': 'off',
       'react-dom/no-missing-button-type': 'off',
+      'style/jsx-wrap-multilines': 'off',
     },
   },
   {
