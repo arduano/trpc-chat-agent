@@ -4,7 +4,7 @@ import type { makeChatRouterForAgent } from '../server';
 import type { AdvancedReactAgent } from '../server/advancedReactAgent';
 import { useEffect, useMemo, useState } from 'react';
 import { ClientSideChatConversation } from '../common/types';
-import { useConversationStore } from './clientConversationStore';
+import { mapActiveCallbackAddResponse, useConversationStore } from './clientConversationStore';
 
 type UseConversationArgs<Agent extends AdvancedReactAgent> = {
   conversationId?: string;
@@ -22,6 +22,10 @@ export function useConversation<Agent extends AdvancedReactAgent>({
   const conversationFromStore = useConversationStore((data) =>
     conversationId === undefined ? undefined : data.get.conversation(conversationId)
   );
+  const callbacks =
+    useConversationStore((data) =>
+      conversationId === undefined ? undefined : data.get.conversationCallbacks(conversationId)
+    ) ?? {};
 
   const [branch, setBranch] = useState<ChatTree>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(conversationId);
@@ -81,8 +85,7 @@ export function useConversation<Agent extends AdvancedReactAgent>({
 
   // Is loading when the conversation isn't guaranteed to be missing,
   // and the conversation isn't present in the store
-  const isLoadingConversation =
-    !isConversationMissing && conversationId && !store.isConversationPresent(conversationId);
+  const isLoadingConversation = !isConversationMissing && conversationId && !conversationFromStore;
 
   // Can start a new message when the conversation isn't guaranteed to be missing,
   // And when it's not loading
@@ -90,6 +93,27 @@ export function useConversation<Agent extends AdvancedReactAgent>({
 
   // Use the current conversation
   const conversation = (conversationFromStore ?? placeholderConversation) as ClientSideChatConversation<Agent>;
+
+  const activeAiMessageId = useMemo(() => conversation.getAIMessageIdAt(branch), [branch, conversation]);
+
+  const activeCallbacks = useMemo(
+    () =>
+      Object.values(callbacks)
+        .filter((c) => !!c) // Necessary to please typescript
+        .filter((c) => c.messageId === activeAiMessageId)
+        .map((c) =>
+          mapActiveCallbackAddResponse(c, async (response) =>
+            router.handleCallback.mutate({
+              conversationId: c.conversationId,
+              messageId: c.messageId,
+              toolCallId: c.toolCallId,
+              callbackId: c.callbackId,
+              callbackArgs: response,
+            })
+          )
+        ),
+    [activeAiMessageId, callbacks]
+  );
 
   const beginMessage = (humanMessage: string) => {
     if (!canStartNewMessage) {
@@ -124,7 +148,7 @@ export function useConversation<Agent extends AdvancedReactAgent>({
 
   const messages = useMemo(() => {
     return conversation.asMessagesArray(branch);
-  }, [conversation, branch]);
+  }, [conversation, branch, activeCallbacks]);
 
   return {
     beginMessage,

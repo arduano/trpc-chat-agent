@@ -1,8 +1,9 @@
 import type { MessageContent } from '@langchain/core/messages';
 import type { DeepPartial } from '@trpc/server';
 import type { z, ZodType } from 'zod';
-import type { ToolRunFn, ZodObjectAny } from './tool';
+import type { ToolRunFn } from './tool';
 import { StructuredChatTool } from './tool';
+import { AnyToolCallback, ToolCallback } from './callback';
 
 export class InitAgents<Context = any> {
   constructor() {}
@@ -21,18 +22,19 @@ export const initAgents = new InitAgents();
 class AgentBuilder<Context> {
   public tool<
     Name extends string,
-    Args extends ZodObjectAny,
+    Args extends z.AnyZodObject,
     ToolProgressData extends ZodType<any> | undefined = undefined,
     Return = undefined,
     ArgsForClient = undefined,
     ResultForClient = undefined,
     // eslint-disable-next-line ts/no-empty-object-type
-    Callbacks extends Record<string, any> = {},
+    Callbacks extends Record<string, AnyToolCallback> = {},
   >(args: {
     name: Name;
     schema: Args;
     toolProgressSchema?: ToolProgressData;
     description: string;
+    callbacks?: Callbacks;
     run: ToolRunFn<Args, Context, Callbacks, ToolProgressData, Return, ResultForClient>;
     mapErrorForAI?: (error: unknown) => MessageContent;
     mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
@@ -47,5 +49,9 @@ class AgentBuilder<Context> {
       Context,
       Callbacks
     >(args);
+  }
+
+  public callback<Args extends z.AnyZodObject, Return extends z.AnyZodObject>(args: ToolCallback<Args, Return>) {
+    return args;
   }
 }

@@ -1,7 +1,7 @@
 import type { MessageContent } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { DeepPartial } from '@trpc/server';
-import type { z, ZodType } from 'zod';
+import type { z } from 'zod';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import {
   CallbackManager,
@@ -11,40 +11,57 @@ import {
 import { BaseLangChain } from '@langchain/core/language_models/base';
 import { ToolInputParsingException } from '@langchain/core/tools';
 import { Debouncer } from '../common/debounce';
-
-export type ZodObjectAny = z.ZodObject<any, any, any, any>;
+import { AnyToolCallback, CallbackFunctions } from './callback';
 
 export type ToolRunFn<
-  Args extends ZodObjectAny,
+  Args extends z.AnyZodObject,
   Context,
-  Callbacks,
-  ToolProgressData extends ZodType<any> | undefined,
+  Callbacks extends Record<string, AnyToolCallback>,
+  ToolProgressData extends z.ZodTypeAny | undefined,
   Return,
   ResultForClient,
 > = (
   args: {
     input: z.infer<Args>;
     ctx: Context;
-    callbacks: Callbacks;
+    callbacks: CallbackFunctions<Callbacks>;
     sendProgress: ToolProgressData extends undefined ? never : (data: z.infer<NonNullable<ToolProgressData>>) => void;
   },
   runManager?: CallbackManagerForToolRun,
   config?: RunnableConfig
-) => Promise<{ response: Return; clientResult: ResultForClient }>;
+) => Promise<ToolCallOutput<Return, ResultForClient>>;
+
+export type ToolCallbackInvoker = (args: {
+  callbackArgs: any;
+  responseSchema: z.ZodTypeAny;
+  toolCallId: string;
+  toolName: string;
+  callbackName: string;
+}) => Promise<any>;
+
+type ToolCallInput<Args extends z.AnyZodObject, Context> = {
+  toolCallId: string;
+  input: z.infer<Args>;
+  ctx: Context;
+  callbackInvoker: ToolCallbackInvoker;
+};
+
+type ToolCallOutput<Return, ResultForClient> = {
+  response: Return;
+  clientResult: ResultForClient;
+};
 
 export class StructuredChatTool<
   Name extends string,
-  Args extends ZodObjectAny,
-  ToolProgressData extends ZodType<any> | undefined = undefined,
+  Args extends z.AnyZodObject,
+  ToolProgressData extends z.ZodTypeAny | undefined = undefined,
   Return = undefined,
   ArgsForClient = undefined,
   ResultForClient = undefined,
   Context = any,
-  Callbacks = Record<string, any>,
-> extends BaseLangChain<
-  { input: z.infer<Args>; ctx: Context; callbacks: Callbacks },
-  { response: Return; clientResult: ResultForClient }
-> {
+  // eslint-disable-next-line ts/no-empty-object-type
+  Callbacks extends Record<string, AnyToolCallback> = {},
+> extends BaseLangChain<ToolCallInput<Args, Context>, ToolCallOutput<Return, ResultForClient>> {
   // Helpers for type inference. These don't actually exist as values.
   TypeInfo: {
     Name: Name;
@@ -69,6 +86,7 @@ export class StructuredChatTool<
       schema: Args;
       toolProgressSchema?: ToolProgressData;
       description: string;
+      callbacks?: Callbacks;
       run: ToolRunFn<Args, Context, Callbacks, ToolProgressData, Return, ResultForClient>;
       mapErrorForAI?: (error: unknown) => MessageContent;
       mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
@@ -108,9 +126,9 @@ export class StructuredChatTool<
   }
 
   async invoke(
-    args: { input: z.infer<Args>; ctx: Context; callbacks: Callbacks },
+    args: ToolCallInput<Args, Context>,
     config?: RunnableConfig
-  ): Promise<{ response: Return; clientResult: ResultForClient }> {
+  ): Promise<ToolCallOutput<Return, ResultForClient>> {
     let parsed;
     try {
       parsed = await this.schema.parseAsync(args.input);
@@ -141,11 +159,27 @@ export class StructuredChatTool<
     delete parsedConfig.runId;
 
     try {
+      const allCallbacks = Object.fromEntries(
+        Object.entries(this.toolArgs.callbacks ?? {}).map(([name, callback]) => {
+          return [
+            name,
+            (callArgs: any) =>
+              args.callbackInvoker({
+                callbackArgs: callArgs,
+                responseSchema: callback.schema,
+                toolCallId: args.toolCallId,
+                toolName: this.name,
+                callbackName: name,
+              }),
+          ];
+        })
+      );
+
       const result = await this.toolArgs.run(
         {
           input: parsed,
           ctx: args.ctx,
-          callbacks: args.callbacks,
+          callbacks: allCallbacks as CallbackFunctions<Callbacks>,
           sendProgress: ((
             data: ToolProgressData extends undefined ? undefined : z.infer<NonNullable<ToolProgressData>>
           ) => {

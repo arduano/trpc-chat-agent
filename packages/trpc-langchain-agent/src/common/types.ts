@@ -6,6 +6,8 @@ import type { AgentTools } from './agentTypes';
 import { AIMessage, HumanMessage, ToolMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { UnreachableError } from './unreachable';
+import { CallbackAddress } from '../server';
+import { castDraft, Draft, produce, WritableDraft } from 'immer';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
 
@@ -273,8 +275,24 @@ export class ChatConversation<AIMessage extends { id: string }> {
 
   readonly aiMessageRootId = '_root_';
 
+  protected produceData(fn: (data: WritableDraft<ConversationData<AIMessage>>) => void) {
+    this.data = produce(this.data, fn);
+  }
+
+  protected produceAiMessage(messageId: string, fn: (data: Draft<AIMessage>) => void) {
+    this.data = produce(this.data, (data) => {
+      const aiMessage = data.aiMessages[messageId];
+      if (!aiMessage) {
+        throw new Error('Invalid messageId');
+      }
+      fn(aiMessage);
+    });
+  }
+
   public generateId() {
-    this.data.messageIdCounter += 1;
+    this.produceData((data) => {
+      data.messageIdCounter += 1;
+    });
     return this.data.messageIdCounter.toString();
   }
 
@@ -369,22 +387,30 @@ export class ChatConversation<AIMessage extends { id: string }> {
   }
 
   private pushNewIndexforHumanMessageChildren(humanId: string, childAiId: string) {
-    if (!this.data.humanMessageChildIds?.[humanId]) {
-      this.data.humanMessageChildIds[humanId] = [];
-    }
-    const array = this.data.humanMessageChildIds[humanId];
-    const newIndex = array.length;
-    array.push(childAiId);
+    let newIndex = 0;
+    this.produceData((data) => {
+      if (!data.humanMessageChildIds?.[humanId]) {
+        data.humanMessageChildIds[humanId] = [];
+      }
+      const array = data.humanMessageChildIds[humanId];
+      newIndex = array.length;
+      array.push(childAiId);
+    });
+
     return newIndex;
   }
 
   private pushNewIndexforAIMessageChildren(aiId: string, childHumanId: string) {
-    if (!this.data.aiMessageChildIds?.[aiId]) {
-      this.data.aiMessageChildIds[aiId] = [];
-    }
-    const array = this.data.aiMessageChildIds[aiId];
-    const newIndex = array.length;
-    array.push(childHumanId);
+    let newIndex = 0;
+    this.produceData((data) => {
+      if (!data.aiMessageChildIds?.[aiId]) {
+        data.aiMessageChildIds[aiId] = [];
+      }
+      const array = data.aiMessageChildIds[aiId];
+      newIndex = array.length;
+      array.push(childHumanId);
+    });
+
     return newIndex;
   }
 
@@ -407,8 +433,10 @@ export class ChatConversation<AIMessage extends { id: string }> {
     const newHumanIndex = this.pushNewIndexforAIMessageChildren(parentAiId, humanId);
     const newAiIndex = this.pushNewIndexforHumanMessageChildren(humanId, aiId);
 
-    this.data.humanMessages[humanId] = humanMessage;
-    this.data.aiMessages[aiId] = aiMessage;
+    this.produceData((data) => {
+      data.humanMessages[humanId] = humanMessage;
+      data.aiMessages[aiId] = castDraft(aiMessage);
+    });
 
     return [
       ...tree,
@@ -498,80 +526,72 @@ export class ServerSideChatConversation<Agent extends AdvancedReactAgent<any>> e
   }
 
   public abortAllPendingToolCalls() {
-    for (const aiMessage of Object.values(this.data.aiMessages)) {
-      for (const part of aiMessage.parts) {
-        for (const toolCall of part.toolCalls) {
-          if (toolCall.state === 'loading') {
-            toolCall.state = 'aborted';
+    this.produceData((data) => {
+      for (const aiMessage of Object.values(data.aiMessages)) {
+        for (const part of aiMessage.parts) {
+          for (const toolCall of part.toolCalls) {
+            if (toolCall.state === 'loading') {
+              toolCall.state = 'aborted';
+            }
           }
         }
       }
-    }
-  }
-
-  private getAIMessageById(id: string) {
-    const message = this.data.aiMessages?.[id];
-    if (!message) {
-      throw new Error(`Message with ID ${id} not found`);
-    }
-    return message;
-  }
-
-  private getPartsForAIMessageId(id: string) {
-    const aiMessage = this.getAIMessageById(id);
-    return aiMessage.parts;
-  }
-
-  private getLastPartForAIMessageId(id: string) {
-    const parts = this.getPartsForAIMessageId(id);
-    return parts[parts.length - 1];
+    });
   }
 
   private updateMessageContent(update: ServerUpdateMessageContent) {
-    const lastPart = this.getLastPartForAIMessageId(update.messageId);
-
-    lastPart.content = concatMessageContent(lastPart.content, update.contentToAppend);
+    this.produceAiMessage(update.messageId, (message) => {
+      const lastPart = message.parts[message.parts.length - 1];
+      lastPart.content = concatMessageContent(lastPart.content, update.contentToAppend);
+    });
   }
 
   private updateMessageBeginToolCall(update: ServerUpdateBeginToolCall) {
-    const lastPart = this.getLastPartForAIMessageId(update.messageId);
-    lastPart.toolCalls.push({
-      id: update.toolCallId,
-      name: update.toolCallName,
-      args: update.newArgs,
-      state: 'loading',
-      client: {
-        args: update.newClientArgs,
-      },
+    this.produceAiMessage(update.messageId, (message) => {
+      const lastPart = message.parts[message.parts.length - 1];
+      const newToolCall = {
+        id: update.toolCallId,
+        name: update.toolCallName,
+        args: update.newArgs,
+        state: 'loading',
+        client: {
+          args: update.newClientArgs,
+        },
+      } as AdvancedToolCallFromToolsArray<AgentTools<Agent>>;
+
+      lastPart.toolCalls.push(castDraft(newToolCall));
     });
   }
 
   private updateMessageToolCall(update: ServerUpdateMessageToolCall) {
-    const lastPart = this.getLastPartForAIMessageId(update.messageId);
-    const toolCall = lastPart.toolCalls.find((tc) => tc.id === update.toolCallId);
-    if (!toolCall) {
-      throw new Error(`Tool call with ID ${update.toolCallId} not found`);
-    }
+    this.produceAiMessage(update.messageId, (message) => {
+      const lastPart = message.parts[message.parts.length - 1];
+      const toolCall = lastPart.toolCalls.find((tc) => tc.id === update.toolCallId);
+      if (!toolCall) {
+        throw new Error(`Tool call with ID ${update.toolCallId} not found`);
+      }
 
-    if (update.newResult !== undefined) {
-      toolCall.result = update.newResult;
-    }
-    if (update.newClientArgs !== undefined) {
-      toolCall.client.args = update.newClientArgs;
-    }
-    if (update.newClientResult !== undefined) {
-      toolCall.client.result = update.newClientResult;
-    }
-    if (update.newState !== undefined) {
-      toolCall.state = update.newState;
-    }
+      if (update.newResult !== undefined) {
+        toolCall.result = update.newResult;
+      }
+      if (update.newClientArgs !== undefined) {
+        toolCall.client.args = update.newClientArgs;
+      }
+      if (update.newClientResult !== undefined) {
+        toolCall.client.result = update.newClientResult;
+      }
+      if (update.newState !== undefined) {
+        toolCall.state = update.newState;
+      }
+    });
   }
 
   private beginNewAIMessagePart(update: ServerBeginNewAIMessagePart) {
-    const parts = this.getPartsForAIMessageId(update.messageId);
-    parts.push({
-      content: '',
-      toolCalls: [],
+    this.produceAiMessage(update.messageId, (message) => {
+      message.parts.push({
+        content: '',
+        toolCalls: [],
+      });
     });
   }
 
@@ -621,82 +641,56 @@ export class ClientSideChatConversation<Agent extends AdvancedReactAgent<any>> e
     }
   }
 
-  private getAIMessageById(id: string) {
-    const message = this.data.aiMessages?.[id];
-    if (!message) {
-      throw new Error(`Message with ID ${id} not found`);
-    }
-    return message;
-  }
-
-  // Walks down the objects and clones everything until the parts list of the specified AI message.
-  // Then, the part is returned, so it can be modified.
-  // This is necessary so that client-side UI code knows what was updated.
-  private forceClonePartsForAIMessageId(id: string) {
-    this.data = { ...this.data };
-    this.data.aiMessages = { ...this.data.aiMessages };
-    const aiMessage = { ...this.getAIMessageById(id) };
-    this.data.aiMessages[id] = aiMessage;
-    const parts = [...aiMessage.parts];
-    aiMessage.parts = parts;
-    return parts;
-  }
-
-  // Walks down the objects and clones everything until the last part of the specified AI message.
-  // Then, the part is returned, so it can be modified.
-  // This is necessary so that client-side UI code knows what was updated.
-  private forceCloneLastPartForAIMessageId(id: string) {
-    const parts = this.forceClonePartsForAIMessageId(id);
-    const lastPart = { ...parts[parts.length - 1] };
-    parts[parts.length - 1] = lastPart;
-    return lastPart;
-  }
-
   private updateMessageContent(update: ClientUpdateMessageContent) {
-    const lastPart = this.forceCloneLastPartForAIMessageId(update.messageId);
-
-    lastPart.content = concatMessageContent(lastPart.content, update.contentToAppend);
+    this.produceAiMessage(update.messageId, (message) => {
+      const lastPart = message.parts[message.parts.length - 1];
+      lastPart.content = concatMessageContent(lastPart.content, update.contentToAppend);
+    });
   }
 
   private updateMessageBeginToolCall(update: ClientUpdateMessageBeginToolCall) {
-    const lastPart = this.forceCloneLastPartForAIMessageId(update.messageId);
-    lastPart.toolCalls.push({
-      id: update.toolCallId,
-      state: 'loading',
-      name: update.toolCallName,
+    this.produceAiMessage(update.messageId, (message) => {
+      const lastPart = message.parts[message.parts.length - 1];
+      const newToolCall = {
+        id: update.toolCallId,
+        state: 'loading',
+        name: update.toolCallName,
+      } as AdvancedToolCallFromToolsArray<AgentTools<Agent>>;
+
+      lastPart.toolCalls.push(castDraft(newToolCall));
     });
   }
 
   private updateMessageToolCall(update: ClientUpdateMessageToolCall) {
-    const lastPart = this.forceCloneLastPartForAIMessageId(update.messageId);
-    const toolCallIndex = lastPart.toolCalls.findIndex((tc) => tc.id === update.toolCallId);
-    if (toolCallIndex === -1) {
-      throw new Error(`Tool call with ID ${update.toolCallId} not found`);
-    }
+    this.produceAiMessage(update.messageId, (message) => {
+      const lastPart = message.parts[message.parts.length - 1];
+      const toolCallIndex = lastPart.toolCalls.findIndex((tc) => tc.id === update.toolCallId);
+      if (toolCallIndex === -1) {
+        throw new Error(`Tool call with ID ${update.toolCallId} not found`);
+      }
 
-    const updatedToolCall = { ...lastPart.toolCalls[toolCallIndex] };
-
-    if (update.newArgs !== undefined) {
-      updatedToolCall.args = update.newArgs;
-    }
-    if (update.newProgressStatus !== undefined) {
-      updatedToolCall.progressStatus = update.newProgressStatus;
-    }
-    if (update.newResult !== undefined) {
-      updatedToolCall.result = update.newResult;
-    }
-    if (update.newState !== undefined) {
-      updatedToolCall.state = update.newState;
-    }
-
-    lastPart.toolCalls[toolCallIndex] = updatedToolCall;
+      const toolCall = lastPart.toolCalls[toolCallIndex];
+      if (update.newArgs !== undefined) {
+        toolCall.args = update.newArgs;
+      }
+      if (update.newProgressStatus !== undefined) {
+        toolCall.progressStatus = update.newProgressStatus;
+      }
+      if (update.newResult !== undefined) {
+        toolCall.result = update.newResult;
+      }
+      if (update.newState !== undefined) {
+        toolCall.state = update.newState;
+      }
+    });
   }
 
   private beginNewAIMessagePart(update: ClientBeginNewAIMessagePart) {
-    const parts = this.forceClonePartsForAIMessageId(update.messageId);
-    parts.push({
-      content: '',
-      toolCalls: [],
+    this.produceAiMessage(update.messageId, (message) => {
+      message.parts.push({
+        content: '',
+        toolCalls: [],
+      });
     });
   }
 }
@@ -740,13 +734,25 @@ export type ClientSyncConversation = {
   branch: ChatTree;
 };
 
+export type ClientRequestCallbackResponse = {
+  kind: 'request-callback-response';
+  conversationId: string;
+  messageId: string;
+  toolCallId: string;
+  callbackId: string;
+  toolName: string;
+  callbackName: string;
+  // eslint-disable-next-line ts/no-empty-object-type
+  requestArgs: {}; // Can't use "any" because of trpc issues
+};
+
 export type ClientSideConversationUpdate =
   | ClientUpdateMessageBeginToolCall
   | ClientUpdateMessageContent
   | ClientUpdateMessageToolCall
   | ClientBeginNewAIMessagePart;
 
-export type ClientSideUpdate = ClientSyncConversation | ClientSideConversationUpdate;
+export type ClientSideUpdate = ClientSyncConversation | ClientRequestCallbackResponse | ClientSideConversationUpdate;
 
 export type ServerUpdateMessageContent = {
   kind: 'update-content';

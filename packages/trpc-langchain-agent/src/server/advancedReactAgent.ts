@@ -12,7 +12,7 @@ import type {
   ServerSideConversationUpdate,
   ServerSideUpdate,
 } from '../common/types';
-import type { AnyStructuredChatTool } from './tool';
+import type { AnyStructuredChatTool, ToolCallbackInvoker } from './tool';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { isAIMessageChunk } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
@@ -21,17 +21,13 @@ import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgr
 import { Debouncer } from '../common/debounce';
 import { ServerSideChatConversation } from '../common/types';
 
-function makeStateAnnotation<
-  Tools extends readonly AnyStructuredChatTool[],
-  Context = any,
-  Callbacks extends Record<string, any> = Record<string, any>,
->() {
+function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context = any>() {
   return Annotation.Root({
     conversationData: Annotation<ServerSideConversationData<Tools>>,
     chatBranch: Annotation<ChatTree>,
     humanMessageContent: Annotation<MessageContent>,
     ctx: Annotation<Context>,
-    callbacks: Annotation<Callbacks>,
+    callbackInvoker: Annotation<ToolCallbackInvoker>,
   });
 }
 
@@ -376,7 +372,7 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
         // Call the tool
         try {
           const { response, clientResult } = await tool.invoke(
-            { input: toolCall.args, ctx: state.ctx, callbacks: state.callbacks },
+            { input: toolCall.args, ctx: state.ctx, callbackInvoker: state.callbackInvoker, toolCallId: toolCall.id },
             {
               callbacks: [
                 {

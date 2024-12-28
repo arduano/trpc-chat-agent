@@ -5,6 +5,7 @@ import type { AdvancedReactAgent } from './advancedReactAgent';
 import { observable } from '@trpc/server/observable';
 import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversation } from '../common/types';
+import { CallbackManager, generateCallbackId } from './callback';
 
 type MakeChatRouterForAgentArgs<Agent extends AdvancedReactAgent, Context extends object | ContextCallback> = {
   agent: Agent;
@@ -30,6 +31,8 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
   createConversation,
   t,
 }: MakeChatRouterForAgentArgs<Agent, Context>) {
+  const callbackManager = new CallbackManager();
+
   const router = t.router({
     promptChat: t.procedure
       .input(
@@ -52,8 +55,13 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
             }
 
             const conversation = new ServerSideChatConversation(conversationData);
-
             let chatBranch: ChatTree = input.branch;
+
+            const aiMessageId = conversation.getAIMessageIdAt(chatBranch);
+            if (!aiMessageId) {
+              console.error('No AI message for ID, this is unexpected');
+              return;
+            }
 
             try {
               const events = await agent.streamEvents(
@@ -62,7 +70,31 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
                   conversationData: structuredClone(conversation.data),
                   chatBranch,
                   ctx,
-                  callbacks: null as any,
+                  callbackInvoker: ({ callbackArgs, callbackName, responseSchema, toolCallId, toolName }) => {
+                    const callbackId = generateCallbackId();
+                    const promise = callbackManager.getCallbackResponsePromise(
+                      {
+                        conversationId: conversation.data.id,
+                        messageId: aiMessageId,
+                        toolCallId,
+                        callbackId,
+                      },
+                      responseSchema
+                    );
+
+                    emit.next({
+                      kind: 'request-callback-response',
+                      conversationId: conversation.data.id,
+                      messageId: aiMessageId,
+                      toolCallId,
+                      callbackId,
+                      toolName,
+                      callbackName,
+                      requestArgs: callbackArgs,
+                    });
+
+                    return promise;
+                  },
                 },
                 {
                   version: 'v2',
@@ -113,6 +145,28 @@ export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context
 
       return new ServerSideChatConversation(conversationData).asClientSideConversation();
     }),
+
+    handleCallback: t.procedure
+      .input(
+        z.object({
+          conversationId: z.string(),
+          messageId: z.string(),
+          toolCallId: z.string(),
+          callbackId: z.string(),
+          callbackArgs: z.any(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await callbackManager.respondToCallback(
+          {
+            conversationId: input.conversationId,
+            messageId: input.messageId,
+            toolCallId: input.toolCallId,
+            callbackId: input.callbackId,
+          },
+          input.callbackArgs
+        );
+      }),
   });
 
   return router;

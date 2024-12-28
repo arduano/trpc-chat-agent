@@ -6,12 +6,6 @@ import { ai } from './context';
 // Simple in-memory store for todo items
 const todos: string[] = [];
 
-async function _makeContext() {
-  return {
-    foo: 'bar',
-  } as const;
-}
-
 const calculatorTool = ai.tool({
   name: 'calculator',
   schema: z.object({
@@ -146,7 +140,35 @@ const timerTool = ai.tool({
   mapErrorForAI: (error) => `Timer failed: ${error}`,
 });
 
-const allTools = [calculatorTool, weatherTool, todoTool, timerTool] as const;
+const toolWithCallback = ai.tool({
+  name: 'prompt-user',
+  schema: z.object({
+    question: z.string(),
+  }),
+  description: 'Get the user to respond to a prompt',
+  callbacks: {
+    getResponse: ai.callback({
+      schema: z.object({
+        question: z.string(),
+      }),
+      response: z.object({
+        response: z.string(),
+      }),
+    }),
+  },
+  run: async ({ input: { question }, callbacks }) => {
+    const response = await callbacks.getResponse({ question });
+
+    return {
+      response: `User's response: ${response.response}`,
+      clientResult: response,
+    };
+  },
+  mapArgsForClient: (args) => args,
+  mapErrorForAI: (error) => `Failed to get user response: ${error}`,
+});
+
+const allTools = [calculatorTool, weatherTool, todoTool, timerTool, toolWithCallback] as const;
 
 export const agent = createAdvancedReactAgent({
   llm: new ChatOpenAI({ model: 'gpt-4o' }),

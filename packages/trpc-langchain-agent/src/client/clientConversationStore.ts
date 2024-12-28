@@ -1,31 +1,93 @@
-import type { ClientSideUpdate } from '../common/types';
+import type { ChatTree, ClientSideUpdate } from '../common/types';
 import type { AdvancedReactAgent } from '../server/advancedReactAgent';
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
 import { ClientSideChatConversation } from '../common/types';
 import { mergeKeepingOldReferences } from './merge';
+import { castDraft, Draft, produce } from 'immer';
+
+type ActiveCallback<ToolName extends string, CallbackName extends string, ToolArgs, ResponseType> = {
+  conversationId: string;
+  messageId: string;
+  toolCallId: string;
+  callbackId: string;
+  callbackName: CallbackName;
+  toolName: ToolName;
+  args: ToolArgs;
+  remove: (response: ResponseType) => void;
+};
+
+type ActiveCallbackWithResponse<ToolName extends string, CallbackName extends string, ToolArgs, ResponseType> = Omit<
+  ActiveCallback<ToolName, CallbackName, ToolArgs, ResponseType>,
+  'remove'
+> & {
+  respond: (response: ResponseType) => void;
+};
+
+type AnyActiveCallback = ActiveCallback<string, string, any, any>;
+
+type Callbacks = Record<string, AnyActiveCallback | undefined>;
+
+type ConversationRelatedData = {
+  conversation: ClientSideChatConversation<AdvancedReactAgent>;
+  callbacks: Callbacks;
+};
 
 // Helper function for propagating the "Agent" type into the store
 function makeConversationStore() {
   return create(
     combine(
       {
-        conversations: {} as Record<string, ClientSideChatConversation<AdvancedReactAgent> | undefined>,
+        conversations: {} as Record<string, ConversationRelatedData | undefined>,
       },
       (set, get) => {
-        const getConversation = (conversationId: string) => {
-          return get().conversations[conversationId];
+        let callbackKeyCounter = 0;
+        const generateCallbackKey = () => {
+          callbackKeyCounter += 1;
+          return callbackKeyCounter.toString();
         };
+
+        const getConversation = (conversationId: string) => {
+          return get().conversations[conversationId]?.conversation;
+        };
+
+        const produceData = (fn: (data: Draft<ReturnType<typeof get>>) => void) => {
+          set((state) => produce(state, fn));
+        };
+
         const setConversation = (
           conversationId: string,
           conversation: ClientSideChatConversation<AdvancedReactAgent>
         ) => {
-          set((state) => ({
-            conversations: {
-              ...state.conversations,
-              [conversationId]: conversation,
-            },
-          }));
+          produceData((state) => {
+            if (!state.conversations[conversationId]) {
+              state.conversations[conversationId] = castDraft({ conversation, callbacks: {} });
+            } else {
+              state.conversations[conversationId].conversation = castDraft(conversation);
+            }
+          });
+        };
+
+        const getCallbacks = (conversationId: string) => {
+          return get().conversations[conversationId]?.callbacks ?? {};
+        };
+
+        const addCallback = (conversationId: string, callbackKey: string, callback: AnyActiveCallback) => {
+          produceData((state) => {
+            if (!state.conversations[conversationId]) {
+              return;
+            }
+            state.conversations[conversationId].callbacks[callbackKey] = castDraft(callback);
+          });
+        };
+
+        const removeCallback = (conversationId: string, callbackKey: string) => {
+          produceData((state) => {
+            if (!state.conversations[conversationId]) {
+              return;
+            }
+            delete state.conversations[conversationId].callbacks[callbackKey];
+          });
         };
 
         return {
@@ -42,6 +104,20 @@ function makeConversationStore() {
                 } else {
                   setConversation(conversationId, new ClientSideChatConversation(conversationData));
                 }
+              } else if (event.kind === 'request-callback-response') {
+                const key = generateCallbackKey();
+                addCallback(event.conversationId, key, {
+                  conversationId: event.conversationId,
+                  messageId: event.messageId,
+                  toolCallId: event.toolCallId,
+                  callbackId: event.callbackId,
+                  callbackName: event.callbackName,
+                  toolName: event.toolName,
+                  args: event.requestArgs,
+                  remove: () => {
+                    removeCallback(event.conversationId, key);
+                  },
+                });
               } else {
                 const conversation = getConversation(event.conversationId);
                 if (!conversation) {
@@ -75,6 +151,9 @@ function makeConversationStore() {
             conversation: (conversationId: string) => {
               return getConversation(conversationId);
             },
+            conversationCallbacks: (conversationId: string) => {
+              return getCallbacks(conversationId);
+            },
           },
         };
       }
@@ -83,3 +162,18 @@ function makeConversationStore() {
 }
 
 export const useConversationStore = makeConversationStore();
+
+export function mapActiveCallbackAddResponse<
+  ToolName extends string,
+  CallbackName extends string,
+  ToolArgs,
+  ResponseType,
+>(
+  callback: ActiveCallback<ToolName, CallbackName, ToolArgs, ResponseType>,
+  respond: (response: ResponseType) => Promise<void>
+): ActiveCallbackWithResponse<ToolName, CallbackName, ToolArgs, ResponseType> {
+  return {
+    ...callback,
+    respond,
+  };
+}
