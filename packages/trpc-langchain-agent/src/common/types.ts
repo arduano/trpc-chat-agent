@@ -8,6 +8,7 @@ import { castDraft, produce } from 'immer';
 import { z } from 'zod';
 import { processMessageContentForClient } from './messageContent';
 import { UnreachableError } from './unreachable';
+import { mergeKeepingOldReferences } from './merge';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
 
@@ -594,6 +595,10 @@ export class ClientSideChatConversation<Agent extends ChatAgent<any>> extends Ch
       id: '',
       messageIdCounter: 0,
     });
+  }
+
+  public mergeInNewData(data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>) {
+    this.data = mergeKeepingOldReferences(this.data, data);
   }
 
   public processMessageUpdate(update: ClientSideConversationUpdate) {

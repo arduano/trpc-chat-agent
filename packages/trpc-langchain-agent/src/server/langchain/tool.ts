@@ -1,7 +1,7 @@
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { StructuredChatTool, ToolCallInput, ToolCallOutput } from 'src/common/structuredTool';
 import type { z } from 'zod';
-import type { LangchainToolExtraArgs } from './builder';
+import type { LangchainToolExtraArgs } from '../builder';
 import { CallbackManager, parseCallbackConfigArg } from '@langchain/core/callbacks/manager';
 import { BaseLangChain } from '@langchain/core/language_models/base';
 import { ToolInputParsingException } from '@langchain/core/tools';

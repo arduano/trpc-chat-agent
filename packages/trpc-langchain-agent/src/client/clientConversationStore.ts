@@ -1,11 +1,11 @@
 import type { Draft } from 'immer';
-import type { ClientSideUpdate } from '../common/types';
-import type { ChatAgent } from '../server/chatAgent';
+import type { AgentTools, ChatAgent } from '../common';
+import type { ClientSideConversationData, ClientSideUpdate } from '../common/types';
 import { castDraft, produce } from 'immer';
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
 import { ClientSideChatConversation } from '../common/types';
-import { mergeKeepingOldReferences } from './merge';
+import { mergeKeepingOldReferences } from '../common/merge';
 
 export type ActiveCallback<ToolName extends string, CallbackName extends string, ToolArgs> = {
   conversationId: string;
@@ -49,7 +49,13 @@ function makeConversationStore() {
           set((state) => produce(state, fn));
         };
 
-        const setConversation = (conversationId: string, conversation: ClientSideChatConversation<ChatAgent>) => {
+        const setConversationData = (
+          conversationId: string,
+          conversationData: ClientSideConversationData<AgentTools<ChatAgent>>
+        ) => {
+          // Forcing a new instance/reference each time here
+          const conversation = new ClientSideChatConversation(conversationData);
+
           produceData((state) => {
             if (!state.conversations[conversationId]) {
               state.conversations[conversationId] = castDraft({ conversation, callbacks: {} });
@@ -90,10 +96,12 @@ function makeConversationStore() {
                 if (existingConversation) {
                   // If an existing conversation exists, merge the data so that references are
                   // preserved if the underlying data is the same
-                  const merged = mergeKeepingOldReferences(existingConversation.data, conversationData);
-                  setConversation(conversationId, new ClientSideChatConversation(merged));
+                  existingConversation.mergeInNewData(conversationData);
+
+                  // Force update the reference
+                  setConversationData(conversationId, existingConversation.data);
                 } else {
-                  setConversation(conversationId, new ClientSideChatConversation(conversationData));
+                  setConversationData(conversationId, conversationData);
                 }
               } else if (event.kind === 'request-callback-response') {
                 const key = generateCallbackKey();
@@ -122,7 +130,7 @@ function makeConversationStore() {
                 if (oldData !== conversation.data) {
                   // Change the class instance if the data instance has changed.
                   // This helps with state related stuff.
-                  setConversation(event.conversationId, new ClientSideChatConversation(conversation.data));
+                  setConversationData(event.conversationId, conversation.data);
                 }
               }
             },
@@ -134,7 +142,7 @@ function makeConversationStore() {
               conversation: ClientSideChatConversation<ChatAgent>
             ) => {
               if (!getConversation(conversationId)) {
-                setConversation(conversationId, conversation);
+                setConversationData(conversationId, conversation.data);
               }
             },
             clearCallbacksForConversation: (conversationId: string) => {

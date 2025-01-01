@@ -5,9 +5,9 @@ import type { DeepPartial } from '@trpc/server';
 import type { z, ZodType } from 'zod';
 import type { AnyStructuredChatTool, ToolRunFn } from '../common/structuredTool';
 import type { AnyToolCallback, ToolCallback } from './callback';
-import type { CreateChatAgentArgs } from './chatAgent';
+import type { CreateChatAgentArgs } from './langchain/chatAgent';
 import { StructuredChatTool } from '../common/structuredTool';
-import { createChatAgentLangchain } from './chatAgent';
+import { createChatAgentLangchain } from './langchain/chatAgent';
 
 export abstract class AgentsBackend<ExtraArgs extends readonly any[], BaseMessageType> {
   // Field to stop typescript from complaining about unused types.

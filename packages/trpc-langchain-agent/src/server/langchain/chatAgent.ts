@@ -1,9 +1,10 @@
+import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { AIMessageChunk, BaseMessage, MessageContent } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
-import type { ChatAgent, ChatAgentInvokeArgs } from '../common';
-import type { AnyStructuredChatTool, ToolCallbackInvoker } from '../common/structuredTool';
+import type { ChatAgent, ChatAgentInvokeArgs } from '../../common';
+import type { AnyStructuredChatTool, ToolCallbackInvoker } from '../../common/structuredTool';
 import type {
   AdvancedAIMessageData,
   ChatTree,
@@ -13,15 +14,15 @@ import type {
   ServerSideConversationData,
   ServerSideConversationUpdate,
   ServerSideUpdate,
-} from '../common/types';
+} from '../../common/types';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
-import { Debouncer } from '../common/debounce';
-import { processMessageContentForClient } from '../common/messageContent';
-import { ServerSideChatConversation } from '../common/types';
+import { Debouncer } from '../../common/debounce';
+import { processMessageContentForClient } from '../../common/messageContent';
+import { ServerSideChatConversation } from '../../common/types';
 import { StructuredChatToolLangChain } from './tool';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context = any>() {
@@ -35,23 +36,27 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Con
 }
 
 export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
-  llm: BaseChatModel;
+  // Common
   tools: Tools;
   debounceMs: number;
 
+  // Transformation
   systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);
-
   transformMessages?: (
     conversation: Readonly<ServerSideChatConversation<ChatAgent<Tools>>>,
     branch: ChatTree,
     ctx: Tools[number]['TypeInfo']['Context']
   ) => BaseMessage[] | Promise<BaseMessage[]>;
+
+  // LangChain
+  llm: BaseChatModel;
+  langchainCallbacks?: LangchainCallbacks;
 };
 
 export function createChatAgentLangchain<Tools extends readonly AnyStructuredChatTool[]>(
   args: CreateChatAgentArgs<Tools>
 ): ChatAgent<Tools> {
-  const { llm, tools, debounceMs: _debounceMs } = args;
+  const { llm, tools, debounceMs: _debounceMs, langchainCallbacks } = args;
   const debounceMs = _debounceMs || 100;
 
   const toolsList = tools.map((t) => new StructuredChatToolLangChain(t));
@@ -485,6 +490,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
       const iter = compiled.streamEvents(args, {
         version: 'v2',
         signal: args.controller.signal,
+        callbacks: langchainCallbacks,
       });
       for await (const event of iter) {
         try {

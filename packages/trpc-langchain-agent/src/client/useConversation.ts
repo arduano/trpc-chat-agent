@@ -1,7 +1,7 @@
 import type { MessageContent } from '@langchain/core/messages';
 import type { createTRPCProxyClient } from '@trpc/client';
 import type { z } from 'zod';
-import type { AgentTools, AnyStructuredChatTool } from '../common';
+import type { AgentTools, AnyStructuredChatTool, ChatAgent } from '../common';
 import type {
   AdvancedAIMessageDataClientSide,
   AdvancedAIMessageDataPartClientSide,
@@ -10,7 +10,6 @@ import type {
   ToolCallState,
 } from '../common/types';
 import type { AnyToolCallback, makeChatRouterForAgent } from '../server';
-import type { ChatAgent } from '../server/chatAgent';
 import type { ActiveCallback } from './clientConversationStore';
 import { useEffect, useMemo, useState } from 'react';
 import { ClientSideChatConversation } from '../common/types';
