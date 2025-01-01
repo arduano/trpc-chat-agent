@@ -1,5 +1,5 @@
-import { Runnable } from '@langchain/core/runnables';
-import { AnyStructuredChatTool } from './structuredTool';
+import type { Runnable } from '@langchain/core/runnables';
+import type { AnyStructuredChatTool } from './structuredTool';
 import type { ClientSideChatConversation, ServerSideChatConversation } from './types';
 
 export type AgentTools<Agent extends ChatAgent<any>> =

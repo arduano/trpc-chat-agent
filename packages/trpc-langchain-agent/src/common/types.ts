@@ -2,12 +2,12 @@ import type { BaseMessage, MessageContent, MessageContentText, UsageMetadata } f
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type { Draft, WritableDraft } from 'immer';
 import type { AgentTools, ChatAgent } from './agentTypes';
+import type { AnyStructuredChatTool } from './structuredTool';
 import { AIMessage, HumanMessage, ToolMessage } from '@langchain/core/messages';
 import { castDraft, produce } from 'immer';
 import { z } from 'zod';
-import { UnreachableError } from './unreachable';
-import { AnyStructuredChatTool } from './structuredTool';
 import { processMessageContentForClient } from './messageContent';
+import { UnreachableError } from './unreachable';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
 

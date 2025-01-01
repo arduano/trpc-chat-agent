@@ -1,8 +1,8 @@
 import type { DeepPartial } from '@trpc/server';
 import type { AnyToolCallback, CallbackFunctions } from 'src/server';
 import type { z } from 'zod';
+import type { MessageContent } from './messageContent';
 import { Debouncer } from './debounce';
-import { MessageContent } from './messageContent';
 
 export type ToolRunFn<
   Args extends z.AnyZodObject,
