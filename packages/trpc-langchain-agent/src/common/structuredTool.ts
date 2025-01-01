@@ -147,3 +147,5 @@ export class StructuredChatTool<
 }
 
 export type AnyStructuredChatTool = StructuredChatTool<string, any, any, any, any, any, any, any>;
+
+export type ToolsContext<Tools extends readonly AnyStructuredChatTool[]> = Tools[number]['TypeInfo']['Context'];

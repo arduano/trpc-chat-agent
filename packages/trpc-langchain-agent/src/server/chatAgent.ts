@@ -2,7 +2,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import type { AIMessageChunk, BaseMessage, MessageContent } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
-import type { ChatAgent } from '../common';
+import type { ChatAgent, ChatAgentInvokeArgs } from '../common';
 import type { AnyStructuredChatTool, ToolCallbackInvoker } from '../common/structuredTool';
 import type {
   AdvancedAIMessageData,
@@ -50,7 +50,7 @@ export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> 
 
 export function createChatAgentLangchain<Tools extends readonly AnyStructuredChatTool[]>(
   args: CreateChatAgentArgs<Tools>
-) {
+): ChatAgent<Tools> {
   const { llm, tools, debounceMs: _debounceMs } = args;
   const debounceMs = _debounceMs || 100;
 
@@ -480,5 +480,32 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
 
   const compiled = workflow.compile({});
 
-  return compiled as typeof compiled & ChatAgent<Tools>;
+  return {
+    async *invoke(args: ChatAgentInvokeArgs<Tools>) {
+      const iter = compiled.streamEvents(args, {
+        version: 'v2',
+        signal: args.controller.signal,
+      });
+      for await (const event of iter) {
+        try {
+          if (event.name === 'on_conversation_client_update') {
+            const eventData = event.data as ClientSideUpdate;
+            yield {
+              side: 'client',
+              update: eventData,
+            };
+          }
+          if (event.name === 'on_conversation_server_update') {
+            const eventData = event.data as ServerSideUpdate;
+            yield {
+              side: 'server',
+              update: eventData,
+            };
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    },
+  };
 }

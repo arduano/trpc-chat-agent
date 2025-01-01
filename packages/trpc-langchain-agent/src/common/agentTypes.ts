@@ -1,6 +1,12 @@
-import type { Runnable } from '@langchain/core/runnables';
-import type { AnyStructuredChatTool } from './structuredTool';
-import type { ClientSideChatConversation, ServerSideChatConversation } from './types';
+import type { MessageContent } from './messageContent';
+import type { AnyStructuredChatTool, ToolCallbackInvoker, ToolsContext } from './structuredTool';
+import type {
+  AgentUpdateMessage,
+  ChatTree,
+  ClientSideChatConversation,
+  ServerSideChatConversation,
+  ServerSideConversationData,
+} from './types';
 
 export type AgentTools<Agent extends ChatAgent<any>> =
   Agent extends ChatAgent<infer Tools> ? NonNullable<Tools> : never;
@@ -13,7 +19,15 @@ export type AdvancedReactAgentClientConversation<Agent extends ChatAgent<any>> =
   AgentTools<Agent>
 >;
 
-export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable & {
-  // Not real data, just a marker type
-  __toolTypes?: Tools;
+export type ChatAgentInvokeArgs<Tools extends readonly AnyStructuredChatTool[]> = {
+  conversationData: ServerSideConversationData<Tools>;
+  chatBranch: ChatTree;
+  humanMessageContent: MessageContent;
+  getCtx: () => ToolsContext<Tools>;
+  callbackInvoker: ToolCallbackInvoker;
+  controller: AbortController;
+};
+
+export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any> = {
+  invoke: (args: ChatAgentInvokeArgs<Tools>) => AsyncIterableIterator<AgentUpdateMessage>;
 };

@@ -769,6 +769,16 @@ export type ServerSideConversationUpdate =
 
 export type ServerSideUpdate = ServerSyncConversation | ServerSideConversationUpdate;
 
+export type AgentUpdateMessage =
+  | {
+      side: 'server';
+      update: ServerSideUpdate;
+    }
+  | {
+      side: 'client';
+      update: ClientSideUpdate;
+    };
+
 function concatMessageContent(messageContent: MessageContent, contentToAppend: MessageContent): MessageContent {
   // Handle mismatches between string and non-string content
   if (typeof contentToAppend === 'string') {
