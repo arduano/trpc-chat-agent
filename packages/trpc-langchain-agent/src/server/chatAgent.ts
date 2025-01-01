@@ -17,10 +17,12 @@ import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
-import { processMessageContentForClient } from '../common/content';
 import { Debouncer } from '../common/debounce';
 import { ServerSideChatConversation } from '../common/types';
-import { type AnyStructuredChatTool, StructuredChatToolLangChain, type ToolCallbackInvoker } from './tool';
+import { ChatAgent } from '../common';
+import { processMessageContentForClient } from '../common/messageContent';
+import { AnyStructuredChatTool, ToolCallbackInvoker } from '../common/structuredTool';
+import { StructuredChatToolLangChain } from './tool';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context = any>() {
   return Annotation.Root({
@@ -31,10 +33,6 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Con
     callbackInvoker: Annotation<ToolCallbackInvoker>,
   });
 }
-
-type StateAnnotationForTools<Tools extends readonly AnyStructuredChatTool[]> = ReturnType<
-  typeof makeStateAnnotation<Tools>
->['State'];
 
 export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   llm: BaseChatModel;
@@ -48,13 +46,6 @@ export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> 
     branch: ChatTree,
     ctx: Tools[number]['TypeInfo']['Context']
   ) => BaseMessage[] | Promise<BaseMessage[]>;
-};
-
-export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable<
-  StateAnnotationForTools<Tools>
-> & {
-  // Not real data, just a marker type
-  __toolTypes?: Tools;
 };
 
 export function createChatAgentLangchain<Tools extends readonly AnyStructuredChatTool[]>(

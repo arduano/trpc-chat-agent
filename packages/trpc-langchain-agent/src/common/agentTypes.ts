@@ -1,4 +1,5 @@
-import type { ChatAgent } from '../server';
+import { Runnable } from '@langchain/core/runnables';
+import { AnyStructuredChatTool } from './structuredTool';
 import type { ClientSideChatConversation, ServerSideChatConversation } from './types';
 
 export type AgentTools<Agent extends ChatAgent<any>> =
@@ -11,3 +12,8 @@ export type AdvancedReactAgentConversation<Agent extends ChatAgent<any>> = Serve
 export type AdvancedReactAgentClientConversation<Agent extends ChatAgent<any>> = ClientSideChatConversation<
   AgentTools<Agent>
 >;
+
+export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable & {
+  // Not real data, just a marker type
+  __toolTypes?: Tools;
+};
