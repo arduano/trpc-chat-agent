@@ -1,4 +1,3 @@
-import { createAdvancedReactAgent } from '@arduano/trpc-langchain-agent/server';
 import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
 import { ai } from './context';
@@ -170,7 +169,7 @@ const toolWithCallback = ai.tool({
 
 const allTools = [calculatorTool, weatherTool, todoTool, timerTool, toolWithCallback] as const;
 
-export const agent = createAdvancedReactAgent({
+export const agent = ai.agent({
   llm: new ChatOpenAI({ model: 'gpt-4o' }),
   tools: allTools,
   debounceMs: 0,

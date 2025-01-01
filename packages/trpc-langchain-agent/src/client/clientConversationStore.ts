@@ -1,6 +1,6 @@
 import type { Draft } from 'immer';
 import type { ClientSideUpdate } from '../common/types';
-import type { AdvancedReactAgent } from '../server/advancedReactAgent';
+import type { ChatAgent } from '../server/chatAgent';
 import { castDraft, produce } from 'immer';
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
@@ -23,7 +23,7 @@ type AnyActiveCallback = ActiveCallback<string, string, any>;
 type Callbacks = Record<string, AnyActiveCallback | undefined>;
 
 type ConversationRelatedData = {
-  conversation: ClientSideChatConversation<AdvancedReactAgent>;
+  conversation: ClientSideChatConversation<ChatAgent>;
   callbacks: Callbacks;
 };
 
@@ -49,10 +49,7 @@ function makeConversationStore() {
           set((state) => produce(state, fn));
         };
 
-        const setConversation = (
-          conversationId: string,
-          conversation: ClientSideChatConversation<AdvancedReactAgent>
-        ) => {
+        const setConversation = (conversationId: string, conversation: ClientSideChatConversation<ChatAgent>) => {
           produceData((state) => {
             if (!state.conversations[conversationId]) {
               state.conversations[conversationId] = castDraft({ conversation, callbacks: {} });
@@ -134,7 +131,7 @@ function makeConversationStore() {
             },
             setConversationIfNotPresent: (
               conversationId: string,
-              conversation: ClientSideChatConversation<AdvancedReactAgent>
+              conversation: ClientSideChatConversation<ChatAgent>
             ) => {
               if (!getConversation(conversationId)) {
                 setConversation(conversationId, conversation);

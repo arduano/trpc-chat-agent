@@ -12,7 +12,6 @@
     "pnpm": "^9.6.0"
   },
   "scripts": {
-    "dev": "pnpm run --cwd example/server dev & pnpm run --cwd example/client dev",
     "server": "cd example/server && pnpm",
     "client": "cd example/client && pnpm",
     "package": "cd packages/trpc-langchain-agent && pnpm",

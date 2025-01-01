@@ -1,13 +1,13 @@
-import type { AdvancedReactAgent } from '../server';
+import type { ChatAgent } from '../server';
 import type { ClientSideChatConversation, ServerSideChatConversation } from './types';
 
-export type AgentTools<Agent extends AdvancedReactAgent<any>> =
-  Agent extends AdvancedReactAgent<infer Tools> ? NonNullable<Tools> : never;
+export type AgentTools<Agent extends ChatAgent<any>> =
+  Agent extends ChatAgent<infer Tools> ? NonNullable<Tools> : never;
 
-export type AdvancedReactAgentConversation<Agent extends AdvancedReactAgent<any>> = ServerSideChatConversation<
+export type AdvancedReactAgentConversation<Agent extends ChatAgent<any>> = ServerSideChatConversation<
   AgentTools<Agent>
 >;
 
-export type AdvancedReactAgentClientConversation<Agent extends AdvancedReactAgent<any>> = ClientSideChatConversation<
+export type AdvancedReactAgentClientConversation<Agent extends ChatAgent<any>> = ClientSideChatConversation<
   AgentTools<Agent>
 >;

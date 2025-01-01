@@ -10,7 +10,7 @@ import type {
   ToolCallState,
 } from '../common/types';
 import type { AnyToolCallback, makeChatRouterForAgent } from '../server';
-import type { AdvancedReactAgent } from '../server/advancedReactAgent';
+import type { ChatAgent } from '../server/chatAgent';
 import type { ActiveCallback } from './clientConversationStore';
 import { useEffect, useMemo, useState } from 'react';
 import { ClientSideChatConversation } from '../common/types';
@@ -18,12 +18,12 @@ import { useConversationStore } from './clientConversationStore';
 import useKeyedMemo from './useKeyedMemo';
 import { useRefValue } from './useRefValue';
 
-type UseConversationArgs<Agent extends AdvancedReactAgent> = {
+type UseConversationArgs<Agent extends ChatAgent> = {
   conversationId?: string;
   router: RouterTypeFromAgent<Agent>;
   onUpdateConversationId?: (conversationId: string) => void;
 };
-export function useConversation<Agent extends AdvancedReactAgent>({
+export function useConversation<Agent extends ChatAgent>({
   conversationId,
   router,
   onUpdateConversationId,
@@ -222,7 +222,7 @@ export function useConversation<Agent extends AdvancedReactAgent>({
   };
 }
 
-function useConversationStreamer<Agent extends AdvancedReactAgent>(
+function useConversationStreamer<Agent extends ChatAgent>(
   router: RouterTypeFromAgent<Agent>,
   callbacks: { onUpdate: (event: ClientSideUpdate) => void; onComplete: () => void }
 ) {
@@ -276,7 +276,7 @@ function useConversationStreamer<Agent extends AdvancedReactAgent>(
   };
 }
 
-type RouterTypeFromAgent<Agent extends AdvancedReactAgent> = ReturnType<
+type RouterTypeFromAgent<Agent extends ChatAgent> = ReturnType<
   typeof createTRPCProxyClient<ReturnType<typeof makeChatRouterForAgent<Agent, any>>>
 >;
 

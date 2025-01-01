@@ -1,3 +1,5 @@
+/* eslint-disable perfectionist/sort-imports */
+import './env';
 import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import { WebSocketServer } from 'ws';

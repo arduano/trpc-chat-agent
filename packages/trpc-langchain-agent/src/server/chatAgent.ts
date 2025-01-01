@@ -1,5 +1,5 @@
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import type { AIMessageChunk, MessageContent, MessageContentComplex } from '@langchain/core/messages';
+import type { AIMessageChunk, BaseMessage, MessageContent } from '@langchain/core/messages';
 import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
 import type {
@@ -12,15 +12,15 @@ import type {
   ServerSideConversationUpdate,
   ServerSideUpdate,
 } from '../common/types';
-import type { AnyStructuredChatTool, ToolCallbackInvoker } from './tool';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
-import { BaseMessage, isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
+import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
+import { processMessageContentForClient } from '../common/content';
 import { Debouncer } from '../common/debounce';
 import { ServerSideChatConversation } from '../common/types';
-import { processMessageContentForClient } from '../common/content';
+import { type AnyStructuredChatTool, StructuredChatToolLangChain, type ToolCallbackInvoker } from './tool';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context = any>() {
   return Annotation.Root({
@@ -36,7 +36,7 @@ type StateAnnotationForTools<Tools extends readonly AnyStructuredChatTool[]> = R
   typeof makeStateAnnotation<Tools>
 >['State'];
 
-export type CreateAdvancedReactAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
+export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   llm: BaseChatModel;
   tools: Tools;
   debounceMs: number;
@@ -44,26 +44,26 @@ export type CreateAdvancedReactAgentArgs<Tools extends readonly AnyStructuredCha
   systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);
 
   transformMessages?: (
-    conversation: Readonly<ServerSideChatConversation<AdvancedReactAgent<Tools>>>,
+    conversation: Readonly<ServerSideChatConversation<ChatAgent<Tools>>>,
     branch: ChatTree,
     ctx: Tools[number]['TypeInfo']['Context']
   ) => BaseMessage[] | Promise<BaseMessage[]>;
 };
 
-export type AdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable<
+export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable<
   StateAnnotationForTools<Tools>
 > & {
   // Not real data, just a marker type
   __toolTypes?: Tools;
 };
 
-export function createAdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[]>(
-  args: CreateAdvancedReactAgentArgs<Tools>
+export function createChatAgentLangchain<Tools extends readonly AnyStructuredChatTool[]>(
+  args: CreateChatAgentArgs<Tools>
 ) {
   const { llm, tools, debounceMs: _debounceMs } = args;
   const debounceMs = _debounceMs || 100;
 
-  const toolsList = tools as any as AnyStructuredChatTool[]; // Remove "readonly"
+  const toolsList = tools.map((t) => new StructuredChatToolLangChain(t));
 
   const StateAnnotation = makeStateAnnotation();
   type AgentState = typeof StateAnnotation.State;
@@ -97,7 +97,7 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
   };
 
   const transformMessages = async (
-    conversation: Readonly<ServerSideChatConversation<AdvancedReactAgent<Tools>>>,
+    conversation: Readonly<ServerSideChatConversation<ChatAgent<Tools>>>,
     branch: ChatTree,
     ctx: Tools[number]['TypeInfo']['Context']
   ) => {
@@ -247,13 +247,13 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
               aggregateChunk = aggregateChunk.concat(data);
             }
 
-            if (data.content.length > 0) {
-              sendServerSideUpdate({
-                kind: 'update-content',
-                messageId: aiMessageId,
-                totalContent: aggregateChunk.content,
-              });
+            sendServerSideUpdate({
+              kind: 'update-content',
+              messageId: aiMessageId,
+              totalContent: aggregateChunk.content,
+            });
 
+            if (data.content.length > 0) {
               const processedDelta = processMessageContentForClient(data.content);
               sendClientSideUpdate({
                 kind: 'update-content',
@@ -403,25 +403,15 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
 
         // Call the tool
         try {
-          const { response, clientResult } = await tool.invoke(
-            {
-              input: toolCall.args,
-              ctx: state.getCtx,
-              callbackInvoker: state.callbackInvoker,
-              toolCallId: toolCall.id,
+          const { response, clientResult } = await tool.invoke({
+            input: toolCall.args,
+            ctx: state.getCtx,
+            callbackInvoker: state.callbackInvoker,
+            toolCallId: toolCall.id,
+            progressCallback: (data: any) => {
+              progressDebouncer.debounce(data);
             },
-            {
-              callbacks: [
-                {
-                  handleCustomEvent(name, data) {
-                    if (name === 'on_structured_tool_progress') {
-                      progressDebouncer.debounce(data);
-                    }
-                  },
-                },
-              ],
-            }
-          );
+          });
 
           progressDebouncer.flush();
 
@@ -499,5 +489,5 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
 
   const compiled = workflow.compile({});
 
-  return compiled as typeof compiled & AdvancedReactAgent<Tools>;
+  return compiled as typeof compiled & ChatAgent<Tools>;
 }

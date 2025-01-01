@@ -1,14 +1,13 @@
 import type { initTRPC } from '@trpc/server';
 import type { AgentTools } from '../common/agentTypes';
 import type { ChatTree, ClientSideUpdate, ServerSideConversationData, ServerSideUpdate } from '../common/types';
-import type { AdvancedReactAgent } from './advancedReactAgent';
+import type { ChatAgent } from './chatAgent';
 import { observable } from '@trpc/server/observable';
 import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversation } from '../common/types';
 import { CallbackManager, generateCallbackId } from './callback';
-import { BaseMessage, SystemMessage } from '@langchain/core/messages';
 
-type MakeChatRouterForAgentArgs<Agent extends AdvancedReactAgent, Context extends object | ContextCallback> = {
+type MakeChatRouterForAgentArgs<Agent extends ChatAgent, Context extends object | ContextCallback> = {
   agent: Agent;
   t: TrpcWithContext<Context>;
   createConversation: (ctx: Context) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
@@ -25,7 +24,7 @@ type TrpcWithContext<Context extends object | ContextCallback> = ReturnType<
   ReturnType<typeof initTRPC.context<Context>>['create']
 >;
 
-export function makeChatRouterForAgent<Agent extends AdvancedReactAgent, Context extends object | ContextCallback>({
+export function makeChatRouterForAgent<Agent extends ChatAgent, Context extends object | ContextCallback>({
   agent,
   getConversation,
   saveConversation,

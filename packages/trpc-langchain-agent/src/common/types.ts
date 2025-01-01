@@ -1,14 +1,14 @@
 import type { BaseMessage, MessageContent, MessageContentText, UsageMetadata } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type { Draft, WritableDraft } from 'immer';
-import type { AdvancedReactAgent } from '../server/advancedReactAgent';
+import type { ChatAgent } from '../server/chatAgent';
 import type { AnyStructuredChatTool } from '../server/tool';
 import type { AgentTools } from './agentTypes';
 import { AIMessage, HumanMessage, ToolMessage } from '@langchain/core/messages';
 import { castDraft, produce } from 'immer';
 import { z } from 'zod';
-import { UnreachableError } from './unreachable';
 import { processMessageContentForClient } from './content';
+import { UnreachableError } from './unreachable';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
 
@@ -53,7 +53,6 @@ export type AdvancedAIMessagePartData<Tools extends readonly AnyStructuredChatTo
   toolCalls: AdvancedToolCallFromToolsArray<Tools>[];
   responseMetadata?: Record<string, any>;
   usageMetadata?: UsageMetadata;
-  rawAiMessage: any;
 };
 
 export type AdvancedAIMessageData<Tools extends readonly AnyStructuredChatTool[]> = {
@@ -111,17 +110,17 @@ export class ChatAdvancedAIMessage<Tools extends readonly AnyStructuredChatTool[
     }
 
     function partAsLangchainMessages(part: AdvancedAIMessagePartData<Tools>): BaseMessage[] {
-      let aiMessage: AIMessage;
-
-      // If the raw aiMessage is present, use it. Otherwise generate one from the other fields.
-      if (part.rawAiMessage) {
-        aiMessage = part.rawAiMessage;
-      } else {
-        // Very minimal AI message. The raw content would only be missing in rare early cancellation edge cases.
-        aiMessage = new AIMessage({
-          content: part.content,
-        });
-      }
+      const aiMessage = new AIMessage({
+        content: part.content,
+        tool_calls: part.toolCalls.map<ToolCall>((tc) => ({
+          name: tc.name,
+          args: tc.args,
+          id: tc.id,
+          type: 'tool_call',
+        })),
+        response_metadata: part.responseMetadata,
+        usage_metadata: part.usageMetadata,
+      });
 
       const toolResponseMessages = part.toolCalls.map<ToolMessage>(
         (tc) =>
@@ -449,14 +448,14 @@ export class ChatConversation<AIMessage extends { id: string }> {
   }
 }
 
-export class ServerSideChatConversation<Agent extends AdvancedReactAgent<any>> extends ChatConversation<
+export class ServerSideChatConversation<Agent extends ChatAgent<any>> extends ChatConversation<
   AdvancedAIMessageData<AgentTools<Agent>>
 > {
   constructor(data: Readonly<ServerSideConversationData<AgentTools<Agent>>>) {
     super(data);
   }
 
-  public static newConversationData<Agent extends AdvancedReactAgent<any>>(
+  public static newConversationData<Agent extends ChatAgent<any>>(
     id: string
   ): ServerSideConversationData<AgentTools<Agent>> {
     return {
@@ -563,7 +562,6 @@ export class ServerSideChatConversation<Agent extends AdvancedReactAgent<any>> e
       message.parts.push({
         content: '',
         toolCalls: [],
-        rawAiMessage: null,
       });
     });
   }
@@ -581,14 +579,14 @@ export class ServerSideChatConversation<Agent extends AdvancedReactAgent<any>> e
   }
 }
 
-export class ClientSideChatConversation<Agent extends AdvancedReactAgent<any>> extends ChatConversation<
+export class ClientSideChatConversation<Agent extends ChatAgent<any>> extends ChatConversation<
   AdvancedAIMessageDataClientSide<AgentTools<Agent>>
 > {
   constructor(data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>) {
     super(data);
   }
 
-  public static makePlaceholderConversation<Agent extends AdvancedReactAgent>(): ClientSideChatConversation<Agent> {
+  public static makePlaceholderConversation<Agent extends ChatAgent>(): ClientSideChatConversation<Agent> {
     return new ClientSideChatConversation({
       aiMessageChildIds: {},
       humanMessageChildIds: {},

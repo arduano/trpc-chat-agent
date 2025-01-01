@@ -1,4 +1,4 @@
-import { initAgents } from '@arduano/trpc-langchain-agent/server';
+import { initAgents, LangChainAgentsBackend } from '@arduano/trpc-langchain-agent/server';
 import { kvsEnvStorage } from '@kvs/env';
 import { initTRPC } from '@trpc/server';
 
@@ -15,4 +15,4 @@ export async function createContext() {
 }
 
 export const t = initTRPC.context<typeof createContext>().create();
-export const ai = initAgents.context<typeof createContext>().create();
+export const ai = initAgents.context<typeof createContext>().backend(new LangChainAgentsBackend()).create();

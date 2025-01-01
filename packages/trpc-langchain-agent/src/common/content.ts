@@ -1,4 +1,4 @@
-import { MessageContentComplex, MessageContent } from '@langchain/core/messages';
+import type { MessageContent, MessageContentComplex } from '@langchain/core/messages';
 
 const contentTypesThatShouldBeString = ['text', 'text_delta'];
 const allowedClientContentTypes = [...contentTypesThatShouldBeString];

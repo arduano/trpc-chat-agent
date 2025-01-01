@@ -47,6 +47,7 @@ export default antfu(
       'antfu/consistent-list-newline': 'off',
       'react-dom/no-missing-button-type': 'off',
       'style/jsx-wrap-multilines': 'off',
+      'style/type-generic-spacing': 'off',
     },
   },
   {
