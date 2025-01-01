@@ -8,6 +8,7 @@ import { AIMessage, HumanMessage, ToolMessage } from '@langchain/core/messages';
 import { castDraft, produce } from 'immer';
 import { z } from 'zod';
 import { UnreachableError } from './unreachable';
+import { processMessageContentForClient } from './content';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
 
@@ -52,6 +53,7 @@ export type AdvancedAIMessagePartData<Tools extends readonly AnyStructuredChatTo
   toolCalls: AdvancedToolCallFromToolsArray<Tools>[];
   responseMetadata?: Record<string, any>;
   usageMetadata?: UsageMetadata;
+  rawAiMessage: any;
 };
 
 export type AdvancedAIMessageData<Tools extends readonly AnyStructuredChatTool[]> = {
@@ -104,18 +106,22 @@ export class ChatAdvancedAIMessage<Tools extends readonly AnyStructuredChatTool[
   }
 
   public asLangChainMessages(): BaseMessage[] {
+    function partHasContentOrToolCalls(part: AdvancedAIMessagePartData<Tools>): boolean {
+      return part.content.length > 0 || part.toolCalls.length > 0;
+    }
+
     function partAsLangchainMessages(part: AdvancedAIMessagePartData<Tools>): BaseMessage[] {
-      const aiMessage = new AIMessage({
-        content: part.content,
-        tool_calls: part.toolCalls.map<ToolCall>((tc) => ({
-          name: tc.name,
-          args: tc.args,
-          id: tc.id,
-          type: 'tool_call',
-        })),
-        response_metadata: part.responseMetadata,
-        usage_metadata: part.usageMetadata,
-      });
+      let aiMessage: AIMessage;
+
+      // If the raw aiMessage is present, use it. Otherwise generate one from the other fields.
+      if (part.rawAiMessage) {
+        aiMessage = part.rawAiMessage;
+      } else {
+        // Very minimal AI message. The raw content would only be missing in rare early cancellation edge cases.
+        aiMessage = new AIMessage({
+          content: part.content,
+        });
+      }
 
       const toolResponseMessages = part.toolCalls.map<ToolMessage>(
         (tc) =>
@@ -128,7 +134,7 @@ export class ChatAdvancedAIMessage<Tools extends readonly AnyStructuredChatTool[
       return [aiMessage, ...toolResponseMessages];
     }
 
-    return this.data.parts.flatMap(partAsLangchainMessages);
+    return this.data.parts.filter(partHasContentOrToolCalls).flatMap(partAsLangchainMessages);
   }
 
   public asClientSideMessageData(): AdvancedAIMessageDataClientSide<Tools> {
@@ -136,7 +142,7 @@ export class ChatAdvancedAIMessage<Tools extends readonly AnyStructuredChatTool[
       id: this.data.id,
       kind: this.data.kind,
       parts: this.data.parts.map<AdvancedAIMessageDataPartClientSide<Tools>>((part) => ({
-        content: part.content,
+        content: processMessageContentForClient(part.content),
         toolCalls: part.toolCalls.map<AdvancedToolCallClientSideFromToolsArray<Tools>>((tc) => ({
           id: tc.id,
           name: tc.name,
@@ -446,7 +452,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
 export class ServerSideChatConversation<Agent extends AdvancedReactAgent<any>> extends ChatConversation<
   AdvancedAIMessageData<AgentTools<Agent>>
 > {
-  constructor(data: ServerSideConversationData<AgentTools<Agent>>) {
+  constructor(data: Readonly<ServerSideConversationData<AgentTools<Agent>>>) {
     super(data);
   }
 
@@ -508,7 +514,7 @@ export class ServerSideChatConversation<Agent extends AdvancedReactAgent<any>> e
   private updateMessageContent(update: ServerUpdateMessageContent) {
     this.produceAiMessage(update.messageId, (message) => {
       const lastPart = message.parts[message.parts.length - 1];
-      lastPart.content = concatMessageContent(lastPart.content, update.contentToAppend);
+      lastPart.content = update.totalContent;
     });
   }
 
@@ -557,6 +563,7 @@ export class ServerSideChatConversation<Agent extends AdvancedReactAgent<any>> e
       message.parts.push({
         content: '',
         toolCalls: [],
+        rawAiMessage: null,
       });
     });
   }
@@ -723,7 +730,7 @@ export type ClientSideUpdate = ClientSyncConversation | ClientRequestCallbackRes
 export type ServerUpdateMessageContent = {
   kind: 'update-content';
   messageId: string;
-  contentToAppend: MessageContent;
+  totalContent: MessageContent;
 };
 
 export type ServerUpdateBeginToolCall = {

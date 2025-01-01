@@ -1,8 +1,8 @@
 import { nanoid } from 'nanoid';
-import { ServerSideChatConversation } from '../../../packages/trpc-langchain-agent/src/common/types';
-import { makeChatRouterForAgent } from '../../../packages/trpc-langchain-agent/src/server/chatRouter';
 import { agent } from './agent';
 import { t } from './context';
+import { ServerSideChatConversation } from '@arduano/trpc-langchain-agent/common';
+import { makeChatRouterForAgent } from '@arduano/trpc-langchain-agent/server';
 
 const router = t.router({
   chat: makeChatRouterForAgent({

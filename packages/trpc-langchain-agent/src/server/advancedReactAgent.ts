@@ -1,5 +1,5 @@
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import type { AIMessageChunk, MessageContent } from '@langchain/core/messages';
+import type { AIMessageChunk, MessageContent, MessageContentComplex } from '@langchain/core/messages';
 import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
 import type {
@@ -14,19 +14,20 @@ import type {
 } from '../common/types';
 import type { AnyStructuredChatTool, ToolCallbackInvoker } from './tool';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
-import { isAIMessageChunk } from '@langchain/core/messages';
+import { BaseMessage, isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
 import { Debouncer } from '../common/debounce';
 import { ServerSideChatConversation } from '../common/types';
+import { processMessageContentForClient } from '../common/content';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context = any>() {
   return Annotation.Root({
     conversationData: Annotation<ServerSideConversationData<Tools>>,
     chatBranch: Annotation<ChatTree>,
     humanMessageContent: Annotation<MessageContent>,
-    ctx: Annotation<Context>,
+    getCtx: Annotation<() => Context>,
     callbackInvoker: Annotation<ToolCallbackInvoker>,
   });
 }
@@ -39,6 +40,14 @@ export type CreateAdvancedReactAgentArgs<Tools extends readonly AnyStructuredCha
   llm: BaseChatModel;
   tools: Tools;
   debounceMs: number;
+
+  systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);
+
+  transformMessages?: (
+    conversation: Readonly<ServerSideChatConversation<AdvancedReactAgent<Tools>>>,
+    branch: ChatTree,
+    ctx: Tools[number]['TypeInfo']['Context']
+  ) => BaseMessage[] | Promise<BaseMessage[]>;
 };
 
 export type AdvancedReactAgent<Tools extends readonly AnyStructuredChatTool[] = any> = Runnable<
@@ -76,6 +85,27 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
 
   const sendServerSideUpdateToConfig = (update: ServerSideUpdate, config: RunnableConfig) => {
     dispatchCustomEvent('on_conversation_server_update', update, config);
+  };
+
+  const addSystemMessage = async (messages: BaseMessage[], ctx: Tools[number]['TypeInfo']['Context']) => {
+    if (typeof args.systemMessage === 'string') {
+      messages.unshift(new SystemMessage(args.systemMessage));
+    } else if (typeof args.systemMessage === 'function') {
+      messages.unshift(new SystemMessage(await args.systemMessage(ctx)));
+    }
+    return messages;
+  };
+
+  const transformMessages = async (
+    conversation: Readonly<ServerSideChatConversation<AdvancedReactAgent<Tools>>>,
+    branch: ChatTree,
+    ctx: Tools[number]['TypeInfo']['Context']
+  ) => {
+    if (typeof args.transformMessages === 'function') {
+      return addSystemMessage(await args.transformMessages(conversation, branch, ctx), ctx);
+    }
+
+    return addSystemMessage(conversation.asLangChainMessagesArray(branch), ctx);
   };
 
   const handleErrors = (fn: (...args: any[]) => any) => {
@@ -162,7 +192,7 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
   const callModel = async (state: AgentState, config: RunnableConfig) => {
     const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
 
-    const messageList = stateConvo.asLangChainMessagesArray(state.chatBranch);
+    const messageList = await transformMessages(stateConvo, state.chatBranch, state.getCtx);
 
     const aiMessage = stateConvo.getAIMessageAt(state.chatBranch);
     if (!aiMessage) {
@@ -221,13 +251,15 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
               sendServerSideUpdate({
                 kind: 'update-content',
                 messageId: aiMessageId,
-                contentToAppend: data.content,
+                totalContent: aggregateChunk.content,
               });
+
+              const processedDelta = processMessageContentForClient(data.content);
               sendClientSideUpdate({
                 kind: 'update-content',
                 conversationId: state.conversationData.id,
                 messageId: aiMessageId,
-                contentToAppend: data.content,
+                contentToAppend: processedDelta,
               });
             }
 
@@ -372,7 +404,12 @@ export function createAdvancedReactAgent<Tools extends readonly AnyStructuredCha
         // Call the tool
         try {
           const { response, clientResult } = await tool.invoke(
-            { input: toolCall.args, ctx: state.ctx, callbackInvoker: state.callbackInvoker, toolCallId: toolCall.id },
+            {
+              input: toolCall.args,
+              ctx: state.getCtx,
+              callbackInvoker: state.callbackInvoker,
+              toolCallId: toolCall.id,
+            },
             {
               callbacks: [
                 {

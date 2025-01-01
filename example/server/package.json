@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "dependencies": {
     "@arduano/trpc-langchain-agent": "workspace:*",
