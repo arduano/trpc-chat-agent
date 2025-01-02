@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@arduano/trpc-langchain-agent": "workspace:*",
+    "@arduano/trpc-chat-agent": "workspace:*",
+    "@arduano/trpc-chat-agent-react": "workspace:*",
     "@tanstack/react-query": "4.36.1",
     "@trpc/client": "^10.45.0",
     "@trpc/react-query": "^10.45.0",

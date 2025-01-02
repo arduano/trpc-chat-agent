@@ -1,13 +1,9 @@
-import type { CallbackManagerForToolRun } from '@langchain/core/callbacks/manager';
-import type { BaseMessage, MessageContent } from '@langchain/core/messages';
-import type { RunnableConfig } from '@langchain/core/runnables';
+import type { MessageContent } from '@langchain/core/messages';
 import type { DeepPartial } from '@trpc/server';
 import type { z, ZodType } from 'zod';
-import type { AnyStructuredChatTool, ToolRunFn } from '../common/structuredTool';
+import type { ToolRunFn } from '../common/structuredTool';
 import type { AnyToolCallback, ToolCallback } from './callback';
-import type { CreateChatAgentArgs } from './langchain/chatAgent';
 import { StructuredChatTool } from '../common/structuredTool';
-import { createChatAgentLangchain } from './langchain/chatAgent';
 
 export abstract class AgentsBackend<ExtraArgs extends readonly any[], BaseMessageType> {
   // Field to stop typescript from complaining about unused types.
@@ -18,17 +14,6 @@ export abstract class AgentsBackend<ExtraArgs extends readonly any[], BaseMessag
 }
 
 type AnyAgentsBackend = AgentsBackend<any[], any>;
-
-export type LangchainToolExtraArgs = readonly [CallbackManagerForToolRun | undefined, RunnableConfig];
-export class LangChainAgentsBackend extends AgentsBackend<LangchainToolExtraArgs, BaseMessage> {
-  constructor() {
-    super();
-  }
-
-  public createAgent = <Tools extends readonly AnyStructuredChatTool[]>(args: CreateChatAgentArgs<Tools>) => {
-    return createChatAgentLangchain(args);
-  };
-}
 
 type BackendExtraArgs<T extends AnyAgentsBackend> = T extends AgentsBackend<infer ExtraArgs, any> ? ExtraArgs : never;
 

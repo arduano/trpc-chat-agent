@@ -1,4 +1,5 @@
-import { initAgents, LangChainAgentsBackend } from '@arduano/trpc-langchain-agent/server';
+import { initAgents } from '@arduano/trpc-chat-agent';
+import { LangChainAgentsBackend } from '@arduano/trpc-chat-agent-langchain';
 import { kvsEnvStorage } from '@kvs/env';
 import { initTRPC } from '@trpc/server';
 

@@ -1,23 +1,6 @@
 {
-  "name": "@arduano/trpc-langchain-agent",
+  "name": "@arduano/trpc-chat-agent",
   "version": "0.1.0",
-  "exports": {
-    "./client": {
-      "import": "./dist/client/index.mjs",
-      "require": "./dist/client/index.js",
-      "default": "./dist/client/index.js"
-    },
-    "./server": {
-      "import": "./dist/server/index.mjs",
-      "require": "./dist/server/index.js",
-      "default": "./dist/server/index.js"
-    },
-    "./common": {
-      "import": "./dist/common/index.mjs",
-      "require": "./dist/common/index.js",
-      "default": "./dist/common/index.js"
-    }
-  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

@@ -1,10 +1,14 @@
+import type {
+  AgentTools,
+  ChatAgent,
+  ClientSideConversationData,
+  ClientSideUpdate,
+} from '@arduano/trpc-chat-agent/common';
 import type { Draft } from 'immer';
-import type { AgentTools, ChatAgent } from '../common';
-import type { ClientSideConversationData, ClientSideUpdate } from '../common/types';
+import { ClientSideChatConversation } from '@arduano/trpc-chat-agent/common';
 import { castDraft, produce } from 'immer';
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
-import { ClientSideChatConversation } from '../common/types';
 
 export type ActiveCallback<ToolName extends string, CallbackName extends string, ToolArgs> = {
   conversationId: string;

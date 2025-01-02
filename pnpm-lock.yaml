@@ -59,9 +59,12 @@ importers:
 
   example/client:
     dependencies:
-      '@arduano/trpc-langchain-agent':
+      '@arduano/trpc-chat-agent':
         specifier: workspace:*
-        version: link:../../packages/trpc-langchain-agent
+        version: link:../../packages/trpc-chat-agent
+      '@arduano/trpc-chat-agent-react':
+        specifier: workspace:*
+        version: link:../../packages/trpc-chat-agent-react
       '@tanstack/react-query':
         specifier: 4.36.1
         version: 4.36.1(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -111,9 +114,12 @@ importers:
 
   example/server:
     dependencies:
-      '@arduano/trpc-langchain-agent':
+      '@arduano/trpc-chat-agent':
         specifier: workspace:*
-        version: link:../../packages/trpc-langchain-agent
+        version: link:../../packages/trpc-chat-agent
+      '@arduano/trpc-chat-agent-langchain':
+        specifier: workspace:*
+        version: link:../../packages/trpc-chat-agent-langchain
       '@kvs/env':
         specifier: ^2.2.0
         version: 2.2.0
@@ -170,7 +176,7 @@ importers:
         specifier: ^5.7.2
         version: 5.7.2
 
-  packages/trpc-langchain-agent:
+  packages/trpc-chat-agent:
     dependencies:
       '@langchain/core':
         specifier: ^0.3.26
@@ -184,6 +190,62 @@ importers:
       '@trpc/server':
         specifier: ^10.45.2
         version: 10.45.2
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
+      zustand:
+        specifier: ^5.0.2
+        version: 5.0.2(@types/react@18.2.43)(immer@10.1.1)(react@18.2.0)(use-sync-external-store@1.4.0(react@18.2.0))
+    devDependencies:
+      '@types/react':
+        specifier: 18.2.43
+        version: 18.2.43
+      rollup:
+        specifier: ^4.29.1
+        version: 4.29.1
+      typescript:
+        specifier: ^5.0.0
+        version: 5.7.2
+
+  packages/trpc-chat-agent-langchain:
+    dependencies:
+      '@arduano/trpc-chat-agent':
+        specifier: workspace:*
+        version: link:../trpc-chat-agent
+      '@langchain/core':
+        specifier: ^0.3.26
+        version: 0.3.26(openai@4.77.0(zod@3.24.1))
+      '@langchain/langgraph':
+        specifier: ^0.2.36
+        version: 0.2.36(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
+      '@trpc/server':
+        specifier: ^10.45.2
+        version: 10.45.2
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
+    devDependencies:
+      rollup:
+        specifier: ^4.29.1
+        version: 4.29.1
+      typescript:
+        specifier: ^5.0.0
+        version: 5.7.2
+
+  packages/trpc-chat-agent-react:
+    dependencies:
+      '@arduano/trpc-chat-agent':
+        specifier: workspace:*
+        version: link:../trpc-chat-agent
+      '@trpc/client':
+        specifier: ^10.45.2
+        version: 10.45.2(@trpc/server@10.45.2)
       immer:
         specifier: ^10.1.1
         version: 10.1.1

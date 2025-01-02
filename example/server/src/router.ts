@@ -1,5 +1,5 @@
-import { ServerSideChatConversation } from '@arduano/trpc-langchain-agent/common';
-import { makeChatRouterForAgent } from '@arduano/trpc-langchain-agent/server';
+import { ServerSideChatConversation } from '@arduano/trpc-chat-agent/common';
+import { makeChatRouterForAgent } from '@arduano/trpc-chat-agent/server';
 import { nanoid } from 'nanoid';
 import { agent } from './agent';
 import { t } from './context';

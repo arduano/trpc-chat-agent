@@ -1,7 +1,7 @@
-import type { AdvancedAIMessageDataClientSideWithCallbacks } from '@arduano/trpc-langchain-agent/client';
-import type { AnyStructuredChatTool, HumanMessageData } from '@arduano/trpc-langchain-agent/common';
+import type { AdvancedAIMessageDataClientSideWithCallbacks } from '@arduano/trpc-chat-agent/client';
+import type { AnyStructuredChatTool, HumanMessageData } from '@arduano/trpc-chat-agent/common';
 import type { AgentType } from '../../../server/src/agent';
-import { useConversation } from '@arduano/trpc-langchain-agent/client';
+import { useConversation } from '@arduano/trpc-chat-agent/client';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { rawTrpc } from '../trpc';

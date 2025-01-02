@@ -14,7 +14,7 @@
   "scripts": {
     "server": "cd example/server && pnpm",
     "client": "cd example/client && pnpm",
-    "package": "cd packages/trpc-langchain-agent && pnpm",
+    "package": "cd packages/trpc-chat-agent && pnpm",
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
