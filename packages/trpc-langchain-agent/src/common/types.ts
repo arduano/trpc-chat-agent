@@ -6,9 +6,9 @@ import type { AnyStructuredChatTool } from './structuredTool';
 import { AIMessage, HumanMessage, ToolMessage } from '@langchain/core/messages';
 import { castDraft, produce } from 'immer';
 import { z } from 'zod';
+import { mergeKeepingOldReferences } from './merge';
 import { processMessageContentForClient } from './messageContent';
 import { UnreachableError } from './unreachable';
-import { mergeKeepingOldReferences } from './merge';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
 

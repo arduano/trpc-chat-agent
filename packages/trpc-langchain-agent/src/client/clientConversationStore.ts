@@ -5,7 +5,6 @@ import { castDraft, produce } from 'immer';
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
 import { ClientSideChatConversation } from '../common/types';
-import { mergeKeepingOldReferences } from '../common/merge';
 
 export type ActiveCallback<ToolName extends string, CallbackName extends string, ToolArgs> = {
   conversationId: string;
