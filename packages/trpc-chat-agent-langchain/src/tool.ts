@@ -88,17 +88,7 @@ export class StructuredChatToolLangChain<
     delete parsedConfig.runId;
 
     try {
-      const result = await this.tool.invoke(
-        {
-          input: parsed,
-          ctx: args.ctx,
-          toolCallId: args.toolCallId,
-          callbackInvoker: args.callbackInvoker,
-          progressCallback: args.progressCallback,
-        },
-        runManager,
-        parsedConfig
-      );
+      const result = await this.tool.invoke(args, runManager, parsedConfig);
       return result;
     } catch (e: any) {
       await runManager?.handleToolError(e);

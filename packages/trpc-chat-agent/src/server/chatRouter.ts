@@ -63,7 +63,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent, Context extends 
                 humanMessageContent: input.humanMessageContent,
                 conversationData: structuredClone(conversation.data),
                 chatBranch,
-                getCtx: () => ctx,
+                ctx,
 
                 // TODO: Remove any
                 callbackInvoker: ({ callbackArgs, callbackName, responseSchema, toolCallId, toolName }: any) => {

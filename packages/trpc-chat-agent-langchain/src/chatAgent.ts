@@ -17,14 +17,12 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import type { AIMessageChunk, BaseMessage, MessageContent } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
-import { ServerSideChatConversation } from '@arduano/trpc-chat-agent';
+import { Debouncer, processMessageContentForClient, ServerSideChatConversation } from '@arduano/trpc-chat-agent';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
-import { Debouncer } from 'node_modules/@arduano/trpc-chat-agent/dist/common/debounce';
-import { processMessageContentForClient } from 'node_modules/@arduano/trpc-chat-agent/dist/common/messageContent';
 import { StructuredChatToolLangChain } from './tool';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context = any>() {
@@ -32,7 +30,7 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Con
     conversationData: Annotation<ServerSideConversationData<Tools>>,
     chatBranch: Annotation<ChatTree>,
     humanMessageContent: Annotation<MessageContent>,
-    getCtx: Annotation<() => Context>,
+    ctx: Annotation<Context>,
     callbackInvoker: Annotation<ToolCallbackInvoker>,
   });
 }
@@ -190,7 +188,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
   const callModel = async (state: AgentState, config: RunnableConfig) => {
     const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
 
-    const messageList = await transformMessages(stateConvo, state.chatBranch, state.getCtx);
+    const messageList = await transformMessages(stateConvo, state.chatBranch, state.ctx);
 
     const aiMessage = stateConvo.getAIMessageAt(state.chatBranch);
     if (!aiMessage) {
@@ -403,12 +401,13 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
         try {
           const { response, clientResult } = await tool.invoke({
             input: toolCall.args,
-            ctx: state.getCtx,
+            ctx: state.ctx,
             callbackInvoker: state.callbackInvoker,
             toolCallId: toolCall.id,
             progressCallback: (data: any) => {
               progressDebouncer.debounce(data);
             },
+            conversation: stateConvo,
           });
 
           progressDebouncer.flush();

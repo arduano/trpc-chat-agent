@@ -2,9 +2,6 @@ import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
 import { ai } from './context';
 
-// Simple in-memory store for todo items
-const todos: string[] = [];
-
 const calculatorTool = ai.tool({
   name: 'calculator',
   schema: z.object({
@@ -77,25 +74,26 @@ const todoTool = ai.tool({
     task: z.string().optional(),
   }),
   description: 'Manage a todo list',
-  run: async ({ input: { action, task } }) => {
-    let response;
-    switch (action) {
-      case 'add':
-        if (task) {
-          todos.push(task);
-        }
-        response = { todos, action: 'added' } as const;
-        break;
-      case 'list':
-        response = { todos, action: 'listed' } as const;
-        break;
-      case 'clear':
-        todos.length = 0;
-        response = { todos, action: 'cleared' } as const;
-        break;
-      default:
-        throw new Error('Invalid action');
-    }
+  run: async ({ input: { action, task }, ctx, conversationId }) => {
+    const response = await ctx.todosLock.acquire(conversationId, async () => {
+      const todos = ((await ctx.todos.get(conversationId)) as string[]) ?? [];
+      switch (action) {
+        case 'add':
+          if (task) {
+            todos.push(task);
+          }
+          await ctx.todos.set(conversationId, todos);
+          return { todos, action: 'added' } as const;
+        case 'clear':
+          todos.length = 0;
+          await ctx.todos.set(conversationId, todos);
+          return { todos, action: 'cleared' } as const;
+        case 'list':
+          return { todos, action: 'listed' } as const;
+        default:
+          throw new Error('Invalid action');
+      }
+    });
 
     return {
       response: JSON.stringify(response, null, 2),

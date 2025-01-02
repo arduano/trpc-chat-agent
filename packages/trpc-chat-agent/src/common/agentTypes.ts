@@ -23,7 +23,7 @@ export type ChatAgentInvokeArgs<Tools extends readonly AnyStructuredChatTool[]> 
   conversationData: ServerSideConversationData<Tools>;
   chatBranch: ChatTree;
   humanMessageContent: MessageContent;
-  getCtx: () => ToolsContext<Tools>;
+  ctx: ToolsContext<Tools>;
   callbackInvoker: ToolCallbackInvoker;
   controller: AbortController;
 };
