@@ -3,17 +3,18 @@ import type {
   AdvancedAIMessageDataPartClientSide,
   AgentTools,
   AnyStructuredChatTool,
+  AnyToolCallback,
   ChatAgent,
   ChatTree,
   ClientSideUpdate,
+  makeChatRouterForAgent,
   MessageContent,
   ToolCallState,
-} from '@arduano/trpc-chat-agent/common';
-import type { AnyToolCallback, makeChatRouterForAgent } from '@arduano/trpc-chat-agent/server';
+} from '@arduano/trpc-chat-agent';
 import type { createTRPCProxyClient } from '@trpc/client';
 import type { z } from 'zod';
 import type { ActiveCallback } from './clientConversationStore';
-import { ClientSideChatConversation } from '@arduano/trpc-chat-agent/common';
+import { ClientSideChatConversation } from '@arduano/trpc-chat-agent';
 import { useEffect, useMemo, useState } from 'react';
 import { useConversationStore } from './clientConversationStore';
 import useKeyedMemo from './useKeyedMemo';

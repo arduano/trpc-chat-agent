@@ -1,11 +1,6 @@
-import type {
-  AgentTools,
-  ChatAgent,
-  ClientSideConversationData,
-  ClientSideUpdate,
-} from '@arduano/trpc-chat-agent/common';
+import type { AgentTools, ChatAgent, ClientSideConversationData, ClientSideUpdate } from '@arduano/trpc-chat-agent';
 import type { Draft } from 'immer';
-import { ClientSideChatConversation } from '@arduano/trpc-chat-agent/common';
+import { ClientSideChatConversation } from '@arduano/trpc-chat-agent';
 import { castDraft, produce } from 'immer';
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';

@@ -11,13 +11,13 @@ import type {
   ServerSideConversationUpdate,
   ServerSideUpdate,
   ToolCallbackInvoker,
-} from '@arduano/trpc-chat-agent/common';
+} from '@arduano/trpc-chat-agent';
 import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { AIMessageChunk, BaseMessage, MessageContent } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
-import { ServerSideChatConversation } from '@arduano/trpc-chat-agent/common';
+import { ServerSideChatConversation } from '@arduano/trpc-chat-agent';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
