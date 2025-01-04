@@ -8,8 +8,15 @@ import type {
   ServerSideConversationData,
 } from './types';
 
-export type AgentTools<Agent extends ChatAgent<any>> =
-  Agent extends ChatAgent<infer Tools> ? NonNullable<Tools> : never;
+/**
+ * Takes an agent type or tools type, and returns the tools type
+ */
+export type AgentTools<AgentOrTools extends ChatAgent<any> | readonly AnyStructuredChatTool[]> =
+  AgentOrTools extends AnyStructuredChatTool[]
+    ? NonNullable<AgentOrTools>
+    : AgentOrTools extends ChatAgent<infer Tools>
+      ? NonNullable<Tools>
+      : never;
 
 export type AdvancedReactAgentConversation<Agent extends ChatAgent<any>> = ServerSideChatConversation<
   AgentTools<Agent>
@@ -28,6 +35,8 @@ export type ChatAgentInvokeArgs<Tools extends readonly AnyStructuredChatTool[]> 
   controller: AbortController;
 };
 
-export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any> = {
+export type ChatAgent<Tools extends readonly AnyStructuredChatTool[]> = {
   invoke: (args: ChatAgentInvokeArgs<Tools>) => AsyncIterableIterator<AgentUpdateMessage>;
 };
+
+export type ChatAgentOrTools = ChatAgent<any> | readonly AnyStructuredChatTool[];

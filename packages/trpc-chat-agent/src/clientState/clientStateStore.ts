@@ -7,6 +7,7 @@ import type {
   AgentTools,
   AnyStructuredChatTool,
   ChatAgent,
+  ChatAgentOrTools,
   ChatBranchState,
   ChatTreePath,
   ClientSideConversationData,
@@ -35,12 +36,12 @@ export type ActiveCallback<ToolName extends string, CallbackName extends string,
 type AnyActiveCallback = ActiveCallback<string, string, any>;
 type Callbacks = Record<string, AnyActiveCallback | undefined>;
 
-type RouterTypeFromAgent<Agent extends ChatAgent> = ReturnType<
-  typeof createTRPCProxyClient<ReturnType<typeof makeChatRouterForAgent<Agent, any>>>
+export type RouterTypeFromAgent<Agent extends ChatAgentOrTools> = ReturnType<
+  typeof createTRPCProxyClient<ReturnType<typeof makeChatRouterForAgent<ChatAgent<AgentTools<Agent>>, any>>>
 >;
 
 type ConversationRelatedData = {
-  conversation: ClientSideChatConversation<ChatAgent>;
+  conversation: ClientSideChatConversation<ChatAgentOrTools>;
   callbacks: Callbacks;
 };
 
@@ -71,7 +72,7 @@ export function createSystemStateStore() {
     return callbackKeyCounter.toString();
   }
 
-  function getConversation<Agent extends ChatAgent>(conversationId: string) {
+  function getConversation<Agent extends ChatAgentOrTools>(conversationId: string) {
     return state.value[conversationId]?.data?.conversation as ClientSideChatConversation<Agent> | undefined;
   }
 
@@ -81,7 +82,7 @@ export function createSystemStateStore() {
 
   function setConversationData(
     conversationId: string,
-    conversationData: ClientSideConversationData<AgentTools<ChatAgent>>
+    conversationData: ClientSideConversationData<AgentTools<ChatAgentOrTools>>
   ) {
     const newConversation = new ClientSideChatConversation(conversationData);
 
@@ -169,7 +170,10 @@ export function createSystemStateStore() {
     return state.value[conversationId]?.data?.callbacks;
   }
 
-  function setConversationIfNotPresent(conversationId: string, newConversation: ClientSideChatConversation<ChatAgent>) {
+  function setConversationIfNotPresent(
+    conversationId: string,
+    newConversation: ClientSideChatConversation<ChatAgentOrTools>
+  ) {
     if (!getConversation(conversationId)) {
       setConversationData(conversationId, newConversation.data);
     }
@@ -177,7 +181,7 @@ export function createSystemStateStore() {
 
   function triggerConversationLoad(
     conversationId: string,
-    resolver: Promise<ClientSideConversationData<AgentTools<ChatAgent>>>
+    resolver: Promise<ClientSideConversationData<AgentTools<ChatAgentOrTools>>>
   ) {
     if (!state.value[conversationId]) {
       state.value[conversationId] = {
@@ -205,7 +209,7 @@ export function createSystemStateStore() {
 
 export type SystemStateStore = ReturnType<typeof createSystemStateStore>;
 
-type CreateSystemStateStoreSubscriberArgs<Agent extends ChatAgent> = {
+type CreateSystemStateStoreSubscriberArgs<Agent extends ChatAgentOrTools> = {
   store: SystemStateStore;
   router: RouterTypeFromAgent<Agent>;
   initialConversationId?: string;
@@ -213,13 +217,13 @@ type CreateSystemStateStoreSubscriberArgs<Agent extends ChatAgent> = {
   onUpdateConversationId?: (conversationId: string) => void;
 };
 
-export function createSystemStateStoreSubscriber<Agent extends ChatAgent>(
+export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>(
   args: CreateSystemStateStoreSubscriberArgs<Agent>
 ) {
   type Tools = AgentTools<Agent>;
 
   const { store, router: typedRouter, initialConversationId, initialPath, onUpdateConversationId } = args;
-  const router = typedRouter as RouterTypeFromAgent<ChatAgent>; // There are cases where this is better, due to generic typing
+  const router = typedRouter as RouterTypeFromAgent<ChatAgentOrTools>; // There are cases where this is better, due to generic typing
 
   const branchState = signal(ConversationBranchState.default());
 
@@ -420,7 +424,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgent>(
 
 type SignalValue<T extends ReadonlySignal<any>> = T extends ReadonlySignal<infer V> ? V : never;
 
-function makeConversationStreamerState<Agent extends ChatAgent>(
+function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
   router: RouterTypeFromAgent<Agent>,
   callbacks: { onUpdate: (event: ClientSideUpdate) => void; onComplete: () => void }
 ) {
@@ -581,7 +585,7 @@ export type AIMessageWithCallbacks<Tools extends readonly AnyStructuredChatTool[
   // regenerate: () => void;
 };
 
-export type HumanMessageDataClientSide = HumanMessageData & {
+export type HumanMessageWithCallbacks = HumanMessageData & {
   branch: ChatBranchStateWithSwitch;
   edit: (content: string) => void;
 };

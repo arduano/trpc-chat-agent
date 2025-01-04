@@ -1,26 +1,21 @@
-import type { ChatAgent, makeChatRouterForAgent } from '@arduano/trpc-chat-agent';
+import type { ChatAgentOrTools, RouterTypeFromAgent } from '@arduano/trpc-chat-agent';
 import type { ReadonlySignal } from '@preact/signals-core';
-import type { createTRPCProxyClient } from '@trpc/client';
 import { createSystemStateStore, createSystemStateStoreSubscriber } from '@arduano/trpc-chat-agent';
 import { useEffect, useMemo, useState } from 'react';
 
-type UseConversationArgs<Agent extends ChatAgent> = {
-  conversationId?: string;
+type UseConversationArgs<Agent extends ChatAgentOrTools> = {
+  initialConversationId?: string;
   router: RouterTypeFromAgent<Agent>;
   onUpdateConversationId?: (conversationId: string) => void;
 };
 
-type RouterTypeFromAgent<Agent extends ChatAgent> = ReturnType<
-  typeof createTRPCProxyClient<ReturnType<typeof makeChatRouterForAgent<Agent, any>>>
->;
-
 const store = createSystemStateStore();
 
-export function useConversation<Agent extends ChatAgent>(args: UseConversationArgs<Agent>) {
+export function useConversation<Agent extends ChatAgentOrTools>(args: UseConversationArgs<Agent>) {
   const subscriber = useMemo(() => {
     return createSystemStateStoreSubscriber({
       store,
-      initialConversationId: args.conversationId,
+      initialConversationId: args.initialConversationId,
       router: args.router,
       onUpdateConversationId: args.onUpdateConversationId,
     });

@@ -1,4 +1,4 @@
-import type { AIMessageToolCallWithCallbacks, AgentTools } from '@arduano/trpc-chat-agent';
+import type { AgentTools, AIMessageToolCallWithCallbacks } from '@arduano/trpc-chat-agent';
 import type { AgentType } from '../../../server/src/agent';
 import React from 'react';
 

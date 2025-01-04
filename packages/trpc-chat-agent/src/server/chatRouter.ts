@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversation } from '../common/types';
 import { CallbackManager, generateCallbackId } from './callback';
 
-type MakeChatRouterForAgentArgs<Agent extends ChatAgent, Context extends object | ContextCallback> = {
+type MakeChatRouterForAgentArgs<Agent extends ChatAgent<any>, Context extends object | ContextCallback> = {
   agent: Agent;
   t: TrpcWithContext<Context>;
   createConversation: (ctx: Context) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
@@ -23,7 +23,7 @@ type TrpcWithContext<Context extends object | ContextCallback> = ReturnType<
   ReturnType<typeof initTRPC.context<Context>>['create']
 >;
 
-export function makeChatRouterForAgent<Agent extends ChatAgent, Context extends object | ContextCallback>({
+export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context extends object | ContextCallback>({
   agent,
   getConversation,
   saveConversation,

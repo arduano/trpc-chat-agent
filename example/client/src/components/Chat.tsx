@@ -18,7 +18,7 @@ export function Chat() {
 
   const { messages, beginMessage, isStreaming } = useConversation<AgentType>({
     router: rawTrpc.chat,
-    conversationId,
+    initialConversationId: conversationId,
     onUpdateConversationId: (newId) => {
       navigate(`/chat/${newId}`, { replace: true });
     },

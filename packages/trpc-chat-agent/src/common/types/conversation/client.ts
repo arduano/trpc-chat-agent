@@ -1,4 +1,4 @@
-import type { AgentTools, ChatAgent } from '../../../common/agentTypes';
+import type { AgentTools, ChatAgentOrTools } from '../../../common/agentTypes';
 import type { AnyStructuredChatTool } from '../../../common/structuredTool';
 import type { AdvancedAIMessageDataClientSide } from '../message/ai';
 import type { AdvancedToolCallFromToolsArray } from '../tools';
@@ -19,14 +19,14 @@ export type ClientSideConversationData<Tools extends readonly AnyStructuredChatT
   AdvancedAIMessageDataClientSide<Tools>
 >;
 
-export class ClientSideChatConversation<Agent extends ChatAgent<any>> extends ChatConversation<
+export class ClientSideChatConversation<Agent extends ChatAgentOrTools> extends ChatConversation<
   AdvancedAIMessageDataClientSide<AgentTools<Agent>>
 > {
   constructor(data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>) {
     super(data);
   }
 
-  public static makePlaceholderConversation<Agent extends ChatAgent>(): ClientSideChatConversation<Agent> {
+  public static makePlaceholderConversation<Agent extends ChatAgentOrTools>(): ClientSideChatConversation<Agent> {
     return new ClientSideChatConversation({
       aiMessageChildIds: {},
       humanMessageChildIds: {},
