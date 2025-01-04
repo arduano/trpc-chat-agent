@@ -1,5 +1,4 @@
-import type { AgentTools } from '@arduano/trpc-chat-agent';
-import type { AdvancedToolCallClientSideWithCallbacksFromToolsArray } from '@arduano/trpc-chat-agent-react';
+import type { AdvancedToolCallClientSideWithCallbacksFromToolsArray, AgentTools } from '@arduano/trpc-chat-agent';
 import type { AgentType } from '../../../server/src/agent';
 import React from 'react';
 

@@ -1,7 +1,7 @@
 import type { BaseMessage } from '@langchain/core/messages';
 import type { AgentTools, ChatAgent } from '../../agentTypes';
 import type { AnyStructuredChatTool } from '../../structuredTool';
-import type { ChatTree } from '../branching';
+import type { ChatTreePath } from '../branching';
 import type { AdvancedAIMessageData } from '../message/ai';
 import type { AdvancedToolCallFromToolsArray } from '../tools';
 import type {
@@ -43,7 +43,7 @@ export class ServerSideChatConversation<Agent extends ChatAgent<any>> extends Ch
     };
   }
 
-  public asLangChainMessagesArray(tree: ChatTree): BaseMessage[] {
+  public asLangChainMessagesArray(tree: ChatTreePath): BaseMessage[] {
     return this.asMessagesArray(tree).flatMap((message) => {
       switch (message.kind) {
         case 'ai':

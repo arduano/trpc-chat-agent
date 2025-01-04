@@ -15,7 +15,7 @@ import { mergeKeepingOldReferences } from '../../../common/merge';
 import { UnreachableError } from '../../../common/unreachable';
 import { ChatConversation, concatMessageContent } from './conversation';
 
-export type ClientSideConversationData<Tools extends readonly AnyStructuredChatTool[]> = ConversationData<
+export type ClientSideConversationData<Tools extends readonly AnyStructuredChatTool[] = any[]> = ConversationData<
   AdvancedAIMessageDataClientSide<Tools>
 >;
 

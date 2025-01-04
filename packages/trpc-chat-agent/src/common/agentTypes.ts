@@ -2,7 +2,7 @@ import type { MessageContent } from './messageContent';
 import type { AnyStructuredChatTool, ToolCallbackInvoker, ToolsContext } from './structuredTool';
 import type {
   AgentUpdateMessage,
-  ChatTree,
+  ChatTreePath,
   ClientSideChatConversation,
   ServerSideChatConversation,
   ServerSideConversationData,
@@ -21,13 +21,13 @@ export type AdvancedReactAgentClientConversation<Agent extends ChatAgent<any>> =
 
 export type ChatAgentInvokeArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   conversationData: ServerSideConversationData<Tools>;
-  chatBranch: ChatTree;
+  chatBranch: ChatTreePath;
   humanMessageContent: MessageContent;
   ctx: ToolsContext<Tools>;
   callbackInvoker: ToolCallbackInvoker;
   controller: AbortController;
 };
 
-export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any> = {
+export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any[]> = {
   invoke: (args: ChatAgentInvokeArgs<Tools>) => AsyncIterableIterator<AgentUpdateMessage>;
 };

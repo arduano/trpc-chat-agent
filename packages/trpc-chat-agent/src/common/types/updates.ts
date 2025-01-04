@@ -1,5 +1,5 @@
 import type { MessageContent } from '../messageContent';
-import type { ChatTree } from './branching';
+import type { ChatTreePath } from './branching';
 import type { ClientSideConversationData } from './conversation/client';
 import type { ServerSideConversationData } from './conversation/server';
 import type { ToolCallState } from './tools';
@@ -40,7 +40,7 @@ export type ClientSyncConversation = {
   kind: 'sync-conversation';
   conversationId: string;
   conversationData: ClientSideConversationData<any>;
-  branch: ChatTree;
+  path: ChatTreePath;
 };
 
 export type ClientRequestCallbackResponse = {
@@ -97,7 +97,7 @@ export type ServerBeginNewAIMessagePart = {
 export type ServerSyncConversation = {
   kind: 'sync-conversation';
   conversationData: ServerSideConversationData<any>;
-  tree: ChatTree;
+  tree: ChatTreePath;
 };
 
 export type ServerSideConversationUpdate =

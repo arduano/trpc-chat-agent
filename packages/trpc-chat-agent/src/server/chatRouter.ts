@@ -1,6 +1,6 @@
 import type { initTRPC } from '@trpc/server';
 import type { AgentTools, ChatAgent } from '../common/agentTypes';
-import type { ChatTree, ClientSideUpdate, ServerSideConversationData } from '../common/types';
+import type { ChatTreePath, ClientSideUpdate, ServerSideConversationData } from '../common/types';
 import { observable } from '@trpc/server/observable';
 import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversation } from '../common/types';
@@ -54,7 +54,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent, Context extends 
             }
 
             const conversation = new ServerSideChatConversation(conversationData);
-            let chatBranch: ChatTree = input.branch;
+            let chatBranch: ChatTreePath = input.branch;
 
             let aiMessageId: string | undefined; // Should get initialized on the first "sync-conversation" event
 
