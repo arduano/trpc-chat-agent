@@ -28,6 +28,6 @@ export type ChatAgentInvokeArgs<Tools extends readonly AnyStructuredChatTool[]> 
   controller: AbortController;
 };
 
-export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any[]> = {
+export type ChatAgent<Tools extends readonly AnyStructuredChatTool[] = any> = {
   invoke: (args: ChatAgentInvokeArgs<Tools>) => AsyncIterableIterator<AgentUpdateMessage>;
 };

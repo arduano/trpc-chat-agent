@@ -1,12 +1,8 @@
-import type { AdvancedToolCallClientSideWithCallbacksFromToolsArray, AgentTools } from '@arduano/trpc-chat-agent';
+import type { AIMessageToolCallWithCallbacks, AgentTools } from '@arduano/trpc-chat-agent';
 import type { AgentType } from '../../../server/src/agent';
 import React from 'react';
 
-export function RenderTool({
-  tool,
-}: {
-  tool: AdvancedToolCallClientSideWithCallbacksFromToolsArray<AgentTools<AgentType>>;
-}) {
+export function RenderTool({ tool }: { tool: AIMessageToolCallWithCallbacks<AgentTools<AgentType>> }) {
   const getStatusColor = (state: typeof tool.state) => {
     switch (state) {
       case 'loading':

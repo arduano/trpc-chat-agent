@@ -1,8 +1,4 @@
-import type {
-  AdvancedAIMessageDataClientSideWithCallbacks,
-  AnyStructuredChatTool,
-  HumanMessageData,
-} from '@arduano/trpc-chat-agent';
+import type { AIMessageWithCallbacks, AnyStructuredChatTool, HumanMessageData } from '@arduano/trpc-chat-agent';
 import type { AgentType } from '../../../server/src/agent';
 import { useConversation } from '@arduano/trpc-chat-agent-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -109,8 +105,8 @@ function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
   renderAiMessage,
   renderHumanMessage,
 }: {
-  messages: (AdvancedAIMessageDataClientSideWithCallbacks<Tools> | HumanMessageData)[];
-  renderAiMessage: (message: AdvancedAIMessageDataClientSideWithCallbacks<Tools>) => JSX.Element;
+  messages: (AIMessageWithCallbacks<Tools> | HumanMessageData)[];
+  renderAiMessage: (message: AIMessageWithCallbacks<Tools>) => JSX.Element;
   renderHumanMessage: (message: HumanMessageData) => JSX.Element;
 }) {
   return (

@@ -3,7 +3,7 @@ import type {
   AnyStructuredChatTool,
   ChatAgent,
   ChatAgentInvokeArgs,
-  ChatTree,
+  ChatTreePath,
   ClientSideConversationUpdate,
   ClientSideUpdate,
   HumanMessageData,
@@ -25,10 +25,10 @@ import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
 import { StructuredChatToolLangChain } from './tool';
 
-function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context = any>() {
+function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context>() {
   return Annotation.Root({
     conversationData: Annotation<ServerSideConversationData<Tools>>,
-    chatBranch: Annotation<ChatTree>,
+    chatPath: Annotation<ChatTreePath>,
     humanMessageContent: Annotation<MessageContent>,
     ctx: Annotation<Context>,
     callbackInvoker: Annotation<ToolCallbackInvoker>,
@@ -44,7 +44,7 @@ export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> 
   systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);
   transformMessages?: (
     conversation: Readonly<ServerSideChatConversation<ChatAgent<Tools>>>,
-    branch: ChatTree,
+    path: ChatTreePath,
     ctx: Tools[number]['TypeInfo']['Context']
   ) => BaseMessage[] | Promise<BaseMessage[]>;
 
@@ -94,14 +94,14 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
 
   const transformMessages = async (
     conversation: Readonly<ServerSideChatConversation<ChatAgent<Tools>>>,
-    branch: ChatTree,
+    path: ChatTreePath,
     ctx: Tools[number]['TypeInfo']['Context']
   ) => {
     if (typeof args.transformMessages === 'function') {
-      return addSystemMessage(await args.transformMessages(conversation, branch, ctx), ctx);
+      return addSystemMessage(await args.transformMessages(conversation, path, ctx), ctx);
     }
 
-    return addSystemMessage(conversation.asLangChainMessagesArray(branch), ctx);
+    return addSystemMessage(conversation.asLangChainMessagesArray(path), ctx);
   };
 
   const handleErrors = (fn: (...args: any[]) => any) => {
@@ -136,14 +136,14 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
       parts: [],
     };
 
-    const newBranch = stateConvo.pushHumanAiMessagePair(state.chatBranch, newHumanMessage, newAIMessage);
+    const newPath = stateConvo.pushHumanAiMessagePair(state.chatPath, newHumanMessage, newAIMessage);
 
     sendClientSideUpdateToConfig(
       {
         kind: 'sync-conversation',
         conversationId: state.conversationData.id,
         conversationData: new ServerSideChatConversation(stateConvo.data).asClientSideConversation(),
-        branch: newBranch,
+        path: newPath,
       },
       config
     );
@@ -151,20 +151,20 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
       {
         kind: 'sync-conversation',
         conversationData: stateConvo.data,
-        tree: newBranch,
+        tree: newPath,
       },
       config
     );
 
     return {
-      chatBranch: newBranch,
+      chatPath: newPath,
       conversationData: stateConvo.data,
     };
   };
 
   const shouldContinue = (state: AgentState) => {
     const stateConvo = new ServerSideChatConversation(state.conversationData);
-    const lastMessage = stateConvo.getAIMessageAt(state.chatBranch);
+    const lastMessage = stateConvo.getAIMessageAt(state.chatPath);
 
     if (!lastMessage) {
       console.error('No last message, this is unexpected');
@@ -188,9 +188,9 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
   const callModel = async (state: AgentState, config: RunnableConfig) => {
     const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
 
-    const messageList = await transformMessages(stateConvo, state.chatBranch, state.ctx);
+    const messageList = await transformMessages(stateConvo, state.chatPath, state.ctx);
 
-    const aiMessage = stateConvo.getAIMessageAt(state.chatBranch);
+    const aiMessage = stateConvo.getAIMessageAt(state.chatPath);
     if (!aiMessage) {
       console.error('No AI message for ID, this is unexpected');
       return;
@@ -360,7 +360,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
 
   const callTools = async (state: AgentState, config: RunnableConfig) => {
     const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
-    const lastMessage = stateConvo.getAIMessageAt(state.chatBranch);
+    const lastMessage = stateConvo.getAIMessageAt(state.chatPath);
     if (!lastMessage) {
       console.error('No last message, this is unexpected');
       return;
@@ -464,7 +464,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
         kind: 'sync-conversation',
         conversationId: state.conversationData.id,
         conversationData: new ServerSideChatConversation(state.conversationData).asClientSideConversation(),
-        branch: state.chatBranch,
+        path: state.chatPath,
       },
       config
     );

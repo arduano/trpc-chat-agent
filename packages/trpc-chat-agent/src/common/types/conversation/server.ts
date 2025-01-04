@@ -19,7 +19,7 @@ import { ChatAdvancedAIMessage } from '../message/ai';
 import { ChatHumanMessage } from '../message/human';
 import { ChatConversation } from './conversation';
 
-export type ServerSideConversationData<Tools extends readonly AnyStructuredChatTool[]> = ConversationData<
+export type ServerSideConversationData<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
   AdvancedAIMessageData<Tools>
 >;
 

@@ -287,9 +287,12 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgent>(
   // Get either the current or the placeholder conversation
   const conversation = computed(() => {
     if (conversationId.value) {
-      return store.getConversation<Agent>(conversationId.value) ?? placeholderConversation.value;
+      const conversation = store.getConversation<Agent>(conversationId.value);
+      if (conversation) {
+        return conversation as ClientSideChatConversation<Agent>;
+      }
     }
-    return placeholderConversation.value;
+    return placeholderConversation.value as ClientSideChatConversation<Agent>;
   });
 
   const callbacks = computed(() => {
@@ -334,7 +337,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgent>(
   const mapAiMessageAddActiveCallbacks = (
     message: AdvancedAIMessageDataClientSide<Tools>,
     activeCallbacks: AnyActiveCallbackWithResponse[]
-  ): AdvancedAIMessageDataClientSideWithCallbacks<Tools> => {
+  ): AIMessageWithCallbacks<Tools> => {
     // const branch = conversation.value.getBranchInfoForMessageId(message.id);
     return {
       ...message,
@@ -561,16 +564,16 @@ export type AdvancedToolCallClientSideWithCallbacks<Tool extends AnyStructuredCh
   callbacks: CallbacksFromToolCallbacks<Tool>[];
 };
 
-export type AdvancedToolCallClientSideWithCallbacksFromToolsArray<Tools extends readonly AnyStructuredChatTool[]> = {
+export type AIMessageToolCallWithCallbacks<Tools extends readonly AnyStructuredChatTool[]> = {
   [K in keyof Tools]: AdvancedToolCallClientSideWithCallbacks<Tools[K]>;
 }[number];
 
 export type AdvancedAIMessageDataPartClientSideWithCallbacks<Tools extends readonly AnyStructuredChatTool[]> = {
   content: MessageContent;
-  toolCalls: AdvancedToolCallClientSideWithCallbacksFromToolsArray<Tools>[];
+  toolCalls: AIMessageToolCallWithCallbacks<Tools>[];
 };
 
-export type AdvancedAIMessageDataClientSideWithCallbacks<Tools extends readonly AnyStructuredChatTool[]> = {
+export type AIMessageWithCallbacks<Tools extends readonly AnyStructuredChatTool[]> = {
   kind: 'ai';
   id: string;
   parts: AdvancedAIMessageDataPartClientSideWithCallbacks<Tools>[];
