@@ -15,7 +15,8 @@
     "server": "cd example/server && pnpm",
     "client": "cd example/client && pnpm",
     "package": "cd packages/trpc-chat-agent && pnpm",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "check-types": "pnpm -r exec tsc --noEmit"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^3.12.0",

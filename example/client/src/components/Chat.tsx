@@ -1,7 +1,12 @@
-import type { AIMessageWithCallbacks, AnyStructuredChatTool, HumanMessageData } from '@arduano/trpc-chat-agent';
+import type {
+  AIMessageWithCallbacks,
+  AnyStructuredChatTool,
+  HumanMessageWithCallbacks,
+} from '@arduano/trpc-chat-agent';
 import type { AgentType } from '../../../server/src/agent';
 import { useConversation } from '@arduano/trpc-chat-agent-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FaPencilAlt } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import { rawTrpc } from '../trpc';
 import { RenderTool } from './RenderTool';
@@ -61,9 +66,7 @@ export function Chat() {
                         ))}
                       </>
                     )}
-                    renderHumanMessage={(message) => (
-                      <div className="p-4 rounded-lg bg-blue-100 ml-8">{message.content as string}</div>
-                    )}
+                    renderHumanMessage={(message) => <HumanMessage message={message} />}
                   />
                   <div ref={messagesEndRef} />
                 </div>
@@ -105,9 +108,9 @@ function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
   renderAiMessage,
   renderHumanMessage,
 }: {
-  messages: (AIMessageWithCallbacks<Tools> | HumanMessageData)[];
+  messages: (AIMessageWithCallbacks<Tools> | HumanMessageWithCallbacks)[];
   renderAiMessage: (message: AIMessageWithCallbacks<Tools>) => JSX.Element;
-  renderHumanMessage: (message: HumanMessageData) => JSX.Element;
+  renderHumanMessage: (message: HumanMessageWithCallbacks) => JSX.Element;
 }) {
   return (
     <>
@@ -118,6 +121,79 @@ function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
           return <RenderMemoed key={message.id} data={message} render={renderAiMessage} />;
         }
       })}
+    </>
+  );
+}
+
+interface HumanMessageProps {
+  message: HumanMessageWithCallbacks;
+}
+
+export function HumanMessage({ message }: HumanMessageProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(message.content as string);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    message.edit(editedContent);
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="flex items-start gap-2">
+      <button
+        onClick={() => setIsEditing(true)}
+        className="mt-2 p-2 text-gray-500 hover:text-gray-700 transition-colors"
+        aria-label="Edit message"
+      >
+        <FaPencilAlt size={14} />
+      </button>
+      {isEditing ? (
+        <form onSubmit={handleSubmit} className="flex-1">
+          <div className="flex gap-2">
+            <textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              className="flex-1 p-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              autoFocus
+              rows={Math.max(1, editedContent.split('\n').length)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e as any);
+                }
+              }}
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 h-fit"
+            >
+              Send
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="p-4 rounded-lg bg-blue-100 flex-1">{message.content as string}</div>
+      )}
+    </div>
+  );
+}
+
+interface AIMessageProps {
+  message: AIMessageWithCallbacks<AgentType>;
+}
+
+export function AIMessage({ message }: AIMessageProps) {
+  return (
+    <>
+      {message.parts.map((part, i) => (
+        <React.Fragment key={i}>
+          {part.content && <div className="p-4 rounded-lg bg-gray-100 mr-8">{part.content as string}</div>}
+          {part.toolCalls.map((toolCall) => (
+            <RenderTool key={toolCall.id} tool={toolCall} />
+          ))}
+        </React.Fragment>
+      ))}
     </>
   );
 }

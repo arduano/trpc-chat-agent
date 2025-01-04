@@ -58,12 +58,12 @@ export class ChatConversation<AIMessage extends { id: string }> {
     let aiId = ChatConversation.aiMessageRootId;
 
     for (const selection of tree) {
-      const nextHumanId = this.data.aiMessageChildIds?.[aiId]?.[selection.humanMessageIndex];
+      const nextHumanId = this.data.aiMessageChildIds?.[aiId]?.[selection.aiMessageChildIndex];
       if (!nextHumanId) {
         return null;
       }
       humanId = nextHumanId;
-      const nextAiId = this.data.humanMessageChildIds?.[humanId]?.[selection.aiMessageIndex];
+      const nextAiId = this.data.humanMessageChildIds?.[humanId]?.[selection.humanMessageChildIndex];
       if (!nextAiId) {
         return null;
       }
@@ -104,8 +104,8 @@ export class ChatConversation<AIMessage extends { id: string }> {
       aiId = aiList[aiIndex];
 
       tree.push({
-        humanMessageIndex: humanIndex,
-        aiMessageIndex: aiIndex,
+        humanMessageChildIndex: humanIndex,
+        aiMessageChildIndex: aiIndex,
       });
     }
 
@@ -184,8 +184,8 @@ export class ChatConversation<AIMessage extends { id: string }> {
     const humanId = humanMessage.id;
     const aiId = aiMessage.id;
 
-    const newHumanIndex = this.pushNewIndexforAIMessageChildren(parentAiId, humanId);
-    const newAiIndex = this.pushNewIndexforHumanMessageChildren(humanId, aiId);
+    const newAiIndex = this.pushNewIndexforAIMessageChildren(parentAiId, humanId);
+    const newHumanIndex = this.pushNewIndexforHumanMessageChildren(humanId, aiId);
 
     this.produceData((data) => {
       data.humanMessages[humanId] = humanMessage;
@@ -195,8 +195,8 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return [
       ...tree,
       {
-        humanMessageIndex: newHumanIndex,
-        aiMessageIndex: newAiIndex,
+        humanMessageChildIndex: newHumanIndex,
+        aiMessageChildIndex: newAiIndex,
       },
     ];
   }
@@ -212,12 +212,12 @@ export class ChatConversation<AIMessage extends { id: string }> {
     let aiId = ChatConversation.aiMessageRootId;
 
     for (const selection of tree) {
-      const nextHumanId = this.data.aiMessageChildIds[aiId]?.[selection.humanMessageIndex];
+      const nextHumanId = this.data.aiMessageChildIds[aiId]?.[selection.aiMessageChildIndex];
       if (!nextHumanId) {
         throw new Error('Invalid tree');
       }
       humanId = nextHumanId;
-      const nextAiId = this.data.humanMessageChildIds[humanId]?.[selection.aiMessageIndex];
+      const nextAiId = this.data.humanMessageChildIds[humanId]?.[selection.humanMessageChildIndex];
       if (!nextAiId) {
         throw new Error('Invalid tree');
       }

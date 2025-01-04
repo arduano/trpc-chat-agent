@@ -5,8 +5,8 @@ import { ChatConversation } from './conversation/conversation';
 
 export const chatBranchZod = z.array(
   z.object({
-    humanMessageIndex: z.number(),
-    aiMessageIndex: z.number(),
+    humanMessageChildIndex: z.number(),
+    aiMessageChildIndex: z.number(),
   })
 );
 export type ChatTreePath = z.infer<typeof chatBranchZod>;
@@ -153,8 +153,8 @@ export class ConversationBranchState {
       aiId = chosenHumanChild;
 
       selectedPath.push({
-        humanMessageIndex: humanIndex,
-        aiMessageIndex: aiIndex,
+        humanMessageChildIndex: humanIndex,
+        aiMessageChildIndex: aiIndex,
       });
     }
 
@@ -190,6 +190,44 @@ export class ConversationBranchState {
     return this.mergeWith(next);
   }
 
+  getPathToHumanMessage(messageId: string): ChatTreePath {
+    if (!this.humanMessageChildren[messageId]) {
+      throw new Error('Invalid messageId');
+    }
+
+    const path: ChatTreePath = [];
+
+    if (!this.messageParent[messageId]) {
+      throw new Error('Invalid messageId');
+    }
+
+    let aiId = this.messageParent[messageId];
+    let humanId = '';
+
+    while (aiId !== ChatConversation.aiMessageRootId) {
+      humanId = this.messageParent[aiId];
+      if (!humanId) {
+        throw new Error('Invalid messageId');
+      }
+      const humanChildIndex = this.humanMessageChildren[humanId].indexOf(aiId);
+
+      aiId = this.messageParent[humanId];
+      if (!aiId) {
+        throw new Error('Invalid messageId');
+      }
+      const aiChildIndex = this.aiMessageChildren[aiId].indexOf(humanId);
+
+      path.push({
+        humanMessageChildIndex: humanChildIndex,
+        aiMessageChildIndex: aiChildIndex,
+      });
+
+      console.log({ humanChildIndex, aiChildIndex, humanId, aiId });
+    }
+
+    return path.reverse();
+  }
+
   /**
    * Update from a branch (ChatTreePath) by sequentially choosing children.
    */
@@ -198,14 +236,14 @@ export class ConversationBranchState {
     let state: ConversationBranchState = this;
     let aiId = ChatConversation.aiMessageRootId;
 
-    for (const { humanMessageIndex, aiMessageIndex } of path) {
-      const nextHuman = state.aiMessageChildren[aiId]?.[humanMessageIndex];
+    for (const { humanMessageChildIndex: humanMessageIndex, aiMessageChildIndex: aiMessageIndex } of path) {
+      const nextHuman = state.aiMessageChildren[aiId]?.[aiMessageIndex];
       if (!nextHuman) {
         throw new Error('Invalid path (Human pick)');
       }
       state = state.setMessageChoice(aiId, nextHuman);
 
-      const nextAi = state.humanMessageChildren[nextHuman]?.[aiMessageIndex];
+      const nextAi = state.humanMessageChildren[nextHuman]?.[humanMessageIndex];
       if (!nextAi) {
         throw new Error('Invalid path (AI pick)');
       }

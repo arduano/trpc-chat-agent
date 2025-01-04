@@ -1,12 +1,10 @@
 import type {
-  AdvancedAIMessageData,
   AnyStructuredChatTool,
   ChatAgent,
   ChatAgentInvokeArgs,
   ChatTreePath,
   ClientSideConversationUpdate,
   ClientSideUpdate,
-  HumanMessageData,
   ServerSideConversationData,
   ServerSideConversationUpdate,
   ServerSideUpdate,
@@ -14,7 +12,7 @@ import type {
 } from '@arduano/trpc-chat-agent';
 import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import type { AIMessageChunk, BaseMessage, MessageContent } from '@langchain/core/messages';
+import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
 import { Debouncer, processMessageContentForClient, ServerSideChatConversation } from '@arduano/trpc-chat-agent';
@@ -29,7 +27,6 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Con
   return Annotation.Root({
     conversationData: Annotation<ServerSideConversationData<Tools>>,
     chatPath: Annotation<ChatTreePath>,
-    humanMessageContent: Annotation<MessageContent>,
     ctx: Annotation<Context>,
     callbackInvoker: Annotation<ToolCallbackInvoker>,
   });
@@ -121,43 +118,17 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
   const initializeNewMessage = async (state: AgentState, config: RunnableConfig): Promise<Partial<AgentState>> => {
     const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
 
-    const aiMessageId = 'ai-' + stateConvo.generateId();
-    const humanMessageId = 'human-' + stateConvo.generateId();
-
-    const newHumanMessage: HumanMessageData = {
-      kind: 'human',
-      id: humanMessageId,
-      content: state.humanMessageContent,
-    };
-
-    const newAIMessage: AdvancedAIMessageData<Tools> = {
-      kind: 'ai',
-      id: aiMessageId,
-      parts: [],
-    };
-
-    const newPath = stateConvo.pushHumanAiMessagePair(state.chatPath, newHumanMessage, newAIMessage);
-
     sendClientSideUpdateToConfig(
       {
         kind: 'sync-conversation',
         conversationId: state.conversationData.id,
         conversationData: new ServerSideChatConversation(stateConvo.data).asClientSideConversation(),
-        path: newPath,
-      },
-      config
-    );
-    sendServerSideUpdateToConfig(
-      {
-        kind: 'sync-conversation',
-        conversationData: stateConvo.data,
-        tree: newPath,
+        path: state.chatPath,
       },
       config
     );
 
     return {
-      chatPath: newPath,
       conversationData: stateConvo.data,
     };
   };
@@ -488,11 +459,19 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
 
   return {
     async *invoke(args: ChatAgentInvokeArgs<Tools>) {
-      const iter = compiled.streamEvents(args, {
-        version: 'v2',
-        signal: args.controller.signal,
-        callbacks: langchainCallbacks,
-      });
+      const iter = compiled.streamEvents(
+        {
+          conversationData: args.conversationData,
+          chatPath: args.chatPath,
+          ctx: args.ctx,
+          callbackInvoker: args.callbackInvoker,
+        },
+        {
+          version: 'v2',
+          signal: args.controller.signal,
+          callbacks: langchainCallbacks,
+        }
+      );
       for await (const event of iter) {
         try {
           if (event.name === 'on_conversation_client_update') {

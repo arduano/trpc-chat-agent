@@ -1,4 +1,3 @@
-import type { MessageContent } from './messageContent';
 import type { AnyStructuredChatTool, ToolCallbackInvoker, ToolsContext } from './structuredTool';
 import type {
   AgentUpdateMessage,
@@ -12,10 +11,10 @@ import type {
  * Takes an agent type or tools type, and returns the tools type
  */
 export type AgentTools<AgentOrTools extends ChatAgent<any> | readonly AnyStructuredChatTool[]> =
-  AgentOrTools extends AnyStructuredChatTool[]
-    ? NonNullable<AgentOrTools>
+  AgentOrTools extends readonly AnyStructuredChatTool[]
+    ? AgentOrTools
     : AgentOrTools extends ChatAgent<infer Tools>
-      ? NonNullable<Tools>
+      ? Tools
       : never;
 
 export type AdvancedReactAgentConversation<Agent extends ChatAgent<any>> = ServerSideChatConversation<
@@ -28,8 +27,7 @@ export type AdvancedReactAgentClientConversation<Agent extends ChatAgent<any>> =
 
 export type ChatAgentInvokeArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   conversationData: ServerSideConversationData<Tools>;
-  chatBranch: ChatTreePath;
-  humanMessageContent: MessageContent;
+  chatPath: ChatTreePath;
   ctx: ToolsContext<Tools>;
   callbackInvoker: ToolCallbackInvoker;
   controller: AbortController;

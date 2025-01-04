@@ -1,7 +1,6 @@
 import type { MessageContent } from '../messageContent';
 import type { ChatTreePath } from './branching';
 import type { ClientSideConversationData } from './conversation/client';
-import type { ServerSideConversationData } from './conversation/server';
 import type { ToolCallState } from './tools';
 
 export type ClientUpdateMessageContent = {
@@ -94,19 +93,13 @@ export type ServerBeginNewAIMessagePart = {
   messageId: string;
 };
 
-export type ServerSyncConversation = {
-  kind: 'sync-conversation';
-  conversationData: ServerSideConversationData<any>;
-  tree: ChatTreePath;
-};
-
 export type ServerSideConversationUpdate =
   | ServerUpdateBeginToolCall
   | ServerUpdateMessageContent
   | ServerUpdateMessageToolCall
   | ServerBeginNewAIMessagePart;
 
-export type ServerSideUpdate = ServerSyncConversation | ServerSideConversationUpdate;
+export type ServerSideUpdate = ServerSideConversationUpdate;
 
 export type AgentUpdateMessage =
   | {

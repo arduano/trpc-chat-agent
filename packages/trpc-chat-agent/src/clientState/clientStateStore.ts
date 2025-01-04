@@ -21,6 +21,7 @@ import { computed, effect, signal } from '@preact/signals-core';
 import { produce } from 'immer';
 import { ClientSideChatConversation, ConversationBranchState } from '../common';
 import { mergeKeepingOldReferences } from '../common/merge';
+import { UnreachableError } from '../common/unreachable';
 
 export type ActiveCallback<ToolName extends string, CallbackName extends string, ToolArgs> = {
   conversationId: string;
@@ -307,8 +308,9 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   });
 
   const callbackCache = makeItemCache<AnyActiveCallbackWithResponse>();
+  const editMsgClosureCache = makeItemCache<(content: string) => void>();
 
-  const activeCallbacksMapped = computed(() => {
+  const CallbacksMapped = computed(() => {
     return Object.values(callbacks.value)
       .filter((c) => !!c) // Necessary to please typescript
       .map((c) =>
@@ -325,30 +327,30 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
       );
   });
 
-  const mapAiMessagePartAddActiveCallbacks = (
+  const mapAiMessagePartAddCallbacks = (
     part: AdvancedAIMessageDataPartClientSide<Tools>,
-    activeCallbacks: AnyActiveCallbackWithResponse[]
+    callbacks: AnyActiveCallbackWithResponse[]
   ): AdvancedAIMessageDataPartClientSideWithCallbacks<Tools> => {
     return {
       ...part,
       toolCalls: part.toolCalls.map((toolCall) => ({
         ...toolCall,
-        callbacks: activeCallbacks.filter((c) => c.toolCallId === toolCall.id) as any, // Any necessary because of the ForceKeyToBeString hack
+        callbacks: callbacks.filter((c) => c.toolCallId === toolCall.id) as any, // Any necessary because of the ForceKeyToBeString hack
       })),
     };
   };
 
-  const mapAiMessageAddActiveCallbacks = (
+  const mapAiMessageAddCallbacks = (
     message: AdvancedAIMessageDataClientSide<Tools>,
-    activeCallbacks: AnyActiveCallbackWithResponse[]
+    callbacks: AnyActiveCallbackWithResponse[]
   ): AIMessageWithCallbacks<Tools> => {
     // const branch = conversation.value.getBranchInfoForMessageId(message.id);
     return {
       ...message,
       parts: message.parts.map((part) =>
-        mapAiMessagePartAddActiveCallbacks(
+        mapAiMessagePartAddCallbacks(
           part,
-          activeCallbacks.filter((c) => c.messageId === message.id)
+          callbacks.filter((c) => c.messageId === message.id)
         )
       ),
       // branch: {
@@ -357,19 +359,37 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     };
   };
 
+  const mapHumanMessageAddCallbacks = (message: HumanMessageData): HumanMessageWithCallbacks => {
+    return {
+      ...message,
+      // branch: {
+      //   ...branchState.value,
+      // },
+      edit: editMsgClosureCache.get(message.id, () => (content: string) => {
+        editMessage(message.id, content);
+      }),
+    };
+  };
+
   const mappedMessages = computed(() => {
     const rawMessages = conversation.value.asMessagesArray(branchState.value.selectedPath);
 
     callbackCache.resetUsage();
+    editMsgClosureCache.resetUsage();
 
     const messagesMapped = rawMessages.map((message) => {
       if (message.kind === 'ai') {
-        return mapAiMessageAddActiveCallbacks(message, activeCallbacksMapped.value);
+        return mapAiMessageAddCallbacks(message, CallbacksMapped.value);
       }
-      return message;
+      if (message.kind === 'human') {
+        return mapHumanMessageAddCallbacks(message);
+      }
+
+      throw new UnreachableError(message, 'Unknown message kind');
     });
 
     callbackCache.deleteUnused();
+    editMsgClosureCache.deleteUnused();
 
     return messagesMapped;
   });
@@ -380,8 +400,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     pastMappedMessages.value = mergeKeepingOldReferences(pastMappedMessages.peek(), mappedMessages.value);
   });
 
-  const beginMessage = (humanMessage: string) => {
-    const currentId = conversationId.value;
+  const assertCanBeginStream = () => {
+    const currentId = conversationId.peek();
     if (currentId) {
       const conversationState = store.getConversationState(currentId);
 
@@ -392,6 +412,10 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
         throw new Error('Cannot start a new message while the conversation is missing');
       }
     }
+  };
+
+  const beginMessage = (humanMessage: string) => {
+    assertCanBeginStream();
 
     // Set the placeholder conversation, in case the conversation doesn't exist yet
     const newPlaceholderConversation = ClientSideChatConversation.makePlaceholderConversation<Agent>();
@@ -410,7 +434,14 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     );
     placeholderConversation.value = newPlaceholderConversation;
 
-    beginStream(conversationId.value, humanMessage, branchState.value.selectedPath);
+    beginStream(conversationId.peek(), humanMessage, branchState.peek().selectedPath);
+  };
+
+  const editMessage = (humanMessageId: string, message: string) => {
+    assertCanBeginStream();
+
+    const path = branchState.peek().getPathToHumanMessage(humanMessageId);
+    beginStream(conversationId.peek(), message, path);
   };
 
   return {
@@ -568,24 +599,27 @@ export type AdvancedToolCallClientSideWithCallbacks<Tool extends AnyStructuredCh
   callbacks: CallbacksFromToolCallbacks<Tool>[];
 };
 
-export type AIMessageToolCallWithCallbacks<Tools extends readonly AnyStructuredChatTool[]> = {
+type AIMessageToolCallWithCallbacksForTools<Tools extends readonly AnyStructuredChatTool[]> = {
   [K in keyof Tools]: AdvancedToolCallClientSideWithCallbacks<Tools[K]>;
 }[number];
 
-export type AdvancedAIMessageDataPartClientSideWithCallbacks<Tools extends readonly AnyStructuredChatTool[]> = {
+export type AIMessageToolCallWithCallbacks<AgentOrTools extends ChatAgentOrTools> =
+  AIMessageToolCallWithCallbacksForTools<AgentTools<AgentOrTools>>;
+
+export type AdvancedAIMessageDataPartClientSideWithCallbacks<AgentOrTools extends ChatAgentOrTools> = {
   content: MessageContent;
-  toolCalls: AIMessageToolCallWithCallbacks<Tools>[];
+  toolCalls: AIMessageToolCallWithCallbacks<AgentOrTools>[];
 };
 
-export type AIMessageWithCallbacks<Tools extends readonly AnyStructuredChatTool[]> = {
+export type AIMessageWithCallbacks<AgentOrTools extends ChatAgentOrTools> = {
   kind: 'ai';
   id: string;
-  parts: AdvancedAIMessageDataPartClientSideWithCallbacks<Tools>[];
+  parts: AdvancedAIMessageDataPartClientSideWithCallbacks<AgentOrTools>[];
   // branch: ChatBranchStateWithSwitch;
   // regenerate: () => void;
 };
 
 export type HumanMessageWithCallbacks = HumanMessageData & {
-  branch: ChatBranchStateWithSwitch;
+  // branch: ChatBranchStateWithSwitch;
   edit: (content: string) => void;
 };
