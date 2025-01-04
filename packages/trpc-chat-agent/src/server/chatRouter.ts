@@ -43,7 +43,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
       .input(
         z.object({
           conversationId: z.string().optional(),
-          humanMessageContent: z.string(),
+          humanMessageContent: z.string().nullable(),
           branch: chatBranchZod,
         })
       )
@@ -62,23 +62,11 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
             const conversation = new ServerSideChatConversation(conversationData);
             let chatPath: ChatTreePath = input.branch;
 
-            // Add the conversation
-            const aiMessageId = 'ai-' + conversation.generateId();
-            const humanMessageId = 'human-' + conversation.generateId();
-
-            const newHumanMessage: HumanMessageData = {
-              kind: 'human',
-              id: humanMessageId,
-              content: input.humanMessageContent,
-            };
-
-            const newAIMessage: AdvancedAIMessageData<AgentTools<Agent>> = {
-              kind: 'ai',
-              id: aiMessageId,
-              parts: [],
-            };
-
-            const newPath = conversation.pushHumanAiMessagePair(chatPath, newHumanMessage, newAIMessage);
+            const { chatPath: newPath, aiMessageId } = addMessagePairToConversation(
+              conversation,
+              chatPath,
+              input.humanMessageContent
+            );
             chatPath = newPath;
 
             try {
@@ -180,4 +168,44 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
   });
 
   return router;
+}
+
+function addMessagePairToConversation<Agent extends ChatAgent<any>>(
+  conversation: ServerSideChatConversation<Agent>,
+  chatPath: ChatTreePath,
+  humanMessageContent: string | null
+): { chatPath: ChatTreePath; aiMessageId: string } {
+  if (humanMessageContent !== null) {
+    // Insert a new human and AI message
+
+    const aiMessageId = 'ai-' + conversation.generateId();
+    const humanMessageId = 'human-' + conversation.generateId();
+
+    const newHumanMessage: HumanMessageData = {
+      kind: 'human',
+      id: humanMessageId,
+      content: humanMessageContent,
+    };
+
+    const newAIMessage: AdvancedAIMessageData<AgentTools<Agent>> = {
+      kind: 'ai',
+      id: aiMessageId,
+      parts: [],
+    };
+
+    const newPath = conversation.pushHumanAiMessagePair(chatPath, newHumanMessage, newAIMessage);
+    return { chatPath: newPath, aiMessageId };
+  } else {
+    // Regenerate the AI message at this path
+    const aiMessageId = 'ai-' + conversation.generateId();
+
+    const newAIMessage: AdvancedAIMessageData<AgentTools<Agent>> = {
+      kind: 'ai',
+      id: aiMessageId,
+      parts: [],
+    };
+
+    const newPath = conversation.pushUpdatedAiMessage(chatPath, newAIMessage);
+    return { chatPath: newPath, aiMessageId };
+  }
 }

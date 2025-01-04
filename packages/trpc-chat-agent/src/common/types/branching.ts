@@ -190,18 +190,10 @@ export class ConversationBranchState {
     return this.mergeWith(next);
   }
 
-  getPathToHumanMessage(messageId: string): ChatTreePath {
-    if (!this.humanMessageChildren[messageId]) {
-      throw new Error('Invalid messageId');
-    }
-
+  getPathToAiMessage(messageId: string): ChatTreePath {
     const path: ChatTreePath = [];
 
-    if (!this.messageParent[messageId]) {
-      throw new Error('Invalid messageId');
-    }
-
-    let aiId = this.messageParent[messageId];
+    let aiId = messageId;
     let humanId = '';
 
     while (aiId !== ChatConversation.aiMessageRootId) {
@@ -221,11 +213,17 @@ export class ConversationBranchState {
         humanMessageChildIndex: humanChildIndex,
         aiMessageChildIndex: aiChildIndex,
       });
-
-      console.log({ humanChildIndex, aiChildIndex, humanId, aiId });
     }
 
     return path.reverse();
+  }
+
+  getPathToHumanMessage(messageId: string): ChatTreePath {
+    if (!this.messageParent[messageId]) {
+      throw new Error('Invalid messageId');
+    }
+
+    return this.getPathToAiMessage(this.messageParent[messageId]);
   }
 
   /**

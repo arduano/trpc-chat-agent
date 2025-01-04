@@ -8,7 +8,7 @@ import type {
   AnyStructuredChatTool,
   ChatAgent,
   ChatAgentOrTools,
-  ChatBranchState,
+  ChatBranchState as ChatPathState,
   ChatTreePath,
   ClientSideConversationData,
   ClientSideUpdate,
@@ -236,6 +236,10 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     branchState.value = updatedBranch;
   }
 
+  function switchMessagePathIndex(messageId: string, index: number) {
+    branchState.value = branchState.peek().withMessageIndex(messageId, index);
+  }
+
   // Trigger loading the conversation if we know the conversation ID
   if (initialConversationId) {
     const conversation = store.getConversation(initialConversationId);
@@ -309,6 +313,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
 
   const callbackCache = makeItemCache<AnyActiveCallbackWithResponse>();
   const editMsgClosureCache = makeItemCache<(content: string) => void>();
+  const regenerateMsgClosureCache = makeItemCache<() => void>();
+  const switchPathMsgClosureCache = makeItemCache<(index: number) => void>();
 
   const CallbacksMapped = computed(() => {
     return Object.values(callbacks.value)
@@ -344,7 +350,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     message: AdvancedAIMessageDataClientSide<Tools>,
     callbacks: AnyActiveCallbackWithResponse[]
   ): AIMessageWithCallbacks<Tools> => {
-    // const branch = conversation.value.getBranchInfoForMessageId(message.id);
+    const path = conversation.value.getPathInfoForMessageId(message.id);
     return {
       ...message,
       parts: message.parts.map((part) =>
@@ -353,21 +359,31 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
           callbacks.filter((c) => c.messageId === message.id)
         )
       ),
-      // branch: {
-      //   ...branch,
-      // },
+      regenerate: regenerateMsgClosureCache.get(message.id, () => () => {
+        regenerateMessage(message.id);
+      }),
+      path: {
+        ...path,
+        switchTo: switchPathMsgClosureCache.get(message.id, () => (index: number) => {
+          switchMessagePathIndex(message.id, index);
+        }),
+      },
     };
   };
 
   const mapHumanMessageAddCallbacks = (message: HumanMessageData): HumanMessageWithCallbacks => {
+    const path = conversation.value.getPathInfoForMessageId(message.id);
     return {
       ...message,
-      // branch: {
-      //   ...branchState.value,
-      // },
       edit: editMsgClosureCache.get(message.id, () => (content: string) => {
         editMessage(message.id, content);
       }),
+      path: {
+        ...path,
+        switchTo: switchPathMsgClosureCache.get(message.id, () => (index: number) => {
+          switchMessagePathIndex(message.id, index);
+        }),
+      },
     };
   };
 
@@ -376,6 +392,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
 
     callbackCache.resetUsage();
     editMsgClosureCache.resetUsage();
+    regenerateMsgClosureCache.resetUsage();
+    switchPathMsgClosureCache.resetUsage();
 
     const messagesMapped = rawMessages.map((message) => {
       if (message.kind === 'ai') {
@@ -390,6 +408,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
 
     callbackCache.deleteUnused();
     editMsgClosureCache.deleteUnused();
+    regenerateMsgClosureCache.deleteUnused();
+    switchPathMsgClosureCache.deleteUnused();
 
     return messagesMapped;
   });
@@ -444,6 +464,13 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     beginStream(conversationId.peek(), message, path);
   };
 
+  const regenerateMessage = (aiMessageId: string) => {
+    assertCanBeginStream();
+
+    const path = branchState.peek().getPathToAiMessage(aiMessageId);
+    beginStream(conversationId.peek(), null, path);
+  };
+
   return {
     conversation,
     messages: pastMappedMessages,
@@ -470,7 +497,7 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
     }
   };
 
-  const beginStream = (conversationId: string | undefined, humanMessage: string, branch: ChatTreePath) => {
+  const beginStream = (conversationId: string | undefined, humanMessage: string | null, branch: ChatTreePath) => {
     if (cancelCurrentStream.value) {
       throw new Error('Already streaming');
     }
@@ -555,7 +582,7 @@ function makeItemCache<T>() {
   };
 }
 
-export type ChatBranchStateWithSwitch = ChatBranchState & {
+export type ChatPathStateWithSwitch = ChatPathState & {
   index: number;
   count: number;
   switchTo: (index: number) => void;
@@ -615,11 +642,11 @@ export type AIMessageWithCallbacks<AgentOrTools extends ChatAgentOrTools> = {
   kind: 'ai';
   id: string;
   parts: AdvancedAIMessageDataPartClientSideWithCallbacks<AgentOrTools>[];
-  // branch: ChatBranchStateWithSwitch;
-  // regenerate: () => void;
+  path: ChatPathStateWithSwitch;
+  regenerate: () => void;
 };
 
 export type HumanMessageWithCallbacks = HumanMessageData & {
-  // branch: ChatBranchStateWithSwitch;
+  path: ChatPathStateWithSwitch;
   edit: (content: string) => void;
 };

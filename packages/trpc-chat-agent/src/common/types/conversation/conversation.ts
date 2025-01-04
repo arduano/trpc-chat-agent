@@ -89,17 +89,17 @@ export class ChatConversation<AIMessage extends { id: string }> {
       }
       const humanIndex = humanList.length - 1;
       if (humanIndex === -1) {
-        throw new Error('Invalid tree');
+        throw new Error('Invalid path');
       }
       humanId = humanList[humanIndex];
 
       const aiList = this.data.humanMessageChildIds?.[humanId];
       if (!aiList) {
-        throw new Error('Invalid tree');
+        throw new Error('Invalid path');
       }
       const aiIndex = aiList.length - 1;
       if (aiIndex === -1) {
-        throw new Error('Invalid tree');
+        throw new Error('Invalid path');
       }
       aiId = aiList[aiIndex];
 
@@ -165,7 +165,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
   }
 
   public pushHumanAiMessagePair(
-    tree: ChatTreePath,
+    path: ChatTreePath,
     humanMessage: HumanMessageData,
     aiMessage: AIMessage
   ): ChatTreePath {
@@ -176,16 +176,16 @@ export class ChatConversation<AIMessage extends { id: string }> {
       throw new Error('AI message already exists');
     }
 
-    const parentAiId = this.getAIMessageIdAt(tree);
+    const parentAiId = this.getAIMessageIdAt(path);
     if (!parentAiId) {
-      throw new Error('Invalid tree');
+      throw new Error('Invalid path');
     }
 
     const humanId = humanMessage.id;
     const aiId = aiMessage.id;
 
-    const newAiIndex = this.pushNewIndexforAIMessageChildren(parentAiId, humanId);
-    const newHumanIndex = this.pushNewIndexforHumanMessageChildren(humanId, aiId);
+    const newAiChildIndex = this.pushNewIndexforAIMessageChildren(parentAiId, humanId);
+    const newHumanChildIndex = this.pushNewIndexforHumanMessageChildren(humanId, aiId);
 
     this.produceData((data) => {
       data.humanMessages[humanId] = humanMessage;
@@ -193,33 +193,61 @@ export class ChatConversation<AIMessage extends { id: string }> {
     });
 
     return [
-      ...tree,
+      ...path,
       {
-        humanMessageChildIndex: newHumanIndex,
-        aiMessageChildIndex: newAiIndex,
+        humanMessageChildIndex: newHumanChildIndex,
+        aiMessageChildIndex: newAiChildIndex,
       },
     ];
   }
 
-  public asMessagesArray(tree: ChatTreePath): (HumanMessageData | AIMessage)[] {
+  public pushUpdatedAiMessage(path: ChatTreePath, aiMessage: AIMessage) {
+    if (this.data.aiMessages[aiMessage.id]) {
+      throw new Error('AI message already exists');
+    }
+
+    const aiId = aiMessage.id;
+
+    const humanMessageId = this.getHumanMessageIdAt(path);
+    if (!humanMessageId) {
+      throw new Error('Invalid path');
+    }
+
+    const newHumanChildIndex = this.pushNewIndexforHumanMessageChildren(humanMessageId, aiId);
+
+    this.produceData((data) => {
+      data.aiMessages[aiId] = castDraft(aiMessage);
+    });
+
+    // Pop the last path element and push the new one
+    return [
+      ...path.slice(0, path.length - 1),
+      {
+        humanMessageChildIndex: newHumanChildIndex,
+        aiMessageChildIndex: 0,
+      },
+    ];
+  }
+
+  public asMessagesArray(path: ChatTreePath): (HumanMessageData | AIMessage)[] {
     const messages: (HumanMessageData | AIMessage)[] = [];
 
-    if (tree.length === 0) {
+    if (path.length === 0) {
       return messages;
     }
 
     let humanId = '';
     let aiId = ChatConversation.aiMessageRootId;
 
-    for (const selection of tree) {
+    for (const selection of path) {
       const nextHumanId = this.data.aiMessageChildIds[aiId]?.[selection.aiMessageChildIndex];
       if (!nextHumanId) {
-        throw new Error('Invalid tree');
+        throw new Error('Invalid path');
       }
       humanId = nextHumanId;
       const nextAiId = this.data.humanMessageChildIds[humanId]?.[selection.humanMessageChildIndex];
       if (!nextAiId) {
-        throw new Error('Invalid tree');
+        throw new Error('Invalid path');
       }
       aiId = nextAiId;
 
@@ -230,7 +258,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return messages;
   }
 
-  public getBranchInfoForMessageId(messageId: string): ChatBranchState {
+  public getPathInfoForMessageId(messageId: string): ChatBranchState {
     const getVariantsForMessageId = (ids: Record<string, string[]>) => {
       return Object.values(ids).find((array) => array.includes(messageId));
     };

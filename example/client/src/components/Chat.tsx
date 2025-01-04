@@ -1,12 +1,13 @@
 import type {
   AIMessageWithCallbacks,
   AnyStructuredChatTool,
+  ChatPathStateWithSwitch,
   HumanMessageWithCallbacks,
 } from '@arduano/trpc-chat-agent';
 import type { AgentType } from '../../../server/src/agent';
 import { useConversation } from '@arduano/trpc-chat-agent-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaPencilAlt } from 'react-icons/fa';
+import { FaPencilAlt, FaRedo } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import { rawTrpc } from '../trpc';
 import { RenderTool } from './RenderTool';
@@ -52,20 +53,7 @@ export function Chat() {
                 <div className="h-[60vh] overflow-auto mb-4 space-y-4 pr-4">
                   <RenderMessages
                     messages={messages}
-                    renderAiMessage={(message) => (
-                      <>
-                        {message.parts.map((part, i) => (
-                          <React.Fragment key={i}>
-                            {part.content && (
-                              <div className="p-4 rounded-lg bg-gray-100 mr-8">{part.content as string}</div>
-                            )}
-                            {part.toolCalls.map((toolCall) => (
-                              <RenderTool key={toolCall.id} tool={toolCall} />
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </>
-                    )}
+                    renderAiMessage={(message) => <AIMessage message={message} />}
                     renderHumanMessage={(message) => <HumanMessage message={message} />}
                   />
                   <div ref={messagesEndRef} />
@@ -125,6 +113,33 @@ function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
   );
 }
 
+interface MessageVariantsProps {
+  path: ChatPathStateWithSwitch;
+}
+
+function MessageVariants({ path }: MessageVariantsProps) {
+  if (path.count <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+      {Array.from({ length: path.count }, (_, i) => (
+        <button
+          key={i}
+          onClick={() => path.switchTo(i)}
+          className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${
+            path.index === i ? 'bg-gray-300' : 'hover:bg-gray-200'
+          }`}
+          aria-label={`Switch to variant ${i + 1}`}
+        >
+          {i + 1}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 interface HumanMessageProps {
   message: HumanMessageWithCallbacks;
 }
@@ -148,33 +163,36 @@ export function HumanMessage({ message }: HumanMessageProps) {
       >
         <FaPencilAlt size={14} />
       </button>
-      {isEditing ? (
-        <form onSubmit={handleSubmit} className="flex-1">
-          <div className="flex gap-2">
-            <textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              className="flex-1 p-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              autoFocus
-              rows={Math.max(1, editedContent.split('\n').length)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e as any);
-                }
-              }}
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 h-fit"
-            >
-              Send
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="p-4 rounded-lg bg-blue-100 flex-1">{message.content as string}</div>
-      )}
+      <div className="flex-1">
+        <MessageVariants path={message.path} />
+        {isEditing ? (
+          <form onSubmit={handleSubmit} className="flex-1">
+            <div className="flex gap-2">
+              <textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                className="flex-1 p-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                autoFocus
+                rows={Math.max(1, editedContent.split('\n').length)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e as any);
+                  }
+                }}
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 h-fit"
+              >
+                Send
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="p-4 rounded-lg bg-blue-100">{message.content as string}</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -185,15 +203,25 @@ interface AIMessageProps {
 
 export function AIMessage({ message }: AIMessageProps) {
   return (
-    <>
-      {message.parts.map((part, i) => (
-        <React.Fragment key={i}>
-          {part.content && <div className="p-4 rounded-lg bg-gray-100 mr-8">{part.content as string}</div>}
-          {part.toolCalls.map((toolCall) => (
-            <RenderTool key={toolCall.id} tool={toolCall} />
-          ))}
-        </React.Fragment>
-      ))}
-    </>
+    <div className="flex items-start gap-2">
+      <button
+        onClick={() => message.regenerate()}
+        className="mt-2 p-2 text-gray-500 hover:text-gray-700 transition-colors"
+        aria-label="Regenerate response"
+      >
+        <FaRedo size={14} />
+      </button>
+      <div className="flex-1">
+        <MessageVariants path={message.path} />
+        {message.parts.map((part, i) => (
+          <React.Fragment key={i}>
+            {part.content && <div className="p-4 rounded-lg bg-gray-100">{part.content as string}</div>}
+            {part.toolCalls.map((toolCall) => (
+              <RenderTool key={toolCall.id} tool={toolCall} />
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
   );
 }
