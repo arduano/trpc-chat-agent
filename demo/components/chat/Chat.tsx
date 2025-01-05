@@ -10,7 +10,7 @@ import type {
   ChatPathStateWithSwitch,
   GetToolByName,
   MessageContent,
-} from '@arduano/trpc-chat-agent';
+} from '@trpc-chat-agent/core';
 import type { JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { trpcClient } from '@/utils/trpc';
-import { useConversation } from '@arduano/trpc-chat-agent-react';
+import { useConversation } from '@trpc-chat-agent/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CgRedo } from 'react-icons/cg';
 import { RiPencilFill } from 'react-icons/ri';

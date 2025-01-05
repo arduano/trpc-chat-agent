@@ -1,6 +1,6 @@
-import type { ChatAgentOrTools, RouterTypeFromAgent } from '@arduano/trpc-chat-agent';
 import type { ReadonlySignal } from '@preact/signals-core';
-import { createSystemStateStore, createSystemStateStoreSubscriber } from '@arduano/trpc-chat-agent';
+import type { ChatAgentOrTools, RouterTypeFromAgent } from '@trpc-chat-agent/core';
+import { createSystemStateStore, createSystemStateStoreSubscriber } from '@trpc-chat-agent/core';
 import { useEffect, useMemo, useState } from 'react';
 
 type UseConversationArgs<Agent extends ChatAgentOrTools> = {

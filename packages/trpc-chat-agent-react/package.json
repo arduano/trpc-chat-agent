@@ -1,5 +1,5 @@
 {
-  "name": "@arduano/trpc-chat-agent-react",
+  "name": "@trpc-chat-agent/react",
   "version": "0.1.0",
   "exports": {
     ".": {
@@ -15,9 +15,9 @@
     "dev": "pnpm build --watch"
   },
   "dependencies": {
-    "@arduano/trpc-chat-agent": "workspace:*",
     "@preact/signals-core": "^1.8.0",
     "@preact/signals-react": "^3.0.0",
+    "@trpc-chat-agent/core": "workspace:*",
     "immer": "^10.1.1",
     "react": "18.2.0",
     "zod": "^3.24.1",

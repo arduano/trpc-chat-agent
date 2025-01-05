@@ -1,6 +1,6 @@
-import { initAgents } from '@arduano/trpc-chat-agent';
-import { LangChainAgentsBackend } from '@arduano/trpc-chat-agent-langchain';
 import { kvsLocalStorage } from '@kvs/node-localstorage';
+import { initAgents } from '@trpc-chat-agent/core';
+import { LangChainAgentsBackend } from '@trpc-chat-agent/langchain';
 import { initTRPC } from '@trpc/server';
 import AsyncLock from 'async-lock';
 

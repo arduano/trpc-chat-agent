@@ -1,5 +1,5 @@
 {
-  "name": "@arduano/trpc-chat-agent-langchain",
+  "name": "@trpc-chat-agent/langchain",
   "version": "0.1.0",
   "exports": {
     ".": {
@@ -15,9 +15,9 @@
     "dev": "pnpm build --watch"
   },
   "dependencies": {
-    "@arduano/trpc-chat-agent": "workspace:*",
     "@langchain/core": "^0.3.26",
     "@langchain/langgraph": "^0.2.36",
+    "@trpc-chat-agent/core": "workspace:*",
     "zod": "^3.24.1"
   },
   "devDependencies": {

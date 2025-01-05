@@ -1,7 +1,7 @@
 'use client';
 
 import type { AgentType } from '@/server/agent';
-import type { AgentTools, ChatAIMessageToolCall, ChatToolCall, ToolCallState } from '@arduano/trpc-chat-agent';
+import type { AgentTools, ChatAIMessageToolCall, ChatToolCall, ToolCallState } from '@trpc-chat-agent/core';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';

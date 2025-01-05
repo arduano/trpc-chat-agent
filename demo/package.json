@@ -9,9 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@arduano/trpc-chat-agent": "workspace:*",
-    "@arduano/trpc-chat-agent-langchain": "workspace:*",
-    "@arduano/trpc-chat-agent-react": "workspace:*",
     "@kvs/node-localstorage": "^2.2.0",
     "@langchain/openai": "^0.3.16",
     "@radix-ui/react-progress": "^1.1.1",
@@ -19,6 +16,9 @@
     "@radix-ui/react-slot": "^1.1.1",
     "@tanstack/react-query": "5.62.15",
     "@tanstack/react-query-devtools": "^5.62.15",
+    "@trpc-chat-agent/core": "workspace:*",
+    "@trpc-chat-agent/langchain": "workspace:*",
+    "@trpc-chat-agent/react": "workspace:*",
     "@trpc/client": "11.0.0-rc.682",
     "@trpc/next": "11.0.0-rc.682",
     "@trpc/react-query": "11.0.0-rc.682",

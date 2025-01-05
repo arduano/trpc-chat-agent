@@ -1,6 +1,6 @@
 import type { createContext } from './context';
 import { EventEmitter } from 'node:events';
-import { makeChatRouterForAgent, ServerSideChatConversation } from '@arduano/trpc-chat-agent';
+import { makeChatRouterForAgent, ServerSideChatConversation } from '@trpc-chat-agent/core';
 import { initTRPC } from '@trpc/server';
 import { observable } from '@trpc/server/observable';
 import { nanoid } from 'nanoid';

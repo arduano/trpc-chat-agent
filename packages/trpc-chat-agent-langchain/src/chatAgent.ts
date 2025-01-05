@@ -1,3 +1,8 @@
+import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
+import type { RunnableConfig } from '@langchain/core/runnables';
+import type { MessagesAnnotation } from '@langchain/langgraph';
 import type {
   AnyStructuredChatTool,
   ChatAgent,
@@ -9,18 +14,13 @@ import type {
   ServerSideConversationUpdate,
   ServerSideUpdate,
   ToolCallbackInvoker,
-} from '@arduano/trpc-chat-agent';
-import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
-import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
-import type { RunnableConfig } from '@langchain/core/runnables';
-import type { MessagesAnnotation } from '@langchain/langgraph';
-import { Debouncer, processMessageContentForClient, ServerSideChatConversation } from '@arduano/trpc-chat-agent';
+} from '@trpc-chat-agent/core';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
+import { Debouncer, processMessageContentForClient, ServerSideChatConversation } from '@trpc-chat-agent/core';
 import { StructuredChatToolLangChain } from './tool';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context>() {

@@ -1,5 +1,5 @@
-import type { StructuredChatTool, ToolCallInput, ToolCallOutput } from '@arduano/trpc-chat-agent';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import type { StructuredChatTool, ToolCallInput, ToolCallOutput } from '@trpc-chat-agent/core';
 import type { z } from 'zod';
 import type { LangchainToolExtraArgs } from '.';
 import { CallbackManager, parseCallbackConfigArg } from '@langchain/core/callbacks/manager';
