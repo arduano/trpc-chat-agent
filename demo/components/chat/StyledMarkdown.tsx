@@ -3,6 +3,7 @@ import Markdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
+import { Card } from '../ui/card';
 
 export function StyledMarkdown({ children }: { children: string }) {
   return (
@@ -36,10 +37,9 @@ export function StyledMarkdown({ children }: { children: string }) {
           />
         ),
         pre: ({ className, node, ...props }) => (
-          <pre
-            className={cn('bg-black p-4 border border-accent-foreground/20 w-full block rounded-lg', className)}
-            {...props}
-          />
+          <Card className="p-4 border border-accent-foreground/20 w-full block rounded-lg">
+            <pre {...props} />
+          </Card>
         ),
         hr: ({ className, node, ...props }) => (
           <hr className={cn('my-6 border-t border-accent', className)} {...props} />
@@ -63,11 +63,11 @@ export function StyledMarkdown({ children }: { children: string }) {
               children={String(children).replace(/\n$/, '')}
               language={match[1]}
               style={themeWithoutBackgroundOrPadding(atomDark)}
-              className={cn(inline ? 'bg-black rounded text-sm font-mono' : 'bg-black p-0', className)}
+              className={cn(inline ? 'rounded text-sm font-mono' : 'p-0', className)}
             />
           ) : (
             <code
-              className={cn(inline ? 'bg-black px-1.5 py-0.5 rounded text-sm font-mono' : 'p-0', className)}
+              className={cn(inline ? 'px-1.5 py-0.5 rounded text-sm font-mono' : 'p-0', className)}
               inline={inline}
               {...rest}
             >
