@@ -18,7 +18,6 @@
     "@arduano/trpc-chat-agent": "workspace:*",
     "@preact/signals-core": "^1.8.0",
     "@preact/signals-react": "^3.0.0",
-    "@trpc/client": "^10.45.2",
     "immer": "^10.1.1",
     "react": "18.2.0",
     "zod": "^3.24.1",

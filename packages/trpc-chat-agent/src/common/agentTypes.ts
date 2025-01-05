@@ -30,7 +30,7 @@ export type ChatAgentInvokeArgs<Tools extends readonly AnyStructuredChatTool[]> 
   chatPath: ChatTreePath;
   ctx: ToolsContext<Tools>;
   callbackInvoker: ToolCallbackInvoker;
-  controller: AbortController;
+  signal: AbortSignal;
 };
 
 export type ChatAgent<Tools extends readonly AnyStructuredChatTool[]> = {

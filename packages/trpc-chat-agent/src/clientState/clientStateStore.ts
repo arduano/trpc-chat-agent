@@ -510,7 +510,15 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
       },
       {
         onData: (updateEvent) => {
-          onUpdate(updateEvent);
+          if (updateEvent === null) {
+            // Currently, trpc seems to be struggling to trigger "conversation complete".
+            // Yielding null to signal the conversation is complete (manually handled client-side)
+            subscription.unsubscribe();
+            cancelCurrentStream.value = undefined;
+            onComplete();
+          } else {
+            onUpdate(updateEvent);
+          }
         },
         onComplete: () => {
           cancelCurrentStream.value = undefined;

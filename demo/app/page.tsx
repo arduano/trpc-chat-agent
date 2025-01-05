@@ -1,8 +1,8 @@
-import { ChatComponent } from '@/components/MessageSubscription';
+import { ChatComponent } from '@/components/Chat';
 
 export default function Home() {
   return (
-    <main className="h-screen bg-gray-50">
+    <main className="h-screen bg-background">
       <ChatComponent />
     </main>
   );

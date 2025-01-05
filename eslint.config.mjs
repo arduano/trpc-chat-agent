@@ -49,6 +49,7 @@ export default antfu(
       'style/jsx-wrap-multilines': 'off',
       'style/type-generic-spacing': 'off',
       'style/quotes': 'off',
+      'unicorn/prefer-node-protocol': 'off',
     },
   },
   {

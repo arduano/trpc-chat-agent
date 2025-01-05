@@ -1,13 +1,20 @@
 import type { AppRouter } from '@/server/trpc';
-import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
+import { httpBatchLink, splitLink, unstable_httpSubscriptionLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 
 export const trpc = createTRPCReact<AppRouter>();
 
-export const trpcClient = createTRPCProxyClient<AppRouter>({
+export const trpcClient = trpc.createClient({
   links: [
-    httpBatchLink({
-      url: '/api/trpc',
+    splitLink({
+      // uses the httpSubscriptionLink for subscriptions
+      condition: (op) => op.type === 'subscription',
+      true: unstable_httpSubscriptionLink({
+        url: `/api/trpc`,
+      }),
+      false: httpBatchLink({
+        url: `/api/trpc`,
+      }),
     }),
   ],
 });

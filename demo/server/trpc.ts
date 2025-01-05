@@ -1,20 +1,40 @@
+import type { createContext } from './context';
 import { EventEmitter } from 'node:events';
+import { makeChatRouterForAgent, ServerSideChatConversation } from '@arduano/trpc-chat-agent';
 import { initTRPC } from '@trpc/server';
 import { observable } from '@trpc/server/observable';
+import { nanoid } from 'nanoid';
+import { agent } from './agent';
 
 export const ee = new EventEmitter();
 
-const t = initTRPC.create();
+export const t = initTRPC.context<typeof createContext>().create();
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
 export const middleware = t.middleware;
 
-ee.on('message', (data) => {
-  console.log(data);
-});
-
 export const appRouter = router({
+  chat: makeChatRouterForAgent({
+    agent,
+    createConversation: async (_ctx) => {
+      const id = nanoid();
+      return ServerSideChatConversation.newConversationData<typeof agent>(id);
+    },
+    getConversation: async (id, ctx) => {
+      const data = await ctx.conversations.get(id);
+      if (!data) {
+        throw new Error('Conversation not found');
+      }
+
+      return data as any;
+    },
+    t,
+    saveConversation: async (id, data, ctx) => {
+      await ctx.conversations.set(id, data);
+    },
+  }),
+
   onMessage: t.procedure.subscription(() => {
     return observable<{ message: string; timestamp: number }>((emit) => {
       const onMessage = (data: { message: string; timestamp: number }) => {

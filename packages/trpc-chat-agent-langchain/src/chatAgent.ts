@@ -468,7 +468,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
         },
         {
           version: 'v2',
-          signal: args.controller.signal,
+          signal: args.signal,
           callbacks: langchainCallbacks,
         }
       );
