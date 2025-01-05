@@ -1,5 +1,5 @@
 .markdown {
-  @apply text-foreground-100 leading-relaxed;
+  @apply text-foreground leading-relaxed;
 }
 
 .markdown > :last-child {
@@ -39,19 +39,19 @@
 }
 
 .markdown a {
-  @apply text-accent-400 hover:text-accent-300 transition-colors;
+  @apply text-accent-foreground transition-colors;
 }
 
 .markdown blockquote {
-  @apply border-l-4 border-background-700 pl-4 my-4 text-background-300;
+  @apply border-l-4 border-accent pl-4 my-4 text-accent-foreground;
 }
 
 .markdown code {
-  @apply bg-background-800 px-1.5 py-0.5 rounded text-sm font-mono;
+  @apply bg-accent px-1.5 py-0.5 rounded text-sm font-mono;
 }
 
 .markdown pre {
-  @apply bg-background-800 p-4 rounded-lg my-4 overflow-x-auto;
+  @apply bg-accent p-4 rounded-lg my-4 overflow-x-auto;
 }
 
 .markdown pre code {
@@ -59,7 +59,7 @@
 }
 
 .markdown hr {
-  @apply my-6 border-t border-background-700;
+  @apply my-6 border-t border-accent;
 }
 
 .markdown table {
@@ -68,11 +68,11 @@
 
 .markdown th,
 .markdown td {
-  @apply border border-background-700 px-4 py-2;
+  @apply border border-accent px-4 py-2;
 }
 
 .markdown th {
-  @apply bg-background-700 font-bold;
+  @apply bg-accent font-bold;
 }
 
 .markdown img {

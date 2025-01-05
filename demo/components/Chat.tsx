@@ -16,13 +16,35 @@ import { cn } from '@/lib/utils';
 import { trpcClient } from '@/utils/trpc';
 import { useConversation } from '@arduano/trpc-chat-agent-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaPencilAlt, FaRedo, FaTimes } from 'react-icons/fa';
+import { FaPencilAlt, FaRedo } from 'react-icons/fa';
 
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { RenderTool } from './RenderTool';
 
-export function ChatComponent() {
+export type ChatComponentProps = {
+  id?: string;
+  onUpdateConversationId?: (id: string) => void;
+};
+
+export function Chat({ id, onUpdateConversationId }: ChatComponentProps) {
+  const [key, setKey] = useState(0);
+  const [pastId, setPastId] = useState(id);
+
+  // Force re-mount the chat component when the id changes.
+  useEffect(() => {
+    if (id !== pastId) {
+      setPastId(id);
+      if (pastId !== undefined) {
+        setKey((k) => k + 1);
+      }
+    }
+  }, [id]);
+
+  return <ChatComponentWithStaticId key={key} id={id} onUpdateConversationId={onUpdateConversationId} />;
+}
+
+export function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatComponentProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -32,9 +54,11 @@ export function ChatComponent() {
 
   const { messages, beginMessage, isStreaming } = useConversation({
     router: trpcClient.chat,
-    initialConversationId: 'xXyAuVcfRRxiymCsskaYd',
+    initialConversationId: id,
     onUpdateConversationId: (newId) => {
-      // Handle conversation ID updates if needed
+      if (onUpdateConversationId) {
+        onUpdateConversationId(newId);
+      }
     },
   });
 
@@ -72,21 +96,25 @@ export function ChatComponent() {
             onChange={(e) => setInput(e.target.value)}
             disabled={isStreaming}
             placeholder="Type a message..."
-            className="resize-none"
+            className="resize-none rounded-xl min-h-[44px] max-h-[200px] overflow-y-auto scrollbar scrollbar-thumb-secondary scrollbar-track-transparent"
             rows={1}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (input.trim() && !isStreaming) {
-                  beginMessage(input);
-                  setInput('');
+                if (!isStreaming && input.trim()) {
+                  handleSubmit(e as any);
                 }
               }
             }}
+            style={{
+              height: 'auto',
+            }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = `${target.scrollHeight}px`;
+            }}
           />
-          <Button type="submit" size="lg" disabled={isStreaming || !input.trim()}>
-            Send
-          </Button>
         </form>
       </Card>
     </div>
@@ -149,43 +177,69 @@ function HumanMessage({ message }: { message: ChatHumanMessage }) {
   };
 
   return (
-    <div className="flex items-start gap-2 pl-12 lg:pl-48">
-      <Button
-        onClick={() => setIsEditing(!isEditing)}
-        variant="ghost"
-        size="sm"
-        className={cn(
-          'mt-2 p-2 text-muted-foreground rounded-full hover:text-foreground',
-          message.path.count > 1 && 'mt-7'
-        )}
-      >
-        {isEditing ? <FaTimes size={14} /> : <FaPencilAlt size={14} />}
-      </Button>
+    <div className={cn('group flex items-start gap-2', !isEditing && 'pl-12 lg:pl-48')}>
+      {!isEditing && (
+        <Button
+          onClick={() => {
+            setIsEditing(!isEditing);
+            setEditedContent(message.content as string);
+          }}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            'mt-2 p-2 text-muted-foreground rounded-full hover:text-foreground opacity-0 group-hover:opacity-100',
+            message.path.count > 1 && 'mt-7'
+          )}
+        >
+          <FaPencilAlt size={14} />
+        </Button>
+      )}
       <div className="flex-1">
-        {message.path.count > 1 && <MessageVariants path={message.path} />}
+        {message.path.count > 1 && !isEditing && <MessageVariants path={message.path} />}
         {isEditing ? (
-          <form onSubmit={handleSubmit} className="flex-1">
-            <div className="flex gap-2">
+          <form onSubmit={handleSubmit}>
+            <Card className="p-4">
               <Textarea
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
-                className="flex-1"
+                className="resize-none min-h-0 border-0 p-0 focus-visible:ring-0 bg-transparent"
                 autoFocus
-                rows={Math.max(1, editedContent.split('\n').length)}
+                rows={1}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSubmit(e as any);
                   }
                 }}
+                style={{
+                  height: 'auto',
+                }}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = `${target.scrollHeight + 2}px`;
+                }}
               />
-              <Button type="submit" size="sm">
-                Send
-              </Button>
-            </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditedContent(message.content as string);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm">
+                  Save changes
+                </Button>
+              </div>
+            </Card>
           </form>
         ) : (
-          <Card className="p-4 bg-secondary">
+          <Card className="p-4 bg-secondary markdown">
             <Markdown remarkPlugins={[remarkGfm]}>{message.content as string}</Markdown>
           </Card>
         )}
@@ -196,16 +250,16 @@ function HumanMessage({ message }: { message: ChatHumanMessage }) {
 
 function AIMessage({ message }: { message: AIMessageWithCallbacks<AgentType> }) {
   return (
-    <div className="flex items-start gap-2 pr-12 lg:pr-48">
+    <div className="group flex items-start gap-2 pr-12 lg:pr-48">
       <div className="flex-1">
         {message.path.count > 1 && <MessageVariants path={message.path} />}
         <div className="space-y-4">
           {message.parts.map((part, i) => (
             <React.Fragment key={i}>
               {part.content && (
-                <Card className="p-4">
+                <div className="markdown">
                   <Markdown remarkPlugins={[remarkGfm]}>{part.content as string}</Markdown>
-                </Card>
+                </div>
               )}
               {part.toolCalls.map((toolCall) => (
                 <RenderTool key={toolCall.id} tool={toolCall} />
@@ -219,7 +273,7 @@ function AIMessage({ message }: { message: AIMessageWithCallbacks<AgentType> }) 
         variant="ghost"
         size="sm"
         className={cn(
-          'mt-2 p-2 text-muted-foreground rounded-full hover:text-foreground',
+          'mt-2 p-2 text-muted-foreground rounded-full hover:text-foreground opacity-0 group-hover:opacity-100',
           message.path.count > 1 && 'mt-7'
         )}
       >

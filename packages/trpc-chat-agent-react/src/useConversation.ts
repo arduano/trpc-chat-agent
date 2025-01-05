@@ -21,6 +21,13 @@ export function useConversation<Agent extends ChatAgentOrTools>(args: UseConvers
     });
   }, []);
 
+  // Force cancel stream when the component unmounts
+  useEffect(() => {
+    return () => {
+      subscriber.cancelStream();
+    };
+  }, []);
+
   return {
     beginMessage: subscriber.beginMessage,
     cancelStream: subscriber.cancelStream,
@@ -29,6 +36,8 @@ export function useConversation<Agent extends ChatAgentOrTools>(args: UseConvers
     conversation: useSignalValue(subscriber.conversation),
     messages: useSignalValue(subscriber.messages),
     isStreaming: useSignalValue(subscriber.isStreaming),
+    conversationError: useSignalValue(subscriber.conversationError),
+    hasConversation: useSignalValue(subscriber.hasConversation),
   };
 }
 

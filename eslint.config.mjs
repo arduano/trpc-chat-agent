@@ -53,7 +53,7 @@ export default antfu(
     },
   },
   {
-    ignores: ['node_modules', '**/*.html', ''],
+    ignores: ['node_modules', '**/*.html', '**/*.md'],
   },
   eslintPluginPrettierRecommended
 );

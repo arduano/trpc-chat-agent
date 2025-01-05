@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "example/*",
+    "demo/*",
     "packages/*"
   ],
   "packageManager": "pnpm@9.12.2",
@@ -12,9 +12,7 @@
     "pnpm": "^9.6.0"
   },
   "scripts": {
-    "server": "cd example/server && pnpm",
-    "client": "cd example/client && pnpm",
-    "package": "cd packages/trpc-chat-agent && pnpm",
+    "demo": "cd demo && pnpm",
     "lint:fix": "eslint . --fix",
     "check-types": "pnpm -r exec tsc --noEmit"
   },

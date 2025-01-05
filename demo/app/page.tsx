@@ -1,9 +1,16 @@
-import { ChatComponent } from '@/components/Chat';
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function Home() {
-  return (
-    <main className="h-screen bg-background">
-      <ChatComponent />
-    </main>
-  );
+  // Redirect to /chat
+
+  const router = useRouter();
+
+  useEffect(() => {
+    router.push('/chat');
+  }, [router]);
+
+  return <div></div>;
 }

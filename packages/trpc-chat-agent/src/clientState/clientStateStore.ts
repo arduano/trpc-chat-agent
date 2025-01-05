@@ -268,7 +268,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
 
   const conversationId = signal(initialConversationId);
 
-  const { beginStream, cancelStream, isStreaming } = makeConversationStreamerState(router, {
+  const { beginStream, cancelStream, isStreaming, conversationError } = makeConversationStreamerState(router, {
     onUpdate: (update) => {
       store.processConversationUpdate(update);
 
@@ -471,12 +471,18 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     beginStream(conversationId.peek(), null, path);
   };
 
+  const hasConversation = computed(() => {
+    return !!conversationId.peek();
+  });
+
   return {
     conversation,
     messages: pastMappedMessages,
     beginMessage,
     isStreaming,
     cancelStream,
+    hasConversation,
+    conversationError,
   };
 }
 
@@ -487,6 +493,7 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
   callbacks: { onUpdate: (event: ClientSideUpdate) => void; onComplete: () => void }
 ) {
   const cancelCurrentStream = signal<(() => void) | undefined>(undefined);
+  const conversationError = signal<Error | undefined>(undefined);
 
   const { onUpdate, onComplete } = callbacks;
 
@@ -498,6 +505,8 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
   };
 
   const beginStream = (conversationId: string | undefined, humanMessage: string | null, branch: ChatTreePath) => {
+    conversationError.value = undefined;
+
     if (cancelCurrentStream.value) {
       throw new Error('Already streaming');
     }
@@ -525,7 +534,7 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
           onComplete();
         },
         onError: (err) => {
-          console.error('Chat error:', err);
+          conversationError.value = err;
           cancelStream();
         },
       }
@@ -540,6 +549,7 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
     beginStream,
     cancelStream,
     isStreaming: computed(() => !!cancelCurrentStream.value),
+    conversationError: computed(() => conversationError.value), // Make it read-only
   };
 }
 

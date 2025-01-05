@@ -214,7 +214,7 @@ interface ToolResultWrapperProps {
 
 function ToolResultWrapper({ icon, title, subtitle, children }: ToolResultWrapperProps) {
   return (
-    <Card className="mt-2 p-4 border">
+    <Card className="mt-2 p-4 border-none">
       <div className="flex items-start gap-3">
         <div className="mt-1">{icon}</div>
         <div className="flex-1">
@@ -243,17 +243,21 @@ function PromptUserInput({ onSubmit }: { onSubmit: (response: string) => void })
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
-      <Textarea
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        className="flex-1"
-        placeholder="Type your response..."
-        rows={1}
-      />
-      <Button type="submit" disabled={!input.trim()}>
-        Submit
-      </Button>
+    <form onSubmit={handleSubmit}>
+      <Card className="p-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="flex-1 bg-transparent border-0 p-0 focus-visible:ring-0"
+            placeholder="Type your response..."
+          />
+          <Button type="submit" size="sm" disabled={!input.trim()}>
+            Submit
+          </Button>
+        </div>
+      </Card>
     </form>
   );
 }
