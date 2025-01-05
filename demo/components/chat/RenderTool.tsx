@@ -5,7 +5,6 @@ import type { AgentTools, ChatAIMessageToolCall, ChatToolCall, ToolCallState } f
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import React, { useState } from 'react';
 import {

@@ -349,7 +349,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   const mapAiMessageAddCallbacks = (
     message: AdvancedAIMessageDataClientSide<Tools>,
     callbacks: AnyActiveCallbackWithResponse[]
-  ): AIMessageWithCallbacks<Tools> => {
+  ): ChatAIMessage<Tools> => {
     const path = conversation.value.getPathInfoForMessageId(message.id);
     return {
       ...message,
@@ -657,7 +657,7 @@ export type ChatAIMessagePart<AgentOrTools extends ChatAgentOrTools> = {
   toolCalls: ChatAIMessageToolCall<AgentOrTools>[];
 };
 
-export type AIMessageWithCallbacks<AgentOrTools extends ChatAgentOrTools> = {
+export type ChatAIMessage<AgentOrTools extends ChatAgentOrTools> = {
   kind: 'ai';
   id: string;
   parts: ChatAIMessagePart<AgentOrTools>[];
@@ -669,3 +669,15 @@ export type ChatHumanMessage = HumanMessageData & {
   path: ChatPathStateWithSwitch;
   edit: (content: string) => void;
 };
+
+type GetToolByNameFromList<
+  Name extends Tools[number]['TypeInfo']['Name'],
+  Tools extends readonly AnyStructuredChatTool[],
+> = {
+  [K in keyof Tools]: Tools[K]['TypeInfo']['Name'] extends Name ? Tools[K] : never;
+}[number];
+
+export type GetToolByName<
+  Name extends AgentTools<AgentOrTools>[number]['TypeInfo']['Name'],
+  AgentOrTools extends ChatAgentOrTools,
+> = GetToolByNameFromList<Name, AgentTools<AgentOrTools>>;

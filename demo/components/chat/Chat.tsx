@@ -2,10 +2,14 @@
 
 import type { AgentType } from '@/server/agent';
 import type {
-  AIMessageWithCallbacks,
   AnyStructuredChatTool,
+  ChatAIMessage,
+  ChatAIMessagePart,
+  ChatAIMessageToolCall,
   ChatHumanMessage,
   ChatPathStateWithSwitch,
+  GetToolByName,
+  MessageContent,
 } from '@arduano/trpc-chat-agent';
 import type { JSX } from 'react';
 import { Button } from '@/components/ui/button';
@@ -15,12 +19,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { trpcClient } from '@/utils/trpc';
 import { useConversation } from '@arduano/trpc-chat-agent-react';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaPencilAlt, FaRedo } from 'react-icons/fa';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CgRedo } from 'react-icons/cg';
+import { RiPencilFill } from 'react-icons/ri';
 
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { RenderTool } from './RenderTool';
+import { StyledMarkdown } from './StyledMarkdown';
 
 export type ChatComponentProps = {
   id?: string;
@@ -44,7 +48,7 @@ export function Chat({ id, onUpdateConversationId }: ChatComponentProps) {
   return <ChatComponentWithStaticId key={key} id={id} onUpdateConversationId={onUpdateConversationId} />;
 }
 
-export function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatComponentProps) {
+function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatComponentProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -76,18 +80,20 @@ export function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatCo
 
   return (
     <div className="flex flex-col h-screen max-h-screen">
-      <Card className="flex-1 border-0 rounded-none shadow-none relative">
-        <ScrollArea className="h-full">
+      <ScrollArea className="flex-1 h-full">
+        <Card className=" border-0 rounded-none shadow-none relative">
           <div className="flex flex-col gap-4 p-4 max-w-4xl mx-auto">
             <RenderMessages
               messages={messages}
-              renderAiMessage={(message) => <AIMessage message={message} />}
+              renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
+              renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
               renderHumanMessage={(message) => <HumanMessage message={message} />}
+              renderToolCall={(toolCall) => <RenderTool tool={toolCall} />}
             />
             <div ref={messagesEndRef} />
           </div>
-        </ScrollArea>
-      </Card>
+        </Card>
+      </ScrollArea>
 
       <Card className="border-t rounded-none p-4">
         <form onSubmit={handleSubmit} className="flex gap-4 max-w-4xl mx-auto">
@@ -121,31 +127,94 @@ export function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatCo
   );
 }
 
-function RenderMemoed<T>({ data, render }: { data: T; render: (data: T) => JSX.Element }) {
-  const jsx = useMemo(() => render(data), [data]);
-  return <>{jsx}</>;
+function RenderMemoed<T extends readonly any[]>({ data, render }: { data: T; render: (...args: T) => JSX.Element }) {
+  const jsx = useMemo(() => (!render ? 'Error: render function was missing' : render(...data)), data);
+  return jsx;
 }
 
 function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
   messages,
-  renderAiMessage,
   renderHumanMessage,
+  renderAiMessagePartContent,
+  renderToolCall,
+  renderAiMessageShell,
+  renderToolCallShell,
 }: {
-  messages: (AIMessageWithCallbacks<Tools> | ChatHumanMessage)[];
-  renderAiMessage: (message: AIMessageWithCallbacks<Tools>) => JSX.Element;
+  messages: (ChatAIMessage<Tools> | ChatHumanMessage)[];
+  renderAiMessageShell?: (message: ChatAIMessage<Tools>, children: JSX.Element) => JSX.Element;
+  renderAiMessagePartContent: (content: MessageContent) => JSX.Element;
+  renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Tools>, children: JSX.Element) => JSX.Element;
+  renderToolCall:
+    | {
+        [K in Tools[number]['TypeInfo']['Name']]: (toolCall: GetToolByName<K, Tools>) => JSX.Element;
+      }
+    | ((toolCall: ChatAIMessageToolCall<Tools>) => JSX.Element);
   renderHumanMessage: (message: ChatHumanMessage) => JSX.Element;
 }) {
-  return (
-    <>
-      {messages.map((message) => {
-        if (message.kind === 'human') {
-          return <RenderMemoed key={message.id} data={message} render={renderHumanMessage} />;
-        } else {
-          return <RenderMemoed key={message.id} data={message} render={renderAiMessage} />;
-        }
-      })}
-    </>
-  );
+  const defaultShellRender = useCallback((data: any, children: JSX.Element) => <>{children}</>, []);
+
+  renderAiMessageShell ??= defaultShellRender;
+  renderToolCallShell ??= defaultShellRender;
+
+  const renderSingleToolCall = (toolCall: ChatAIMessageToolCall<Tools>) => {
+    const toolCallRenderFn = typeof renderToolCall === 'function' ? renderToolCall : renderToolCall[toolCall.name];
+
+    if (!toolCallRenderFn) {
+      return <>{`Tool call with name "${toolCall.name}" not found`}</>;
+    }
+
+    return <RenderMemoed key={toolCall.id} data={[toolCall as any]} render={toolCallRenderFn as any} />;
+  };
+
+  const renderAllToolCalls = (toolCalls: ChatAIMessageToolCall<Tools>[]) => {
+    return (
+      <>
+        {toolCalls.map((toolCall) => {
+          const toolCallRendered = renderSingleToolCall(toolCall);
+          return <RenderMemoed key={toolCall.id} data={[toolCall, toolCallRendered]} render={renderToolCallShell} />;
+        })}
+      </>
+    );
+  };
+
+  const renderAiMessagePart = (message: ChatAIMessagePart<Tools>) => {
+    const content = <RenderMemoed data={[message.content]} render={renderAiMessagePartContent} />;
+    const toolCalls = <RenderMemoed data={[message.toolCalls]} render={renderAllToolCalls} />;
+    return (
+      <>
+        {content}
+        {toolCalls}
+      </>
+    );
+  };
+
+  const renderAiMessage = (message: ChatAIMessage<Tools>) => {
+    const parts = (
+      <>
+        {message.parts.map((part, i) => (
+          <RenderMemoed key={i} data={[part]} render={renderAiMessagePart} />
+        ))}
+      </>
+    );
+
+    return <RenderMemoed data={[message, parts]} render={renderAiMessageShell} />;
+  };
+
+  const renderAllMessages = (messages: (ChatAIMessage<Tools> | ChatHumanMessage)[]) => {
+    return (
+      <>
+        {messages.map((message) => {
+          if (message.kind === 'human') {
+            return <RenderMemoed key={message.id} data={[message]} render={renderHumanMessage} />;
+          } else {
+            return <RenderMemoed key={message.id} data={[message]} render={renderAiMessage} />;
+          }
+        })}
+      </>
+    );
+  };
+
+  return <RenderMemoed data={[messages]} render={renderAllMessages} />;
 }
 
 function MessageVariants({ path }: { path: ChatPathStateWithSwitch }) {
@@ -191,7 +260,7 @@ function HumanMessage({ message }: { message: ChatHumanMessage }) {
             message.path.count > 1 && 'mt-7'
           )}
         >
-          <FaPencilAlt size={14} />
+          <RiPencilFill size={14} />
         </Button>
       )}
       <div className="flex-1">
@@ -240,7 +309,7 @@ function HumanMessage({ message }: { message: ChatHumanMessage }) {
           </form>
         ) : (
           <Card className="p-4 bg-secondary markdown">
-            <Markdown remarkPlugins={[remarkGfm]}>{message.content as string}</Markdown>
+            <StyledMarkdown>{message.content as string}</StyledMarkdown>
           </Card>
         )}
       </div>
@@ -248,25 +317,12 @@ function HumanMessage({ message }: { message: ChatHumanMessage }) {
   );
 }
 
-function AIMessage({ message }: { message: AIMessageWithCallbacks<AgentType> }) {
+function AIMessageShell({ message, children }: { message: ChatAIMessage<AgentType>; children: JSX.Element }) {
   return (
     <div className="group flex items-start gap-2 pr-12 lg:pr-48">
       <div className="flex-1">
         {message.path.count > 1 && <MessageVariants path={message.path} />}
-        <div className="space-y-4">
-          {message.parts.map((part, i) => (
-            <React.Fragment key={i}>
-              {part.content && (
-                <div className="markdown">
-                  <Markdown remarkPlugins={[remarkGfm]}>{part.content as string}</Markdown>
-                </div>
-              )}
-              {part.toolCalls.map((toolCall) => (
-                <RenderTool key={toolCall.id} tool={toolCall} />
-              ))}
-            </React.Fragment>
-          ))}
-        </div>
+        <div className="space-y-4">{children}</div>
       </div>
       <Button
         onClick={() => message.regenerate()}
@@ -277,7 +333,7 @@ function AIMessage({ message }: { message: AIMessageWithCallbacks<AgentType> }) 
           message.path.count > 1 && 'mt-7'
         )}
       >
-        <FaRedo size={14} />
+        <CgRedo size={14} />
       </Button>
     </div>
   );
