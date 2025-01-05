@@ -64,11 +64,11 @@
 
 .markdown th,
 .markdown td {
-  @apply border border-gray-300 px-4 py-2;
+  @apply border border-background-700 px-4 py-2;
 }
 
 .markdown th {
-  @apply bg-gray-100 font-bold;
+  @apply bg-background-700 font-bold;
 }
 
 .markdown img {

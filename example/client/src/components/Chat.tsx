@@ -1,8 +1,8 @@
 import type {
   AIMessageWithCallbacks,
   AnyStructuredChatTool,
+  ChatHumanMessage,
   ChatPathStateWithSwitch,
-  HumanMessageWithCallbacks,
 } from '@arduano/trpc-chat-agent';
 import type { AgentType } from '../../../server/src/agent';
 import { useConversation } from '@arduano/trpc-chat-agent-react';
@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FaPencilAlt, FaRedo, FaTimes } from 'react-icons/fa';
 import Markdown from 'react-markdown';
 import { useNavigate, useParams } from 'react-router-dom';
+import remarkGfm from 'remark-gfm';
 import { twMerge } from 'tailwind-merge';
 import { rawTrpc } from '../trpc';
 import { RenderTool } from './RenderTool';
@@ -95,9 +96,9 @@ function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
   renderAiMessage,
   renderHumanMessage,
 }: {
-  messages: (AIMessageWithCallbacks<Tools> | HumanMessageWithCallbacks)[];
+  messages: (AIMessageWithCallbacks<Tools> | ChatHumanMessage)[];
   renderAiMessage: (message: AIMessageWithCallbacks<Tools>) => JSX.Element;
-  renderHumanMessage: (message: HumanMessageWithCallbacks) => JSX.Element;
+  renderHumanMessage: (message: ChatHumanMessage) => JSX.Element;
 }) {
   return (
     <>
@@ -136,7 +137,7 @@ function MessageVariants({ path }: MessageVariantsProps) {
 }
 
 interface HumanMessageProps {
-  message: HumanMessageWithCallbacks;
+  message: ChatHumanMessage;
 }
 
 export function HumanMessage({ message }: HumanMessageProps) {
@@ -189,7 +190,7 @@ export function HumanMessage({ message }: HumanMessageProps) {
           </form>
         ) : (
           <div className="p-4 rounded-lg bg-accent-950 text-white markdown">
-            <Markdown>{message.content as string}</Markdown>
+            <Markdown remarkPlugins={[remarkGfm]}>{message.content as string}</Markdown>
           </div>
         )}
       </div>
@@ -210,7 +211,7 @@ export function AIMessage({ message }: AIMessageProps) {
           <React.Fragment key={i}>
             {part.content && (
               <div className="p-4 rounded-lg bg-background-800 text-white markdown">
-                <Markdown>{part.content as string}</Markdown>
+                <Markdown remarkPlugins={[remarkGfm]}>{part.content as string}</Markdown>
               </div>
             )}
             {part.toolCalls.map((toolCall) => (

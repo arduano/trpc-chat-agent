@@ -1,9 +1,4 @@
-import type {
-  AgentTools,
-  AIMessageToolCallWithCallbacks,
-  ToolCallState,
-  ToolCallWithCallbacks,
-} from '@arduano/trpc-chat-agent';
+import type { AgentTools, ChatAIMessageToolCall, ChatToolCall, ToolCallState } from '@arduano/trpc-chat-agent';
 import type { AgentType } from '../../../server/src/agent';
 import React from 'react';
 import {
@@ -16,11 +11,11 @@ import {
 } from 'react-icons/hi2';
 import { twMerge } from 'tailwind-merge';
 
-export function RenderTool({ tool }: { tool: AIMessageToolCallWithCallbacks<AgentTools<AgentType>> }) {
+export function RenderTool({ tool }: { tool: ChatAIMessageToolCall<AgentTools<AgentType>> }) {
   switch (tool.name) {
     case 'calculator':
       return (
-        <ToolCallWrapper tool={tool}>
+        <ToolCallWrapper tool={tool} title="Calculator">
           <div className="flex gap-2">
             <span className="font-semibold">Operation:</span>
             <span>{tool.args?.operation}</span>
@@ -47,7 +42,7 @@ export function RenderTool({ tool }: { tool: AIMessageToolCallWithCallbacks<Agen
 
     case 'weather':
       return (
-        <ToolCallWrapper tool={tool}>
+        <ToolCallWrapper tool={tool} title="Weather">
           <div className="flex gap-2">
             <span className="font-semibold">City:</span>
             <span>{tool.args?.city}</span>
@@ -74,7 +69,7 @@ export function RenderTool({ tool }: { tool: AIMessageToolCallWithCallbacks<Agen
 
     case 'todos':
       return (
-        <ToolCallWrapper tool={tool}>
+        <ToolCallWrapper tool={tool} title="Todo List">
           <div className="flex gap-2">
             <span className="font-semibold">Action:</span>
             <span>{tool.args?.action}</span>
@@ -111,7 +106,7 @@ export function RenderTool({ tool }: { tool: AIMessageToolCallWithCallbacks<Agen
 
     case 'timer':
       return (
-        <ToolCallWrapper tool={tool}>
+        <ToolCallWrapper tool={tool} title="Timer">
           <div className="flex gap-2">
             <span className="font-semibold">Duration:</span>
             <span>{tool.args?.seconds} seconds</span>
@@ -142,7 +137,7 @@ export function RenderTool({ tool }: { tool: AIMessageToolCallWithCallbacks<Agen
 
     case 'prompt-user':
       return (
-        <ToolCallWrapper tool={tool}>
+        <ToolCallWrapper tool={tool} title="User Input">
           {tool.callbacks.map((callback) => (
             <ToolResultWrapper
               key={callback.callbackId}
@@ -167,7 +162,7 @@ export function RenderTool({ tool }: { tool: AIMessageToolCallWithCallbacks<Agen
 
     default:
       return (
-        <ToolCallWrapper tool={tool}>
+        <ToolCallWrapper tool={tool} title="Unknown Tool">
           <div className="text-background-400">Unknown tool: {(tool as any).name}</div>
         </ToolCallWrapper>
       );
@@ -207,15 +202,16 @@ const iconColorClasses = {
 
 interface ToolCallWrapperProps {
   children?: React.ReactNode;
-  tool: ToolCallWithCallbacks<any>;
+  tool: ChatToolCall<any>;
+  title?: string;
 }
 
-function ToolCallWrapper({ children, tool }: ToolCallWrapperProps) {
+function ToolCallWrapper({ children, tool, title }: ToolCallWrapperProps) {
   return (
     <div className="my-2 rounded-lg border text-background-100 border-background-700 bg-background-900 p-4 shadow-sm">
       <div className="mb-2 flex items-center gap-2">
         <div className={`h-2 w-2 rounded-full ${getStatusColor(tool.state)}`} />
-        <h3 className="font-medium capitalize ">{tool.name}</h3>
+        {title && <h3 className="font-medium">{title}</h3>}
         <span className="text-sm text-background-400">({tool.state})</span>
       </div>
       {children}

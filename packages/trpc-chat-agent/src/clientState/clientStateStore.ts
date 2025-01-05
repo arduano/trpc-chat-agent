@@ -336,7 +336,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   const mapAiMessagePartAddCallbacks = (
     part: AdvancedAIMessageDataPartClientSide<Tools>,
     callbacks: AnyActiveCallbackWithResponse[]
-  ): AdvancedAIMessageDataPartClientSideWithCallbacks<Tools> => {
+  ): ChatAIMessagePart<Tools> => {
     return {
       ...part,
       toolCalls: part.toolCalls.map((toolCall) => ({
@@ -371,7 +371,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     };
   };
 
-  const mapHumanMessageAddCallbacks = (message: HumanMessageData): HumanMessageWithCallbacks => {
+  const mapHumanMessageAddCallbacks = (message: HumanMessageData): ChatHumanMessage => {
     const path = conversation.value.getPathInfoForMessageId(message.id);
     return {
       ...message,
@@ -610,7 +610,7 @@ type CallbacksFromToolCallbacks<Tool extends AnyStructuredChatTool> = {
   >;
 }[keyof Tool['TypeInfo']['Callbacks']];
 
-export type ToolCallWithCallbacks<Tool extends AnyStructuredChatTool> = {
+export type ChatToolCall<Tool extends AnyStructuredChatTool> = {
   id: string;
 
   name: Tool['TypeInfo']['Name'];
@@ -626,27 +626,28 @@ export type ToolCallWithCallbacks<Tool extends AnyStructuredChatTool> = {
   callbacks: CallbacksFromToolCallbacks<Tool>[];
 };
 
-type AIMessageToolCallWithCallbacksForTools<Tools extends readonly AnyStructuredChatTool[]> = {
-  [K in keyof Tools]: ToolCallWithCallbacks<Tools[K]>;
+type ChatAIMessageToolCallForTools<Tools extends readonly AnyStructuredChatTool[]> = {
+  [K in keyof Tools]: ChatToolCall<Tools[K]>;
 }[number];
 
-export type AIMessageToolCallWithCallbacks<AgentOrTools extends ChatAgentOrTools> =
-  AIMessageToolCallWithCallbacksForTools<AgentTools<AgentOrTools>>;
+export type ChatAIMessageToolCall<AgentOrTools extends ChatAgentOrTools> = ChatAIMessageToolCallForTools<
+  AgentTools<AgentOrTools>
+>;
 
-export type AdvancedAIMessageDataPartClientSideWithCallbacks<AgentOrTools extends ChatAgentOrTools> = {
+export type ChatAIMessagePart<AgentOrTools extends ChatAgentOrTools> = {
   content: MessageContent;
-  toolCalls: AIMessageToolCallWithCallbacks<AgentOrTools>[];
+  toolCalls: ChatAIMessageToolCall<AgentOrTools>[];
 };
 
 export type AIMessageWithCallbacks<AgentOrTools extends ChatAgentOrTools> = {
   kind: 'ai';
   id: string;
-  parts: AdvancedAIMessageDataPartClientSideWithCallbacks<AgentOrTools>[];
+  parts: ChatAIMessagePart<AgentOrTools>[];
   path: ChatPathStateWithSwitch;
   regenerate: () => void;
 };
 
-export type HumanMessageWithCallbacks = HumanMessageData & {
+export type ChatHumanMessage = HumanMessageData & {
   path: ChatPathStateWithSwitch;
   edit: (content: string) => void;
 };
