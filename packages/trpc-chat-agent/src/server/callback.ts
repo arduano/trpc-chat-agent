@@ -121,9 +121,3 @@ export class CallbackManager {
 }
 
 export class CallbackCancelledError extends Error {}
-
-let callbackIdCounter = 0;
-export function generateCallbackId() {
-  callbackIdCounter++;
-  return `callback-${callbackIdCounter}`;
-}

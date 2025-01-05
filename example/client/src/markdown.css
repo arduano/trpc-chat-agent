@@ -2,20 +2,24 @@
   @apply text-foreground-100 leading-relaxed;
 }
 
+.markdown > :last-child {
+  @apply mb-0;
+}
+
 .markdown h1 {
-  @apply text-3xl font-bold mb-6 mt-8;
+  @apply text-3xl font-bold mt-8 mb-6;
 }
 
 .markdown h2 {
-  @apply text-2xl font-bold mb-4 mt-6;
+  @apply text-2xl font-bold mt-6 mb-4;
 }
 
 .markdown h3 {
-  @apply text-xl font-bold mb-3 mt-5;
+  @apply text-xl font-bold mt-4 mb-3;
 }
 
 .markdown h4 {
-  @apply text-lg font-bold mb-2 mt-4;
+  @apply text-lg font-bold mt-3 mb-2;
 }
 
 .markdown p {
@@ -23,31 +27,31 @@
 }
 
 .markdown ul {
-  @apply list-disc pl-6 mb-4;
+  @apply list-disc pl-8 mb-4;
 }
 
 .markdown ol {
-  @apply list-decimal pl-6 mb-4;
+  @apply list-decimal pl-8 mb-4;
 }
 
-.markdown li {
-  @apply mb-1;
+.markdown li + li {
+  @apply mt-1;
 }
 
 .markdown a {
-  @apply text-accent-600 hover:text-accent-800 underline;
+  @apply text-accent-400 hover:text-accent-300 transition-colors;
 }
 
 .markdown blockquote {
-  @apply pl-4 border-l-4 border-gray-300 italic my-4 text-foreground-100;
+  @apply border-l-4 border-background-700 pl-4 my-4 text-background-300;
 }
 
 .markdown code {
-  @apply bg-background-700 rounded px-1 py-0.5 font-mono text-sm;
+  @apply bg-background-800 px-1.5 py-0.5 rounded text-sm font-mono;
 }
 
 .markdown pre {
-  @apply bg-background-700 rounded p-4 mb-4 overflow-x-auto;
+  @apply bg-background-800 p-4 rounded-lg my-4 overflow-x-auto;
 }
 
 .markdown pre code {
@@ -55,11 +59,11 @@
 }
 
 .markdown hr {
-  @apply my-6 border-t border-gray-300;
+  @apply my-6 border-t border-background-700;
 }
 
 .markdown table {
-  @apply w-full border-collapse mb-4;
+  @apply w-full border-collapse my-4;
 }
 
 .markdown th,
@@ -72,5 +76,5 @@
 }
 
 .markdown img {
-  @apply max-w-full h-auto rounded my-4;
+  @apply max-w-full rounded-lg;
 }
