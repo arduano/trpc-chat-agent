@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { Chat } from './components/Chat';
-import { trpc, trpcClient } from './trpc';
+import { trpcClient } from './trpc';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,7 +14,7 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <trpc client={trpcClient} queryClient={queryClient}>
         <Router>
           <Routes>
             <Route path="/" element={<Navigate to="/chat" replace />} />
@@ -22,7 +22,7 @@ export default function App() {
             <Route path="/chat/:id" element={<Chat />} />
           </Routes>
         </Router>
-      </trpc.Provider>
+      </trpc>
     </QueryClientProvider>
   );
 }
