@@ -50,10 +50,11 @@ export default antfu(
       'style/type-generic-spacing': 'off',
       'style/quotes': 'off',
       'unicorn/prefer-node-protocol': 'off',
+      'jsdoc/check-alignment': 'off',
     },
   },
   {
-    ignores: ['node_modules', '**/*.html', '**/*.md', 'www/**'],
+    ignores: ['node_modules', '**/*.html', '**/*.md', '**/*.mdx', '**/.docusaurus/**', '**/.next/**', '**/.cache/**'],
   },
   eslintPluginPrettierRecommended
 );
