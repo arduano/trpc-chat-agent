@@ -1,37 +1,24 @@
 'use client';
 
 import type { AgentType } from '@/server/agent';
-import type {
-  AnyStructuredChatTool,
-  ChatAIMessage,
-  ChatAIMessagePart,
-  ChatAIMessageToolCall,
-  ChatHumanMessage,
-  ChatPathStateWithSwitch,
-  GetToolByName,
-  MessageContent,
-} from '@trpc-chat-agent/core';
-import type { JSX } from 'react';
-import { Button } from '@/components/ui/button';
+import type { AgentTools } from '@trpc-chat-agent/core';
+import type { RenderMessagesProps, UseConversationArgs } from '@trpc-chat-agent/react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { trpcClient } from '@/utils/trpc';
-import { useConversation } from '@trpc-chat-agent/react';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CgRedo } from 'react-icons/cg';
-import { RiPencilFill } from 'react-icons/ri';
+import { RenderMessages, useConversation } from '@trpc-chat-agent/react';
+import React, { useEffect, useRef, useState } from 'react';
 
-import { RenderTool } from './RenderTool';
+import { AIMessageShell } from './AIMessage';
+import { HumanMessage } from './HumanMessage';
 import { StyledMarkdown } from './StyledMarkdown';
 
-export type ChatComponentProps = {
-  id?: string;
-  onUpdateConversationId?: (id: string) => void;
-};
+export type ChatComponentProps<Agent extends AgentType> = Omit<UseConversationArgs<Agent>, 'initialConversationId'> &
+  Pick<RenderMessagesProps<AgentTools<Agent>>, 'renderToolCall'> & {
+    id?: string;
+  };
 
-export function Chat({ id, onUpdateConversationId }: ChatComponentProps) {
+export function Chat<Agent extends AgentType>({ id, ...props }: ChatComponentProps<Agent>) {
   const [key, setKey] = useState(0);
   const [pastId, setPastId] = useState(id);
 
@@ -45,10 +32,14 @@ export function Chat({ id, onUpdateConversationId }: ChatComponentProps) {
     }
   }, [id]);
 
-  return <ChatComponentWithStaticId key={key} id={id} onUpdateConversationId={onUpdateConversationId} />;
+  return <ChatComponentWithStaticId key={key} id={id} {...props} />;
 }
 
-function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatComponentProps) {
+function ChatComponentWithStaticId<Agent extends AgentType>({
+  id,
+  renderToolCall,
+  ...converationArgs
+}: ChatComponentProps<Agent>) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -57,13 +48,9 @@ function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatComponent
   };
 
   const { messages, beginMessage, isStreaming } = useConversation({
-    router: trpcClient.chat,
     initialConversationId: id,
-    onUpdateConversationId: (newId) => {
-      if (onUpdateConversationId) {
-        onUpdateConversationId(newId);
-      }
-    },
+    onUpdateConversationId: converationArgs.onUpdateConversationId,
+    router: converationArgs.router,
   });
 
   useEffect(() => {
@@ -88,7 +75,7 @@ function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatComponent
               renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
               renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
               renderHumanMessage={(message) => <HumanMessage message={message} />}
-              renderToolCall={(toolCall) => <RenderTool tool={toolCall} />}
+              renderToolCall={renderToolCall}
             />
             <div ref={messagesEndRef} />
           </div>
@@ -123,218 +110,6 @@ function ChatComponentWithStaticId({ id, onUpdateConversationId }: ChatComponent
           />
         </form>
       </Card>
-    </div>
-  );
-}
-
-function RenderMemoed<T extends readonly any[]>({ data, render }: { data: T; render: (...args: T) => JSX.Element }) {
-  const jsx = useMemo(() => (!render ? 'Error: render function was missing' : render(...data)), data);
-  return jsx;
-}
-
-function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
-  messages,
-  renderHumanMessage,
-  renderAiMessagePartContent,
-  renderToolCall,
-  renderAiMessageShell,
-  renderToolCallShell,
-}: {
-  messages: (ChatAIMessage<Tools> | ChatHumanMessage)[];
-  renderAiMessageShell?: (message: ChatAIMessage<Tools>, children: JSX.Element) => JSX.Element;
-  renderAiMessagePartContent: (content: MessageContent) => JSX.Element;
-  renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Tools>, children: JSX.Element) => JSX.Element;
-  renderToolCall:
-    | {
-        [K in Tools[number]['TypeInfo']['Name']]: (toolCall: GetToolByName<K, Tools>) => JSX.Element;
-      }
-    | ((toolCall: ChatAIMessageToolCall<Tools>) => JSX.Element);
-  renderHumanMessage: (message: ChatHumanMessage) => JSX.Element;
-}) {
-  const defaultShellRender = useCallback((data: any, children: JSX.Element) => <>{children}</>, []);
-
-  renderAiMessageShell ??= defaultShellRender;
-  renderToolCallShell ??= defaultShellRender;
-
-  const renderSingleToolCall = (toolCall: ChatAIMessageToolCall<Tools>) => {
-    const toolCallRenderFn = typeof renderToolCall === 'function' ? renderToolCall : renderToolCall[toolCall.name];
-
-    if (!toolCallRenderFn) {
-      return <>{`Tool call with name "${toolCall.name}" not found`}</>;
-    }
-
-    return <RenderMemoed key={toolCall.id} data={[toolCall as any]} render={toolCallRenderFn as any} />;
-  };
-
-  const renderAllToolCalls = (toolCalls: ChatAIMessageToolCall<Tools>[]) => {
-    return (
-      <>
-        {toolCalls.map((toolCall) => {
-          const toolCallRendered = renderSingleToolCall(toolCall);
-          return <RenderMemoed key={toolCall.id} data={[toolCall, toolCallRendered]} render={renderToolCallShell} />;
-        })}
-      </>
-    );
-  };
-
-  const renderAiMessagePart = (message: ChatAIMessagePart<Tools>) => {
-    const content = <RenderMemoed data={[message.content]} render={renderAiMessagePartContent} />;
-    const toolCalls = <RenderMemoed data={[message.toolCalls]} render={renderAllToolCalls} />;
-    return (
-      <>
-        {content}
-        {toolCalls}
-      </>
-    );
-  };
-
-  const renderAiMessage = (message: ChatAIMessage<Tools>) => {
-    const parts = (
-      <>
-        {message.parts.map((part, i) => (
-          <RenderMemoed key={i} data={[part]} render={renderAiMessagePart} />
-        ))}
-      </>
-    );
-
-    return <RenderMemoed data={[message, parts]} render={renderAiMessageShell} />;
-  };
-
-  const renderAllMessages = (messages: (ChatAIMessage<Tools> | ChatHumanMessage)[]) => {
-    return (
-      <>
-        {messages.map((message) => {
-          if (message.kind === 'human') {
-            return <RenderMemoed key={message.id} data={[message]} render={renderHumanMessage} />;
-          } else {
-            return <RenderMemoed key={message.id} data={[message]} render={renderAiMessage} />;
-          }
-        })}
-      </>
-    );
-  };
-
-  return <RenderMemoed data={[messages]} render={renderAllMessages} />;
-}
-
-function MessageVariants({ path }: { path: ChatPathStateWithSwitch }) {
-  return (
-    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-      {Array.from({ length: path.count }, (_, i) => (
-        <Button
-          key={i}
-          onClick={() => path.switchTo(i)}
-          variant={path.index === i ? 'secondary' : 'ghost'}
-          size="sm"
-          className="w-5 h-5 p-0"
-        >
-          {i + 1}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
-function HumanMessage({ message }: { message: ChatHumanMessage }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedContent, setEditedContent] = useState(message.content as string);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    message.edit(editedContent);
-    setIsEditing(false);
-  };
-
-  return (
-    <div className={cn('group flex items-start gap-2', !isEditing && 'pl-12 lg:pl-48')}>
-      {!isEditing && (
-        <Button
-          onClick={() => {
-            setIsEditing(!isEditing);
-            setEditedContent(message.content as string);
-          }}
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'mt-2 p-2 text-muted-foreground rounded-full hover:text-foreground opacity-0 group-hover:opacity-100',
-            message.path.count > 1 && 'mt-7'
-          )}
-        >
-          <RiPencilFill size={14} />
-        </Button>
-      )}
-      <div className="flex-1">
-        {message.path.count > 1 && !isEditing && <MessageVariants path={message.path} />}
-        {isEditing ? (
-          <form onSubmit={handleSubmit}>
-            <Card className="p-4">
-              <Textarea
-                value={editedContent}
-                onChange={(e) => setEditedContent(e.target.value)}
-                className="resize-none min-h-0 border-0 p-0 focus-visible:ring-0 bg-transparent"
-                autoFocus
-                rows={1}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e as any);
-                  }
-                }}
-                style={{
-                  height: 'auto',
-                }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = 'auto';
-                  target.style.height = `${target.scrollHeight + 2}px`;
-                }}
-              />
-              <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditedContent(message.content as string);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm">
-                  Save changes
-                </Button>
-              </div>
-            </Card>
-          </form>
-        ) : (
-          <Card className="p-4 bg-secondary markdown">
-            <StyledMarkdown>{message.content as string}</StyledMarkdown>
-          </Card>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AIMessageShell({ message, children }: { message: ChatAIMessage<AgentType>; children: JSX.Element }) {
-  return (
-    <div className="group flex items-start gap-2 pr-12 lg:pr-48">
-      <div className="flex-1">
-        {message.path.count > 1 && <MessageVariants path={message.path} />}
-        <div className="space-y-4">{children}</div>
-      </div>
-      <Button
-        onClick={() => message.regenerate()}
-        variant="ghost"
-        size="sm"
-        className={cn(
-          'mt-2 p-2 text-muted-foreground rounded-full hover:text-foreground opacity-0 group-hover:opacity-100',
-          message.path.count > 1 && 'mt-7'
-        )}
-      >
-        <CgRedo size={14} />
-      </Button>
     </div>
   );
 }

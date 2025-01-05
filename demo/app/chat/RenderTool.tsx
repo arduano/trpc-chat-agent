@@ -1,11 +1,12 @@
 'use client';
 
 import type { AgentType } from '@/server/agent';
-import type { AgentTools, ChatAIMessageToolCall, ChatToolCall, ToolCallState } from '@trpc-chat-agent/core';
+import type { AgentTools, ChatAIMessageToolCall } from '@trpc-chat-agent/core';
+import { ToolCallWrapper } from '@/components/chat/ToolCallWrapper';
+import { ToolResultWrapper } from '@/components/chat/ToolResultWrapper';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
 import React, { useState } from 'react';
 import {
   HiOutlineCalculator,
@@ -171,63 +172,6 @@ export function RenderTool({ tool }: { tool: ChatAIMessageToolCall<AgentTools<Ag
         </ToolCallWrapper>
       );
   }
-}
-
-const getStatusColor = (state: ToolCallState) => {
-  switch (state) {
-    case 'loading':
-      return 'bg-blue-600';
-    case 'complete':
-      return 'bg-green-600';
-    case 'aborted':
-      return 'bg-red-600';
-    default:
-      return 'bg-background-600';
-  }
-};
-
-interface ToolCallWrapperProps {
-  children?: React.ReactNode;
-  tool: ChatToolCall<any>;
-  title?: string;
-}
-
-function ToolCallWrapper({ children, tool, title }: ToolCallWrapperProps) {
-  return (
-    <div className="pl-4 border-l-2 border-muted">
-      <div className="flex items-center gap-2 mb-2">
-        <div className={cn('w-2 h-2 rounded-full', getStatusColor(tool.state))} />
-        <span className="text-sm font-medium">{title}</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-interface ToolResultWrapperProps {
-  icon: React.ReactNode;
-  title?: string;
-  subtitle?: string;
-  children?: React.ReactNode;
-}
-
-function ToolResultWrapper({ icon, title, subtitle, children }: ToolResultWrapperProps) {
-  return (
-    <Card className="mt-2 p-4 border-none">
-      <div className="flex items-start gap-3">
-        <div className="mt-1">{icon}</div>
-        <div className="flex-1">
-          {(title || subtitle) && (
-            <div>
-              {subtitle && <div className="text-sm opacity-70">{subtitle}</div>}
-              {title && <div className="font-semibold">{title}</div>}
-            </div>
-          )}
-          {children}
-        </div>
-      </div>
-    </Card>
-  );
 }
 
 function PromptUserInput({ onSubmit }: { onSubmit: (response: string) => void }) {

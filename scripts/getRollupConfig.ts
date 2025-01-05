@@ -88,7 +88,10 @@ function lib({ input, packageDir, externalPackages }: Options): RollupOptions {
           target: 'es2020',
           transform: {
             react: {
+              runtime: 'automatic',
+              development: false,
               useBuiltins: true,
+              refresh: false,
             },
           },
           externalHelpers: false,

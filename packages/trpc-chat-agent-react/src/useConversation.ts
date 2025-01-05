@@ -3,7 +3,7 @@ import type { ChatAgentOrTools, RouterTypeFromAgent } from '@trpc-chat-agent/cor
 import { createSystemStateStore, createSystemStateStoreSubscriber } from '@trpc-chat-agent/core';
 import { useEffect, useMemo, useState } from 'react';
 
-type UseConversationArgs<Agent extends ChatAgentOrTools> = {
+export type UseConversationArgs<Agent extends ChatAgentOrTools> = {
   initialConversationId?: string;
   router: RouterTypeFromAgent<Agent>;
   onUpdateConversationId?: (conversationId: string) => void;
