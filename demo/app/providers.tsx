@@ -24,9 +24,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     })
   );
 
+  const TrpcProvider = trpc.Provider;
   return (
-    <trpc client={trpcClient} queryClient={queryClient}>
+    <TrpcProvider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </trpc>
+    </TrpcProvider>
   );
 }

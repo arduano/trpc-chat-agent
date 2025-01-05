@@ -48,10 +48,11 @@ export default antfu(
       'react-dom/no-missing-button-type': 'off',
       'style/jsx-wrap-multilines': 'off',
       'style/type-generic-spacing': 'off',
+      'style/quotes': 'off',
     },
   },
   {
-    ignores: ['node_modules', '**/*.html'],
+    ignores: ['node_modules', '**/*.html', ''],
   },
   eslintPluginPrettierRecommended
 );
