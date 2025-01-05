@@ -7,8 +7,10 @@ import type {
 import type { AgentType } from '../../../server/src/agent';
 import { useConversation } from '@arduano/trpc-chat-agent-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaPencilAlt, FaRedo } from 'react-icons/fa';
+import { FaPencilAlt, FaRedo, FaTimes } from 'react-icons/fa';
+import Markdown from 'react-markdown';
 import { useNavigate, useParams } from 'react-router-dom';
+import { twMerge } from 'tailwind-merge';
 import { rawTrpc } from '../trpc';
 import { RenderTool } from './RenderTool';
 
@@ -43,42 +45,39 @@ export function Chat() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      <div className="relative py-3 sm:max-w-screen-xl sm:mx-auto w-full px-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
-        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <div className="max-w-screen-md mx-auto">
-            <div className="divide-y divide-gray-200">
-              <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                <div className="h-[60vh] overflow-auto mb-4 space-y-4 pr-4">
-                  <RenderMessages
-                    messages={messages}
-                    renderAiMessage={(message) => <AIMessage message={message} />}
-                    renderHumanMessage={(message) => <HumanMessage message={message} />}
-                  />
-                  <div ref={messagesEndRef} />
-                </div>
-                <form onSubmit={handleSubmit} className="mt-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      disabled={isStreaming}
-                      className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Type your message..."
-                    />
-                    <button
-                      type="submit"
-                      disabled={isStreaming || !input.trim()}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </form>
-              </div>
+    <div className="min-h-screen bg-background-900 flex flex-col">
+      <div className="flex-1 w-full flex flex-col">
+        <div className="flex-1 flex gap-4 flex-col h-screen max-h-screen">
+          <div className="flex-1 overflow-auto py-4 scrollbar scrollbar-thumb-zinc-700 scrollbar-track-zinc-900">
+            <div className="max-w-6xl w-full mx-auto px-4 space-y-4">
+              <RenderMessages
+                messages={messages}
+                renderAiMessage={(message) => <AIMessage message={message} />}
+                renderHumanMessage={(message) => <HumanMessage message={message} />}
+              />
+              <div ref={messagesEndRef} />
             </div>
+          </div>
+          <div className="max-w-6xl w-full mx-auto px-4">
+            <form onSubmit={handleSubmit} className="mt-2 mb-6">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  disabled={isStreaming}
+                  className="flex-1 p-3 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
+                  placeholder="Type your message..."
+                />
+                <button
+                  type="submit"
+                  disabled={isStreaming || !input.trim()}
+                  className="px-6 py-3 bg-accent-600 text-white rounded-lg disabled:opacity-50 hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-accent-500 transition-colors"
+                >
+                  Send
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -118,18 +117,14 @@ interface MessageVariantsProps {
 }
 
 function MessageVariants({ path }: MessageVariantsProps) {
-  if (path.count <= 1) {
-    return null;
-  }
-
   return (
-    <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+    <div className="flex items-center gap-1 text-xs text-gray-400 mb-1">
       {Array.from({ length: path.count }, (_, i) => (
         <button
           key={i}
           onClick={() => path.switchTo(i)}
           className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${
-            path.index === i ? 'bg-gray-300' : 'hover:bg-gray-200'
+            path.index === i ? 'bg-gray-700 text-white' : 'hover:bg-gray-800 text-gray-300'
           }`}
           aria-label={`Switch to variant ${i + 1}`}
         >
@@ -155,23 +150,26 @@ export function HumanMessage({ message }: HumanMessageProps) {
   };
 
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex items-start gap-2 pl-12 lg:pl-48">
       <button
-        onClick={() => setIsEditing(true)}
-        className="mt-2 p-2 text-gray-500 hover:text-gray-700 transition-colors"
-        aria-label="Edit message"
+        onClick={() => setIsEditing(!isEditing)}
+        className={twMerge(
+          'mt-2 p-2 text-gray-400 hover:text-gray-300 transition-colors',
+          message.path.count > 1 && 'mt-7'
+        )}
+        aria-label={isEditing ? 'Cancel editing' : 'Edit message'}
       >
-        <FaPencilAlt size={14} />
+        {isEditing ? <FaTimes size={14} /> : <FaPencilAlt size={14} />}
       </button>
       <div className="flex-1">
-        <MessageVariants path={message.path} />
+        {message.path.count > 1 && <MessageVariants path={message.path} />}
         {isEditing ? (
           <form onSubmit={handleSubmit} className="flex-1">
             <div className="flex gap-2">
               <textarea
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
-                className="flex-1 p-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="flex-1 p-2 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-accent-500 resize-none"
                 autoFocus
                 rows={Math.max(1, editedContent.split('\n').length)}
                 onKeyDown={(e) => {
@@ -183,14 +181,16 @@ export function HumanMessage({ message }: HumanMessageProps) {
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 h-fit"
+                className="px-4 py-2 bg-accent-600 text-white rounded-lg hover:bg-accent-700 focus:outline-none focus:ring-2 focus:ring-accent-500 h-fit transition-colors"
               >
                 Send
               </button>
             </div>
           </form>
         ) : (
-          <div className="p-4 rounded-lg bg-blue-100">{message.content as string}</div>
+          <div className="p-4 rounded-lg bg-accent-950 text-white markdown">
+            <Markdown>{message.content as string}</Markdown>
+          </div>
         )}
       </div>
     </div>
@@ -203,25 +203,32 @@ interface AIMessageProps {
 
 export function AIMessage({ message }: AIMessageProps) {
   return (
-    <div className="flex items-start gap-2">
-      <button
-        onClick={() => message.regenerate()}
-        className="mt-2 p-2 text-gray-500 hover:text-gray-700 transition-colors"
-        aria-label="Regenerate response"
-      >
-        <FaRedo size={14} />
-      </button>
+    <div className="flex items-start gap-2 pr-12 lg:pr-48">
       <div className="flex-1">
-        <MessageVariants path={message.path} />
+        {message.path.count > 1 && <MessageVariants path={message.path} />}
         {message.parts.map((part, i) => (
           <React.Fragment key={i}>
-            {part.content && <div className="p-4 rounded-lg bg-gray-100">{part.content as string}</div>}
+            {part.content && (
+              <div className="p-4 rounded-lg bg-background-800 text-white markdown">
+                <Markdown>{part.content as string}</Markdown>
+              </div>
+            )}
             {part.toolCalls.map((toolCall) => (
               <RenderTool key={toolCall.id} tool={toolCall} />
             ))}
           </React.Fragment>
         ))}
       </div>
+      <button
+        onClick={() => message.regenerate()}
+        className={twMerge(
+          'mt-2 p-2 text-gray-400 hover:text-gray-300 transition-colors',
+          message.path.count > 1 && 'mt-7'
+        )}
+        aria-label="Regenerate response"
+      >
+        <FaRedo size={14} />
+      </button>
     </div>
   );
 }

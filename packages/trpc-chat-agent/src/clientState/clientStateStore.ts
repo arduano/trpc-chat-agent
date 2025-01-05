@@ -610,7 +610,7 @@ type CallbacksFromToolCallbacks<Tool extends AnyStructuredChatTool> = {
   >;
 }[keyof Tool['TypeInfo']['Callbacks']];
 
-export type AdvancedToolCallClientSideWithCallbacks<Tool extends AnyStructuredChatTool> = {
+export type ToolCallWithCallbacks<Tool extends AnyStructuredChatTool> = {
   id: string;
 
   name: Tool['TypeInfo']['Name'];
@@ -627,7 +627,7 @@ export type AdvancedToolCallClientSideWithCallbacks<Tool extends AnyStructuredCh
 };
 
 type AIMessageToolCallWithCallbacksForTools<Tools extends readonly AnyStructuredChatTool[]> = {
-  [K in keyof Tools]: AdvancedToolCallClientSideWithCallbacks<Tools[K]>;
+  [K in keyof Tools]: ToolCallWithCallbacks<Tools[K]>;
 }[number];
 
 export type AIMessageToolCallWithCallbacks<AgentOrTools extends ChatAgentOrTools> =
