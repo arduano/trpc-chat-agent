@@ -1,3 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 225 40% 94%;
+    --foreground: 221 53% 6%;
+    --card: 225 40% 94%;
+    --card-foreground: 221 53% 6%;
+    --popover: 225 40% 94%;
+    --popover-foreground: 221 53% 6%;
+    --primary: 226 56% 26%;
+    --primary-foreground: 225 40% 94%;
+    --secondary: 261 50% 66%;
+    --secondary-foreground: 221 53% 6%;
+    --muted: 225 39% 20%;
+    --muted-foreground: 221 53% 70%;
+    --accent: 276 51% 47%;
+    --accent-foreground: 225 40% 94%;
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 221 53% 6%;
+    --border: 225 39% 20%;
+    --input: 225 39% 20%;
+    --ring: 276 51% 40%;
+    --radius: 0.5rem;
+  }
+
+  [data-theme='dark'] {
+    --background: 224 38% 6%;
+    --foreground: 224 52% 94%;
+    --card: 224 38% 6%;
+    --card-foreground: 224 52% 94%;
+    --popover: 224 38% 6%;
+    --popover-foreground: 224 52% 94%;
+    --primary: 226 56% 74%;
+    --primary-foreground: 224 38% 6%;
+    --secondary: 261 50% 34%;
+    --secondary-foreground: 224 52% 94%;
+    --muted: 224 37% 80%;
+    --muted-foreground: 224 52% 94%;
+    --accent: 276 51% 53%;
+    --accent-foreground: 224 38% 6%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 224 53% 10%;
+    --border: 224 38% 60%;
+    --input: 224 37% 80%;
+    --ring: 276 51% 60%;
+  }
+}
+
 /**
  * Any CSS included here will be global. The classic template
  * bundles Infima by default. Infima is a CSS framework designed to
@@ -6,25 +57,25 @@
 
 /* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-color-primary: hsl(var(--primary));
+  --ifm-color-primary-dark: hsl(var(--primary) / 0.9);
+  --ifm-color-primary-darker: hsl(var(--primary) / 0.8);
+  --ifm-color-primary-darkest: hsl(var(--primary) / 0.7);
+  --ifm-color-primary-light: hsl(var(--primary) / 1.1);
+  --ifm-color-primary-lighter: hsl(var(--primary) / 1.2);
+  --ifm-color-primary-lightest: hsl(var(--primary) / 1.3);
   --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --docusaurus-highlighted-code-line-bg: hsl(var(--muted) / 0.1);
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: hsl(var(--primary));
+  --ifm-color-primary-dark: hsl(var(--primary) / 0.9);
+  --ifm-color-primary-darker: hsl(var(--primary) / 0.8);
+  --ifm-color-primary-darkest: hsl(var(--primary) / 0.7);
+  --ifm-color-primary-light: hsl(var(--primary) / 1.1);
+  --ifm-color-primary-lighter: hsl(var(--primary) / 1.2);
+  --ifm-color-primary-lightest: hsl(var(--primary) / 1.3);
+  --docusaurus-highlighted-code-line-bg: hsl(var(--muted) / 0.3);
 }
