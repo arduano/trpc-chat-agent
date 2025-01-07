@@ -23,7 +23,7 @@ export function StyledMarkdown({ children }: { children: string }) {
         h4: ({ className, node, ...props }) => (
           <h4 className={cn('text-lg font-bold mt-3 mb-2', className)} {...(props as any)} />
         ),
-        p: ({ className, node, ...props }) => <p className={cn('', className)} {...(props as any)} />,
+        p: ({ className, node, ...props }) => <p className={cn('mb-2 last:mb-0', className)} {...(props as any)} />,
         ul: ({ className, node, ...props }) => <ul className={cn('list-disc pl-8', className)} {...(props as any)} />,
         ol: ({ className, node, ...props }) => (
           <ol className={cn('list-decimal pl-8', className)} {...(props as any)} />

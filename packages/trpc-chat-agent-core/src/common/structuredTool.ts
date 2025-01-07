@@ -1,4 +1,3 @@
-import type { DeepPartial } from '@trpc/server';
 import type { AnyToolCallback, CallbackFunctions } from 'src/server';
 import type { z } from 'zod';
 import type { ChatAgent } from './agentTypes';
@@ -53,6 +52,12 @@ export type ToolCallOutput<Return, ResultForClient> = {
 export type ToolProgressCallback<ToolProgressData extends z.ZodTypeAny | undefined> = ToolProgressData extends undefined
   ? never
   : (data: z.infer<NonNullable<ToolProgressData>>) => void;
+
+type DeepPartial<TObject> = TObject extends object
+  ? {
+      [P in keyof TObject]?: DeepPartial<TObject[P]>;
+    }
+  : TObject;
 
 export class StructuredChatTool<
   Name extends string,

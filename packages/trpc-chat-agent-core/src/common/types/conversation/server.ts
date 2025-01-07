@@ -1,6 +1,5 @@
 import type { AgentTools, ChatAgent } from '../../agentTypes';
 import type { AnyStructuredChatTool } from '../../structuredTool';
-import type { ChatTreePath } from '../branching';
 import type { AdvancedAIMessageData } from '../message/ai';
 import type { AdvancedToolCallFromToolsArray } from '../tools';
 import type {
@@ -14,8 +13,7 @@ import type { ClientSideConversationData } from './client';
 import type { ConversationData } from './conversation';
 import { castDraft } from 'immer';
 import { UnreachableError } from '../../unreachable';
-import { ChatAdvancedAIMessage } from '../message/ai';
-import { ChatHumanMessage } from '../message/human';
+import { ChatAIMessageWrapper } from '../message/ai';
 import { ChatConversation } from './conversation';
 
 export type ServerSideConversationData<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
@@ -133,7 +131,7 @@ export class ServerSideChatConversation<Agent extends ChatAgent<any>> extends Ch
       aiMessages: Object.fromEntries(
         Object.entries(this.data.aiMessages).map(([id, aiMessage]) => [
           id,
-          new ChatAdvancedAIMessage(aiMessage).asClientSideMessageData(),
+          new ChatAIMessageWrapper(aiMessage).asClientSideMessageData(),
         ])
       ),
     };

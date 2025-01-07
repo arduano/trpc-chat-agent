@@ -70,7 +70,7 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [require('tailwindcss-motion'), require('tailwind-scrollbar')({ nocompatible: true })],
   darkMode: ['class', '[data-theme="dark"]'],
   corePlugins: {
     preflight: false,

@@ -81,7 +81,7 @@ export function HumanMessage({ message }: { message: ChatHumanMessage }) {
             </Card>
           </form>
         ) : (
-          <Card className="p-4 bg-secondary markdown">
+          <Card className="p-4 bg-secondary motion-ease-in motion-preset-slide-up-md motion-duration-100">
             <StyledMarkdown>{message.content as string}</StyledMarkdown>
           </Card>
         )}

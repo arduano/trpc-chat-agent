@@ -136,6 +136,14 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return this.data.aiMessages?.[aiId];
   }
 
+  public getHumanMessageAt(tree: ChatTreePath) {
+    const humanId = this.getHumanMessageIdAt(tree);
+    if (!humanId) {
+      return null;
+    }
+    return this.data.humanMessages?.[humanId];
+  }
+
   private pushNewIndexforHumanMessageChildren(humanId: string, childAiId: string) {
     let newIndex = 0;
     this.produceData((data) => {

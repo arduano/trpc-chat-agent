@@ -684,7 +684,7 @@ export type ChatHumanMessage = HumanMessageData & {
   edit: (content: string) => void;
 };
 
-type GetToolByNameFromList<
+export type GetToolByNameFromList<
   Name extends Tools[number]['TypeInfo']['Name'],
   Tools extends readonly AnyStructuredChatTool[],
 > = {

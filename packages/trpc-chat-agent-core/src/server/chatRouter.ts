@@ -28,50 +28,6 @@ type TrpcWithContext<Context extends object | ContextCallback> = ReturnType<
   ReturnType<typeof initTRPC.context<Context>>['create']
 >;
 
-// Simple runtime-agnostic async event emitter implementation
-class AsyncEventEmitter<T> {
-  private listeners: ((value: T) => void)[] = [];
-  private resolvers: ((value: T) => void)[] = [];
-  private signal?: AbortSignal;
-
-  constructor(signal?: AbortSignal) {
-    this.signal = signal;
-    signal?.addEventListener('abort', () => this.cleanup());
-  }
-
-  emit(value: T) {
-    this.listeners.forEach((listener) => listener(value));
-    this.resolvers.forEach((resolve) => resolve(value));
-    this.resolvers = [];
-  }
-
-  private cleanup() {
-    this.listeners = [];
-    this.resolvers = [];
-  }
-
-  async *[Symbol.asyncIterator]() {
-    if (this.signal?.aborted) {
-      return;
-    }
-
-    while (true) {
-      const value = await new Promise<T>((resolve) => {
-        if (this.signal?.aborted) {
-          resolve(null as T);
-          return;
-        }
-        this.resolvers.push(resolve);
-      });
-
-      if (value === null || this.signal?.aborted) {
-        break;
-      }
-      yield value;
-    }
-  }
-}
-
 export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context extends object | ContextCallback>({
   agent,
   getConversation,
@@ -269,5 +225,62 @@ function addMessagePairToConversation<Agent extends ChatAgent<any>>(
 
     const newPath = conversation.pushUpdatedAiMessage(chatPath, newAIMessage);
     return { chatPath: newPath, aiMessageId };
+  }
+}
+
+// Simple runtime-agnostic async event emitter implementation
+class AsyncEventEmitter<T> {
+  private resolvers: ((value: T) => void)[] = [];
+  private eventQueue: T[] = [];
+  private signal?: AbortSignal;
+
+  constructor(signal?: AbortSignal) {
+    this.signal = signal;
+    signal?.addEventListener('abort', () => this.cleanup());
+  }
+
+  emit(value: T) {
+    if (this.resolvers.length > 0) {
+      // If there are waiting resolvers, resolve them immediately
+      const resolver = this.resolvers.shift()!;
+      resolver(value);
+    } else {
+      // Otherwise queue the event
+      this.eventQueue.push(value);
+    }
+  }
+
+  private cleanup() {
+    this.resolvers = [];
+    this.eventQueue = [];
+  }
+
+  async *[Symbol.asyncIterator]() {
+    if (this.signal?.aborted) {
+      return;
+    }
+
+    while (true) {
+      let value: T;
+
+      if (this.eventQueue.length > 0) {
+        // If there are queued events, process them first
+        value = this.eventQueue.shift()!;
+      } else {
+        // Otherwise wait for new events
+        value = await new Promise<T>((resolve) => {
+          if (this.signal?.aborted) {
+            resolve(null as T);
+            return;
+          }
+          this.resolvers.push(resolve);
+        });
+      }
+
+      if (value === null || this.signal?.aborted) {
+        break;
+      }
+      yield value;
+    }
   }
 }

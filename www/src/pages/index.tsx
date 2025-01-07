@@ -7,6 +7,7 @@ import DemoVideo from '@site/static/img/demo.mp4';
 import Heading from '@theme/Heading';
 import Layout from '@theme/Layout';
 import { FaGithub } from 'react-icons/fa';
+import { HomePageChat } from '../components/HomePageChat';
 
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
@@ -54,6 +55,7 @@ export default function Home(): ReactNode {
       <HomepageHeader />
       <main className="bg-background">
         <HomepageFeatures />
+        <HomePageChat />
       </main>
     </Layout>
   );

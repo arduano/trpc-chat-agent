@@ -1,9 +1,9 @@
 import type { ChatAIMessage } from '@trpc-chat-agent/core';
+import type { JSX } from 'react';
 import { cn } from '@site/src/lib/utils';
 import { CgRedo } from 'react-icons/cg';
 import { Button } from '../ui/button';
 import { MessageVariants } from './MessageVariants';
-import { JSX } from 'react';
 
 export function AIMessageShell({ message, children }: { message: ChatAIMessage<any>; children: JSX.Element }) {
   return (

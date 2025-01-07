@@ -22,8 +22,8 @@ import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
 import {
-  ChatAdvancedAIMessage,
-  ChatHumanMessage,
+  ChatAIMessageWrapper,
+  ChatHumanMessageWrapper,
   Debouncer,
   processMessageContentForClient,
   ServerSideChatConversation,
@@ -476,9 +476,9 @@ function asLangChainMessagesArray(
   return conversation.asMessagesArray(tree).flatMap((message) => {
     switch (message.kind) {
       case 'ai':
-        return new ChatAdvancedAIMessage<AgentTools<any>>(message).asLangChainMessages();
+        return new ChatAIMessageWrapper<AgentTools<any>>(message).asLangChainMessages();
       case 'human':
-        return [new ChatHumanMessage(message).asLangChainMessage()];
+        return [new ChatHumanMessageWrapper(message).asLangChainMessage()];
       default:
         throw new UnreachableError(message);
     }

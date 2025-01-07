@@ -8,7 +8,7 @@ export type HumanMessageData = {
   content: MessageContent;
 };
 
-export class ChatHumanMessage {
+export class ChatHumanMessageWrapper {
   constructor(readonly data: HumanMessageData) {}
 
   public get id() {

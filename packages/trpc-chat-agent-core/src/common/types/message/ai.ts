@@ -19,7 +19,7 @@ export type AdvancedAIMessageData<Tools extends readonly AnyStructuredChatTool[]
   parts: AdvancedAIMessagePartData<Tools>[];
 };
 
-export class ChatAdvancedAIMessage<Tools extends readonly AnyStructuredChatTool[]> {
+export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]> {
   constructor(readonly data: AdvancedAIMessageData<Tools>) {}
 
   public get id() {

@@ -3,13 +3,13 @@
 import type { AgentTools, ChatAgent } from '@trpc-chat-agent/core';
 import type { RenderMessagesProps, UseConversationArgs } from '@trpc-chat-agent/react';
 import { Card } from '@site/src/components/ui/card';
+import { buildMockTrpcChatRouter } from '@site/src/lib/mockChatRouterForAgent';
 import { RenderMessages, useConversation } from '@trpc-chat-agent/react';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import React, { useEffect, useMemo } from 'react';
 import { AIMessageShell } from './AIMessage';
 import { HumanMessage } from './HumanMessage';
 import { StyledMarkdown } from './StyledMarkdown';
-import { buildMockTrpcChatRouter } from '@site/src/lib/mockChatRouterForAgent';
 
 export type MockChatComponentProps<Agent extends ChatAgent<any>> = Omit<
   UseConversationArgs<Agent>,

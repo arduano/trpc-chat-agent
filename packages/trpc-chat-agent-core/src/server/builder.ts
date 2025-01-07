@@ -1,10 +1,10 @@
 import type { MessageContent } from '@langchain/core/messages';
 import type { DeepPartial } from '@trpc/server';
 import type { z, ZodType } from 'zod';
+import type { ChatAgent } from '../common';
 import type { ToolRunFn } from '../common/structuredTool';
 import type { AnyToolCallback, ToolCallback } from './callback';
 import { StructuredChatTool } from '../common/structuredTool';
-import { ChatAgent } from '../common';
 
 export abstract class AgentsBackend<ExtraArgs extends readonly any[], BaseMessageType> {
   // Field to stop typescript from complaining about unused types.
@@ -53,13 +53,13 @@ class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
   constructor(readonly backend: Backend) {}
 
   public tool<
-    Name extends string,
-    Args extends z.AnyZodObject,
-    ToolProgressData extends ZodType<any> | undefined = undefined,
-    Return = undefined,
-    ArgsForClient = undefined,
-    ResultForClient = undefined,
-    Callbacks extends Record<string, AnyToolCallback> = Record<string, never>, // This default type is the only one that seems to work, {} breaks things
+    const Name extends string,
+    const Args extends z.AnyZodObject,
+    const ToolProgressData extends ZodType<any> | undefined = undefined,
+    const Return = undefined,
+    const ArgsForClient = undefined,
+    const ResultForClient = undefined,
+    const Callbacks extends Record<string, AnyToolCallback> = Record<string, never>, // This default type is the only one that seems to work, {} breaks things
   >(args: {
     name: Name;
     schema: Args;
