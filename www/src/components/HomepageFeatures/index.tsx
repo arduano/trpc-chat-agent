@@ -1,87 +1,82 @@
 import type { ReactNode } from 'react';
-import { Button } from '@site/src/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@site/src/components/ui/card';
-import { cn } from '@site/src/lib/utils';
-import DocusaurusMountain from '@site/static/img/undraw_docusaurus_mountain.svg';
-import DocusaurusReact from '@site/static/img/undraw_docusaurus_react.svg';
-import DocusaurusTree from '@site/static/img/undraw_docusaurus_tree.svg';
-import styles from './styles.module.css';
+import { BiPackage } from 'react-icons/bi';
+import { HiPuzzle } from 'react-icons/hi';
+import { TbActivityHeartbeat, TbRefresh } from 'react-icons/tb';
+import { VscSymbolClass, VscTools } from 'react-icons/vsc';
 
 type FeatureItem = {
   title: string;
-  Svg: React.ComponentType<React.ComponentProps<'svg'>>;
-  description: ReactNode;
-  buttonText: string;
+  description: string;
+  icon: ReactNode;
+  iconClassName?: string;
 };
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
-    Svg: DocusaurusMountain,
-    description: (
-      <>
-        Docusaurus was designed from the ground up to be easily installed and used to get your website up and running
-        quickly.
-      </>
-    ),
-    buttonText: 'Get Started',
+    title: 'End-to-End Type Safety',
+    description:
+      'Every exposed API that allows custom types propagates them end-to-end, including to the frontend. No more type mismatches!',
+    icon: <VscSymbolClass />,
+    iconClassName: 'bg-blue-950 text-blue-400',
   },
   {
-    title: 'Focus on What Matters',
-    Svg: DocusaurusTree,
-    description: (
-      <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go ahead and move your docs into the{' '}
-        <code>docs</code> directory.
-      </>
-    ),
-    buttonText: 'Learn More',
+    title: 'Plug-and-Play',
+    description:
+      'First-class support for AI tool calls with real-time updates, interactive callbacks, and structured response types.',
+    icon: <HiPuzzle />,
+    iconClassName: 'bg-cyan-950 text-cyan-400',
   },
   {
-    title: 'Powered by React',
-    Svg: DocusaurusReact,
-    description: (
-      <>
-        Extend or customize your website layout by reusing React. Docusaurus can be extended while reusing the same
-        header and footer.
-      </>
-    ),
-    buttonText: 'Explore',
+    title: 'Automated State Management',
+    description:
+      'Client-side state is managed through signals and avoids redundant re-instancing of identical data for optimal performance.',
+    icon: <TbRefresh />,
+    iconClassName: 'bg-purple-950 text-purple-400',
+  },
+  {
+    title: 'Framework Agnostic',
+    description:
+      'Adapters can be written for any LLM backend or frontend framework. Currently supports Langchain and React with more coming soon.',
+    icon: <BiPackage />,
+    iconClassName: 'bg-rose-950 text-rose-400',
+  },
+  {
+    title: 'Client-Side Tool Previews',
+    description:
+      'Split client/server argument schemas allow the client to preview partial arguments before they are sent to the server.',
+    icon: <VscTools />,
+    iconClassName: 'bg-amber-950 text-amber-400',
+  },
+  {
+    title: 'Minimized Re-rendering',
+    description:
+      'Built on tRPC primitives with optimized data flow, ensuring minimal re-renders and maximum performance.',
+    icon: <TbActivityHeartbeat />,
+    iconClassName: 'bg-emerald-950 text-emerald-400',
   },
 ];
 
-function Feature({ title, Svg, description, buttonText }: FeatureItem) {
+function Feature({ title, description, icon, iconClassName }: FeatureItem) {
   return (
-    <div className={cn('col col--4')}>
-      <Card className="h-full">
-        <CardHeader>
-          <div className="text--center mb-4">
-            <Svg className={styles.featureSvg} role="img" />
-          </div>
-          <CardTitle className="text--center">{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CardDescription className="text--center">{description}</CardDescription>
-        </CardContent>
-        <CardFooter className="justify-center pb-6">
-          <Button variant="outline" className="bg-secondary">
-            {buttonText}
-          </Button>
-        </CardFooter>
-      </Card>
+    <div className="flex flex-col gap-4">
+      <div className={`w-14 h-14 rounded-lg p-3 text-2xl flex items-center justify-center ${iconClassName}`}>
+        {icon}
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">{title}</h3>
+        <p className="text-foreground/70">{description}</p>
+      </div>
     </div>
   );
 }
 
 export default function HomepageFeatures(): ReactNode {
   return (
-    <section className={styles.features}>
-      <div className="container">
-        <div className="row">
-          {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} />
-          ))}
-        </div>
+    <section className="py-24 px-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+        {FeatureList.map((props, idx) => (
+          <Feature key={idx} {...props} />
+        ))}
       </div>
     </section>
   );

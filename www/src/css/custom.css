@@ -2,50 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+button {
+  border-width: 0;
+}
+
 @layer base {
   :root {
-    --background: 225 40% 94%;
-    --foreground: 221 53% 6%;
-    --card: 225 40% 94%;
-    --card-foreground: 221 53% 6%;
-    --popover: 225 40% 94%;
-    --popover-foreground: 221 53% 6%;
-    --primary: 226 56% 26%;
-    --primary-foreground: 225 40% 94%;
-    --secondary: 261 50% 66%;
-    --secondary-foreground: 221 53% 6%;
-    --muted: 225 39% 20%;
-    --muted-foreground: 221 53% 70%;
-    --accent: 276 51% 47%;
-    --accent-foreground: 225 40% 94%;
+    --background: 230 69% 95%;
+    --foreground: 237 68% 6%;
+    --card: 230 69% 95%;
+    --card-foreground: 237 68% 6%;
+    --popover: 230 69% 95%;
+    --popover-foreground: 237 68% 6%;
+    --primary: 237 67% 26%;
+    --primary-foreground: 230 69% 95%;
+    --secondary: 273 67% 65%;
+    --secondary-foreground: 237 68% 6%;
+    --muted: 230 69% 20%;
+    --muted-foreground: 237 69% 70%;
+    --accent: 279 67% 41%;
+    --accent-foreground: 230 69% 95%;
     --destructive: 0 85% 60%;
-    --destructive-foreground: 221 53% 6%;
-    --border: 225 39% 20%;
-    --input: 225 39% 20%;
-    --ring: 276 51% 40%;
+    --destructive-foreground: 237 68% 6%;
+    --border: 230 69% 20%;
+    --input: 230 69% 20%;
+    --ring: 279 67% 40%;
     --radius: 0.5rem;
   }
 
   [data-theme='dark'] {
-    --background: 224 38% 6%;
-    --foreground: 224 52% 94%;
-    --card: 224 38% 6%;
-    --card-foreground: 224 52% 94%;
-    --popover: 224 38% 6%;
-    --popover-foreground: 224 52% 94%;
-    --primary: 226 56% 74%;
-    --primary-foreground: 224 38% 6%;
-    --secondary: 261 50% 34%;
-    --secondary-foreground: 224 52% 94%;
-    --muted: 224 37% 80%;
-    --muted-foreground: 224 52% 94%;
-    --accent: 276 51% 53%;
-    --accent-foreground: 224 38% 6%;
+    --background: 233 69% 5%;
+    --foreground: 237 70% 94%;
+    --card: 233 69% 5%;
+    --card-foreground: 237 70% 94%;
+    --popover: 233 69% 5%;
+    --popover-foreground: 237 70% 94%;
+    --primary: 237 67% 74%;
+    --primary-foreground: 233 69% 5%;
+    --secondary: 273 67% 35%;
+    --secondary-foreground: 237 70% 94%;
+    --muted: 233 69% 80%;
+    --muted-foreground: 237 70% 94%;
+    --accent: 279 67% 59%;
+    --accent-foreground: 233 69% 5%;
     --destructive: 0 62% 30%;
-    --destructive-foreground: 224 53% 10%;
-    --border: 224 38% 60%;
-    --input: 224 37% 80%;
-    --ring: 276 51% 60%;
+    --destructive-foreground: 238 69% 10%;
+    --border: 233 69% 60%;
+    --input: 233 69% 80%;
+    --ring: 279 67% 60%;
   }
 }
 
@@ -64,18 +68,44 @@
   --ifm-color-primary-light: hsl(var(--primary) / 1.1);
   --ifm-color-primary-lighter: hsl(var(--primary) / 1.2);
   --ifm-color-primary-lightest: hsl(var(--primary) / 1.3);
+
+  --ifm-color-secondary: hsl(var(--secondary));
+  --ifm-color-secondary-dark: hsl(var(--secondary) / 0.9);
+  --ifm-color-secondary-darker: hsl(var(--secondary) / 0.8);
+  --ifm-color-secondary-darkest: hsl(var(--secondary) / 0.7);
+  --ifm-color-secondary-light: hsl(var(--secondary) / 1.1);
+  --ifm-color-secondary-lighter: hsl(var(--secondary) / 1.2);
+  --ifm-color-secondary-lightest: hsl(var(--secondary) / 1.3);
   --ifm-code-font-size: 95%;
+
+  --ifm-navbar-background-color: hsl(var(--background));
+  --ifm-navbar-link-color: hsl(var(--foreground));
+  --ifm-footer-background-color: hsl(var(--background));
+  --ifm-background-color: hsl(var(--background));
+
+  --ifm-color-emphasis-300: hsl(var(--muted));
+  --ifm-color-emphasis-400: hsl(var(--muted));
+  --ifm-color-emphasis-500: hsl(var(--muted));
+  --ifm-color-emphasis-600: hsl(var(--muted));
+  --ifm-color-emphasis-700: hsl(var(--muted));
+  --ifm-color-emphasis-800: hsl(var(--muted));
+
   --docusaurus-highlighted-code-line-bg: hsl(var(--muted) / 0.1);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme='dark'] {
-  --ifm-color-primary: hsl(var(--primary));
-  --ifm-color-primary-dark: hsl(var(--primary) / 0.9);
-  --ifm-color-primary-darker: hsl(var(--primary) / 0.8);
-  --ifm-color-primary-darkest: hsl(var(--primary) / 0.7);
-  --ifm-color-primary-light: hsl(var(--primary) / 1.1);
-  --ifm-color-primary-lighter: hsl(var(--primary) / 1.2);
-  --ifm-color-primary-lightest: hsl(var(--primary) / 1.3);
-  --docusaurus-highlighted-code-line-bg: hsl(var(--muted) / 0.3);
+@layer base {
+  * {
+    @apply border-border border-0;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Navbar styles */
+:root .navbar {
+  @apply border-b border-solid border-border/50;
 }
