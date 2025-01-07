@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import { Button } from '@site/src/components/ui/button';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
-import Heading from '@theme/Heading';
+import { Button } from '@site/src/components/ui/button';
 import DemoVideo from '@site/static/img/demo.mp4';
+import Heading from '@theme/Heading';
 import Layout from '@theme/Layout';
 import { FaGithub } from 'react-icons/fa';
 

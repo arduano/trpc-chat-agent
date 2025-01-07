@@ -4,13 +4,14 @@ import type { z, ZodType } from 'zod';
 import type { ToolRunFn } from '../common/structuredTool';
 import type { AnyToolCallback, ToolCallback } from './callback';
 import { StructuredChatTool } from '../common/structuredTool';
+import { ChatAgent } from '../common';
 
 export abstract class AgentsBackend<ExtraArgs extends readonly any[], BaseMessageType> {
   // Field to stop typescript from complaining about unused types.
   // It is never actually used.
   $types = undefined as never | ExtraArgs | BaseMessageType;
 
-  abstract createAgent: (...args: any[]) => any;
+  abstract createAgent: (...args: any[]) => ChatAgent<any>;
 }
 
 type AnyAgentsBackend = AgentsBackend<any[], any>;

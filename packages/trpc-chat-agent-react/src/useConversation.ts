@@ -38,6 +38,8 @@ export function useConversation<Agent extends ChatAgentOrTools>(args: UseConvers
     isStreaming: useSignalValue(subscriber.isStreaming),
     conversationError: useSignalValue(subscriber.conversationError),
     hasConversation: useSignalValue(subscriber.hasConversation),
+    isLoadingConversation: useSignalValue(subscriber.isLoadingConversation),
+    isMissingConversation: useSignalValue(subscriber.isMissingConversation),
   };
 }
 

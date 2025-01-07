@@ -4,6 +4,7 @@ import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
 import type {
+  AgentTools,
   AnyStructuredChatTool,
   ChatAgent,
   ChatAgentInvokeArgs,
@@ -20,7 +21,13 @@ import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
-import { Debouncer, processMessageContentForClient, ServerSideChatConversation } from '@trpc-chat-agent/core';
+import {
+  ChatAdvancedAIMessage,
+  ChatHumanMessage,
+  Debouncer,
+  processMessageContentForClient,
+  ServerSideChatConversation,
+} from '@trpc-chat-agent/core';
 import { StructuredChatToolLangChain } from './tool';
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context>() {
@@ -98,7 +105,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
       return addSystemMessage(await args.transformMessages(conversation, path, ctx), ctx);
     }
 
-    return addSystemMessage(conversation.asLangChainMessagesArray(path), ctx);
+    return addSystemMessage(asLangChainMessagesArray(conversation, path), ctx);
   };
 
   const handleErrors = (fn: (...args: any[]) => any) => {
@@ -112,24 +119,6 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
           error: e,
         });
       }
-    };
-  };
-
-  const initializeNewMessage = async (state: AgentState, config: RunnableConfig): Promise<Partial<AgentState>> => {
-    const stateConvo = new ServerSideChatConversation(structuredClone(state.conversationData));
-
-    sendClientSideUpdateToConfig(
-      {
-        kind: 'sync-conversation',
-        conversationId: state.conversationData.id,
-        conversationData: new ServerSideChatConversation(stateConvo.data).asClientSideConversation(),
-        path: state.chatPath,
-      },
-      config
-    );
-
-    return {
-      conversationData: stateConvo.data,
     };
   };
 
@@ -429,31 +418,15 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
     };
   };
 
-  const finalizeChat = async (state: AgentState, config: RunnableConfig) => {
-    sendClientSideUpdateToConfig(
-      {
-        kind: 'sync-conversation',
-        conversationId: state.conversationData.id,
-        conversationData: new ServerSideChatConversation(state.conversationData).asClientSideConversation(),
-        path: state.chatPath,
-      },
-      config
-    );
-  };
-
   const workflow = new StateGraph(StateAnnotation)
-    .addNode('init', handleErrors(initializeNewMessage))
     .addNode('agent', handleErrors(callModel))
     .addNode('tools', handleErrors(callTools))
-    .addNode('finalize', handleErrors(finalizeChat))
-    .addEdge(START, 'init')
+    .addEdge(START, 'agent')
     .addConditionalEdges('agent', handleErrors(shouldContinue), {
       continue: 'tools',
-      end: 'finalize',
+      end: END,
     })
-    .addEdge('init', 'agent')
-    .addEdge('tools', 'agent')
-    .addEdge('finalize', END);
+    .addEdge('tools', 'agent');
 
   const compiled = workflow.compile({});
 
@@ -494,4 +467,26 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
       }
     },
   };
+}
+
+function asLangChainMessagesArray(
+  conversation: Readonly<ServerSideChatConversation<ChatAgent<any>>>,
+  tree: ChatTreePath
+): BaseMessage[] {
+  return conversation.asMessagesArray(tree).flatMap((message) => {
+    switch (message.kind) {
+      case 'ai':
+        return new ChatAdvancedAIMessage<AgentTools<any>>(message).asLangChainMessages();
+      case 'human':
+        return [new ChatHumanMessage(message).asLangChainMessage()];
+      default:
+        throw new UnreachableError(message);
+    }
+  });
+}
+
+class UnreachableError extends Error {
+  constructor(_value: never, message?: string) {
+    super(message);
+  }
 }

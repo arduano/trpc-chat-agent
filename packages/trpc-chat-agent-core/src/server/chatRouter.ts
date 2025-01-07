@@ -7,7 +7,6 @@ import type {
   HumanMessageData,
   ServerSideConversationData,
 } from '../common/types';
-import { EventEmitter, on } from 'events';
 import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversation } from '../common/types';
 import { CallbackManager } from './callback';
@@ -29,6 +28,50 @@ type TrpcWithContext<Context extends object | ContextCallback> = ReturnType<
   ReturnType<typeof initTRPC.context<Context>>['create']
 >;
 
+// Simple runtime-agnostic async event emitter implementation
+class AsyncEventEmitter<T> {
+  private listeners: ((value: T) => void)[] = [];
+  private resolvers: ((value: T) => void)[] = [];
+  private signal?: AbortSignal;
+
+  constructor(signal?: AbortSignal) {
+    this.signal = signal;
+    signal?.addEventListener('abort', () => this.cleanup());
+  }
+
+  emit(value: T) {
+    this.listeners.forEach((listener) => listener(value));
+    this.resolvers.forEach((resolve) => resolve(value));
+    this.resolvers = [];
+  }
+
+  private cleanup() {
+    this.listeners = [];
+    this.resolvers = [];
+  }
+
+  async *[Symbol.asyncIterator]() {
+    if (this.signal?.aborted) {
+      return;
+    }
+
+    while (true) {
+      const value = await new Promise<T>((resolve) => {
+        if (this.signal?.aborted) {
+          resolve(null as T);
+          return;
+        }
+        this.resolvers.push(resolve);
+      });
+
+      if (value === null || this.signal?.aborted) {
+        break;
+      }
+      yield value;
+    }
+  }
+}
+
 export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context extends object | ContextCallback>({
   agent,
   getConversation,
@@ -47,27 +90,19 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
           branch: chatBranchZod,
         })
       )
-      .subscription(async function* ({ input, ctx, signal }) {
-        const eventEmitter = new EventEmitter();
+      .subscription(async function* ({ input, ctx, signal }): AsyncGenerator<ClientSideUpdate | null> {
+        const emitter = new AsyncEventEmitter<ClientSideUpdate | null>(signal);
 
         const controller = new AbortController();
         signal?.addEventListener('abort', () => {
           controller.abort();
         });
 
-        const callbackEvents = (async function* () {
-          for await (const [callbackEvent] of on(eventEmitter, 'event', { signal: controller.signal })) {
-            if (callbackEvent === null) {
-              break;
-            }
-            yield callbackEvent as ClientSideUpdate;
-          }
-        })();
         const passEvent = (event: ClientSideUpdate) => {
-          eventEmitter.emit('event', event);
+          emitter.emit(event);
         };
         const endEvents = () => {
-          eventEmitter.emit('event', null);
+          emitter.emit(null);
         };
 
         let conversationData: ServerSideConversationData<AgentTools<Agent>>;
@@ -141,9 +176,23 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
           };
           void processChatUpdates();
 
-          for await (const event of callbackEvents) {
+          yield {
+            kind: 'sync-conversation',
+            conversationId: conversation.data.id,
+            conversationData: conversation.asClientSideConversation(),
+            path: chatPath,
+          };
+
+          for await (const event of emitter) {
             yield event;
           }
+
+          yield {
+            kind: 'sync-conversation',
+            conversationId: conversation.data.id,
+            conversationData: conversation.asClientSideConversation(),
+            path: chatPath,
+          };
         } finally {
           conversation.abortAllPendingToolCalls();
           await saveConversation(conversation.data.id, conversation.data, ctx as any);

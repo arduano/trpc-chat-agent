@@ -1,7 +1,7 @@
 'use client';
 
 import type { AgentType } from '@/server/agent';
-import type { AgentTools } from '@trpc-chat-agent/core';
+import type { AgentTools, ChatAgent } from '@trpc-chat-agent/core';
 import type { RenderMessagesProps, UseConversationArgs } from '@trpc-chat-agent/react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,7 +13,10 @@ import { AIMessageShell } from './AIMessage';
 import { HumanMessage } from './HumanMessage';
 import { StyledMarkdown } from './StyledMarkdown';
 
-export type ChatComponentProps<Agent extends AgentType> = Omit<UseConversationArgs<Agent>, 'initialConversationId'> &
+export type ChatComponentProps<Agent extends ChatAgent<any>> = Omit<
+  UseConversationArgs<Agent>,
+  'initialConversationId'
+> &
   Pick<RenderMessagesProps<AgentTools<Agent>>, 'renderToolCall'> & {
     id?: string;
   };

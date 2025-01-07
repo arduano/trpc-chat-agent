@@ -1,4 +1,3 @@
-import type { BaseMessage } from '@langchain/core/messages';
 import type { AgentTools, ChatAgent } from '../../agentTypes';
 import type { AnyStructuredChatTool } from '../../structuredTool';
 import type { ChatTreePath } from '../branching';
@@ -41,19 +40,6 @@ export class ServerSideChatConversation<Agent extends ChatAgent<any>> extends Ch
       aiMessageChildIds: {},
       humanMessageChildIds: {},
     };
-  }
-
-  public asLangChainMessagesArray(tree: ChatTreePath): BaseMessage[] {
-    return this.asMessagesArray(tree).flatMap((message) => {
-      switch (message.kind) {
-        case 'ai':
-          return new ChatAdvancedAIMessage<AgentTools<Agent>>(message).asLangChainMessages();
-        case 'human':
-          return [new ChatHumanMessage(message).asLangChainMessage()];
-        default:
-          throw new UnreachableError(message, `Invalid message kind "${(message as any).kind}"`);
-      }
-    });
   }
 
   public processMessageUpdate(update: ServerSideConversationUpdate) {

@@ -483,6 +483,20 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     cancelStream,
     hasConversation,
     conversationError,
+    isLoadingConversation: computed(() => {
+      const id = conversationId.peek();
+      if (!id) {
+        return false;
+      }
+      return store.getConversationState(id) === 'loading';
+    }),
+    isMissingConversation: computed(() => {
+      const id = conversationId.peek();
+      if (!id) {
+        return false;
+      }
+      return store.getConversationState(id) === 'missing';
+    }),
   };
 }
 
