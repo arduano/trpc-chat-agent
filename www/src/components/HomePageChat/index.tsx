@@ -1,11 +1,14 @@
 import type { ChatToolCall, GetToolByName } from '@trpc-chat-agent/core';
+import Link from '@docusaurus/Link';
 import { cn } from '@site/src/lib/utils';
 import { initAgents, MockAgentBackend } from '@trpc-chat-agent/core';
 import { useEffect, useState } from 'react';
 import { HiCheck, HiOutlineCode, HiOutlineDocument } from 'react-icons/hi';
 import { LuBrainCircuit } from 'react-icons/lu';
+import Markdown from 'react-markdown';
 import { z } from 'zod';
 import { MockChat } from '../chat/MockChat';
+import { StyledMarkdown } from '../chat/StyledMarkdown';
 import { ToolCallWrapper } from '../chat/ToolCallWrapper';
 import { ToolResultWrapper } from '../chat/ToolResultWrapper';
 import { Button } from '../ui/button';
@@ -109,7 +112,7 @@ const responseMessage3 = `
 ---
 
 ## Ready to dive in?
-Let's explore these capabilities together - what would you like to try first?
+Let's explore these capabilities together
 `.trim();
 
 const responseMessageNonDefault = `
@@ -204,6 +207,18 @@ const agent = ai.agent({
       },
       mapArgsForClient: (args) => args,
     }),
+    ai.tool({
+      name: 'gettingStartedButton',
+      description: 'Getting started button',
+      schema: z.object({}),
+      run: async () => {
+        return {
+          clientResult: {},
+          response: '',
+        };
+      },
+      mapArgsForClient: (args) => args,
+    }),
   ],
   generateResponseUpdates: async ({ create, lastHumanMessage }) => {
     const lastHumanMessageNormalized = lastHumanMessage.replace(/\W+/g, '').toLowerCase();
@@ -244,7 +259,7 @@ const agent = ai.agent({
       await create.aiToolCalls(
         create.toolCallSchema({
           toolName: 'analyzeSite',
-          finalArgs: { url: 'https://trpc-chat-agent.sh/' },
+          finalArgs: { url: 'https://github.com/arduano/trpc-chat-agent' },
         })
       );
 
@@ -262,6 +277,12 @@ const agent = ai.agent({
       await create.beginMessagePart(0);
       const responseStr = `The tool call can see your response was \`${response.response}\`! The response can be forwarded to the LLM too.`;
       await create.aiMessagePartContent(`${responseStr}\n\n${responseMessage3}`, 20);
+      await create.aiToolCalls(
+        create.toolCallSchema({
+          toolName: 'gettingStartedButton',
+          finalArgs: {},
+        })
+      );
     }
   },
 });
@@ -340,6 +361,17 @@ export function HomePageChat({ shouldBegin }: { shouldBegin: boolean }) {
             )}
           </ToolCallWrapper>
         ),
+        gettingStartedButton: (tool) => (
+          <ToolCallWrapper tool={tool} title="Show Button">
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/docs/intro">
+                <Button variant="default" size="sm" className="cursor-pointer">
+                  Getting Started
+                </Button>
+              </Link>
+            </div>
+          </ToolCallWrapper>
+        ),
       }}
       seedPrompt="Hi! Who are you?"
     />
@@ -374,9 +406,14 @@ function WriteCodeFileTool({ tool }: WriteCodeFileToolProps) {
         </CardHeader>
         <CardContent>
           <ScrollArea className={cn('w-full', isCollapsed ? 'max-h-[100px]' : '')}>
-            <pre className="text-sm">
-              <code>{tool.args?.content}</code>
-            </pre>
+            {!tool.result ? (
+              <pre>
+                <code className="text-sm">{tool.args?.content}</code>
+              </pre>
+            ) : (
+              // Yes I know this is lazy
+              <StyledMarkdown>{`\`\`\`ts\n${tool.args?.content}\n\`\`\``}</StyledMarkdown>
+            )}
           </ScrollArea>
           {tool.args?.content && tool.args.content.split('\n').length > 15 && (
             <Button onClick={() => setIsCollapsed(!isCollapsed)} className="mt-2">
