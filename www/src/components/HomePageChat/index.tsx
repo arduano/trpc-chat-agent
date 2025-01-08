@@ -102,10 +102,10 @@ The framework can execute various tools and commands while keeping users updated
 
 const responseMessage2 = `
 ### Framework Flexibility 🔌
-Thanks to its framework-agnostic design, tRPC Chat Agent adapts to any environment. Whether your project uses \`React\`, \`Next.js\`, or another framework, it works seamlessly with your setup.
+Thanks to its framework-agnostic design, tRPC Chat Agent adapts to any environment. Adapters exist for \`React\` and \`LangChain\`, as well as a \`"Mock LLM"\` adapter that this chat is currently using!
 
 ### Interactive Callbacks 💬
-When additional information is needed during a task, the framework can *pause execution* and request user input, making interactions truly **dynamic** and **collaborative**.
+When additional information is needed during a task, the framework can *pause execution* during a tool call and request user input, making interactions truly **dynamic** and **collaborative**.
 `.trim();
 
 const responseMessage3 = `
@@ -116,7 +116,7 @@ Let's explore these capabilities together
 `.trim();
 
 const responseMessageNonDefault = `
-Notice how the user message has a counter above it? The library supports branching conversations so you can switch to previous branches. This is all handled automatically for you!
+Notice how the user message now has a counter above it? The library supports branching conversations so you can switch to previous branches. This is all handled automatically for you!
 `.trim();
 
 const ai = initAgents.backend(new MockAgentBackend()).create();

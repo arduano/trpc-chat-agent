@@ -46,9 +46,9 @@ export function MockChat<Agent extends ChatAgent<any>>({
   }, [isLoadingConversation, shouldBegin]);
 
   return (
-    <div className="flex flex-col">
-      <Card className=" border-0 rounded-none shadow-none relative">
-        <div className="flex flex-col gap-4 p-4 max-w-4xl mx-auto">
+    <div className="flex flex-col w-full min-w-[320px] max-w-full">
+      <Card className="border-0 rounded-none w-full max-w-4xl mx-auto shadow-none relative">
+        <div className="flex flex-col gap-4 p-4 w-full mx-auto">
           <RenderMessages
             messages={messages}
             renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}

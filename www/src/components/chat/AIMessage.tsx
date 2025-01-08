@@ -7,8 +7,8 @@ import { MessageVariants } from './MessageVariants';
 
 export function AIMessageShell({ message, children }: { message: ChatAIMessage<any>; children: JSX.Element }) {
   return (
-    <div className="group flex items-start gap-2 pr-12 lg:pr-48">
-      <div className="flex-1">
+    <div className="group flex items-start max-w-full gap-2 pr-12 lg:pr-48">
+      <div className="flex-1 max-w-full">
         {message.path.count > 1 && <MessageVariants path={message.path} />}
         <div className="space-y-4">{children}</div>
       </div>
