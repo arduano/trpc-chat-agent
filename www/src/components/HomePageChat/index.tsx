@@ -2,7 +2,8 @@ import type { ChatToolCall, GetToolByName } from '@trpc-chat-agent/core';
 import { cn } from '@site/src/lib/utils';
 import { initAgents, MockAgentBackend } from '@trpc-chat-agent/core';
 import { useEffect, useState } from 'react';
-import { HiOutlineCalculator, HiOutlineCode, HiOutlineDocument } from 'react-icons/hi';
+import { HiCheck, HiOutlineCode, HiOutlineDocument } from 'react-icons/hi';
+import { LuBrainCircuit } from 'react-icons/lu';
 import { z } from 'zod';
 import { MockChat } from '../chat/MockChat';
 import { ToolCallWrapper } from '../chat/ToolCallWrapper';
@@ -73,13 +74,16 @@ export default agent;`.trim();
 const responseMessage1 = `
 # 👋 Welcome to tRPC Chat Agent!
 
-I'm an hardcoded "AI" assistant that showcases the power of this framework. Here's what I can do:
+I'm an hardcoded "AI" assistant that showcases the power of this framework. Here's what the library can do:
 
-- Real-time message processing
+- Streamed message responses
 - Type-safe interactions
+- Conversation branching built-in
 - Tool execution with live updates
 - User-interactive callbacks
 - Framework-agnostic design
+
+This chat is using the library with a virtual client+server tRPC layer in your browser. You can even regenerate this message or edit the user message!
 
 ## 🚀 Let's explore how it works...
 
@@ -99,11 +103,17 @@ Thanks to its framework-agnostic design, tRPC Chat Agent adapts to any environme
 
 ### Interactive Callbacks 💬
 When additional information is needed during a task, the framework can *pause execution* and request user input, making interactions truly **dynamic** and **collaborative**.
+`.trim();
 
+const responseMessage3 = `
 ---
 
 ## Ready to dive in?
 Let's explore these capabilities together - what would you like to try first?
+`.trim();
+
+const responseMessageNonDefault = `
+Notice how the user message has a counter above it? The library supports branching conversations so you can switch to previous branches. This is all handled automatically for you!
 `.trim();
 
 const ai = initAgents.backend(new MockAgentBackend()).create();
@@ -125,10 +135,10 @@ const agent = ai.agent({
       mapArgsForClient: (args) => args,
     }),
     ai.tool({
-      name: 'analyzeCode',
-      description: 'Analyze code',
+      name: 'analyzeSite',
+      description: 'Analyze a website',
       schema: z.object({
-        file: z.string(),
+        url: z.string(),
       }),
       toolProgressSchema: z.object({
         progress: z.number(),
@@ -142,7 +152,7 @@ const agent = ai.agent({
         return {
           response: '',
           clientResult: {
-            result: 'This a demo of progress updates from tRPC Chat Agent',
+            result: 'Please star the github repo!',
           },
         };
       },
@@ -163,50 +173,104 @@ const agent = ai.agent({
       },
       mapArgsForClient: (args) => args,
     }),
+    ai.tool({
+      name: 'callbackDemo',
+      description: 'Callback demo',
+      schema: z.object({}),
+      callbacks: {
+        getResponse: ai.callback({
+          args: z.object({ options: z.array(z.string()), question: z.string() }),
+          response: z.object({ response: z.string() }),
+        }),
+      },
+      run: async ({ callbacks }) => {
+        const response = await callbacks.getResponse({
+          question: 'Which LLM will you use for your next project?',
+          options: ['Claude', 'GPT', 'o1', 'Llama', 'Other'],
+        });
+        if (!response) {
+          return {
+            clientResult: null,
+            response: '',
+          };
+        }
+
+        return {
+          clientResult: {
+            response: response.response,
+          },
+          response: response.response,
+        };
+      },
+      mapArgsForClient: (args) => args,
+    }),
   ],
-  generateResponseUpdates: async ({ create }) => {
-    await create.beginMessagePart(0);
-    await create.aiMessagePartContent(responseMessage1, 20);
+  generateResponseUpdates: async ({ create, lastHumanMessage }) => {
+    const lastHumanMessageNormalized = lastHumanMessage.replace(/\W+/g, '').toLowerCase();
+    const shouldGiveDemoMessage = lastHumanMessageNormalized === 'hiwhoareyou';
 
-    await create.aiToolCalls(
-      create.toolCallSchema({
-        toolName: 'greet',
-        finalArgs: { name: 'World' },
-      })
-    );
-    await create.beginMessagePart(0);
+    if (!shouldGiveDemoMessage) {
+      await create.beginMessagePart(0);
+      await create.aiMessagePartContent(responseMessageNonDefault, 20);
+    } else {
+      await create.beginMessagePart(0);
+      await create.aiMessagePartContent(responseMessage1, 20);
 
-    await create.aiToolCalls(
-      create.toolCallSchema({
-        toolName: 'writeCodeFile',
-        inProgressArgs: create
-          .mockCumulativeTokensList(exampleAgentCode)
-          .map((content) => ({ file: 'src/agent.ts', content })),
-        argsProgressDelay: 5,
-        finalArgs: {
-          file: 'src/agent.ts',
-          content: exampleAgentCode,
-        },
-      })
-    );
+      await create.aiToolCalls(
+        create.toolCallSchema({
+          toolName: 'greet',
+          finalArgs: { name: 'World' },
+        })
+      );
 
-    await create.beginMessagePart(0);
-    await create.aiToolCalls(
-      create.toolCallSchema({
-        toolName: 'analyzeCode',
-        finalArgs: { file: 'src/agent.ts' },
-      })
-    );
-    await create.beginMessagePart(0);
+      await create.beginMessagePart(0);
 
-    await create.aiMessagePartContent(responseMessage2, 20);
+      await create.aiToolCalls(
+        create.toolCallSchema({
+          toolName: 'writeCodeFile',
+          inProgressArgs: create
+            .mockCumulativeTokensList(exampleAgentCode)
+            .map((content) => ({ file: 'src/demo-file-writing.ts', content })),
+          argsProgressDelay: 5,
+          finalArgs: {
+            file: 'src/demo-file-writing.ts',
+            content: exampleAgentCode,
+          },
+        })
+      );
+
+      await create.beginMessagePart(0);
+
+      await create.aiToolCalls(
+        create.toolCallSchema({
+          toolName: 'analyzeSite',
+          finalArgs: { url: 'https://trpc-chat-agent.sh/' },
+        })
+      );
+
+      await create.beginMessagePart(0);
+
+      await create.aiMessagePartContent(responseMessage2, 20);
+
+      const [response] = await create.aiToolCalls(
+        create.toolCallSchema({
+          toolName: 'callbackDemo',
+          finalArgs: {},
+        })
+      );
+
+      await create.beginMessagePart(0);
+      const responseStr = `The tool call can see your response was \`${response.response}\`! The response can be forwarded to the LLM too.`;
+      await create.aiMessagePartContent(`${responseStr}\n\n${responseMessage3}`, 20);
+    }
   },
 });
 
-export function HomePageChat() {
+export function HomePageChat({ shouldBegin }: { shouldBegin: boolean }) {
   return (
     <MockChat
       agent={agent}
+      shouldBegin={shouldBegin}
       renderToolCall={{
         greet: (tool) => (
           <ToolCallWrapper tool={tool} title="Greet">
@@ -215,19 +279,19 @@ export function HomePageChat() {
               <span>{tool.args?.name}</span>
             </div>
             <ToolResultWrapper
-              icon={<HiOutlineCalculator size={24} className="text-blue-400" />}
+              icon={<HiCheck size={24} className="text-blue-400" />}
               subtitle="Result"
               title={String(tool.result?.result)}
             />
           </ToolCallWrapper>
         ),
-        analyzeCode: (tool) => {
+        analyzeSite: (tool) => {
           const progress = tool.progressStatus?.progress ?? (tool.result ? 1 : 0);
           return (
             <ToolCallWrapper tool={tool} title="Code Analysis">
               <div className="flex gap-2">
-                <span className="font-semibold">File:</span>
-                <span>{tool.args?.file}</span>
+                <span className="font-semibold">URL:</span>
+                <span>{tool.args?.url}</span>
               </div>
               <div className="mt-2">
                 <Progress value={progress * 100} className="h-2" />
@@ -244,6 +308,38 @@ export function HomePageChat() {
           );
         },
         writeCodeFile: (tool) => <WriteCodeFileTool tool={tool} />,
+        callbackDemo: (tool) => (
+          <ToolCallWrapper tool={tool} title="Callback Demo">
+            {tool.callbacks.map((callback) => (
+              <ToolResultWrapper
+                key={callback.callbackId}
+                icon={<LuBrainCircuit size={24} className="text-green-400" />}
+                subtitle="Choose an Option"
+                title={callback.args.question}
+              >
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {callback.args.options.map((option) => (
+                    <Button
+                      key={option}
+                      onClick={() => callback.respond({ response: option })}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {option}
+                    </Button>
+                  ))}
+                </div>
+              </ToolResultWrapper>
+            ))}
+            {tool.result && (
+              <ToolResultWrapper
+                icon={<LuBrainCircuit size={24} className="text-green-400" />}
+                subtitle="Selected Option"
+                title={tool.result.response}
+              />
+            )}
+          </ToolCallWrapper>
+        ),
       }}
       seedPrompt="Hi! Who are you?"
     />

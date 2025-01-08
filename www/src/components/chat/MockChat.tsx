@@ -19,12 +19,14 @@ export type MockChatComponentProps<Agent extends ChatAgent<any>> = Omit<
     id?: string;
     agent?: Agent;
     seedPrompt?: string;
+    shouldBegin: boolean;
   };
 
 export function MockChat<Agent extends ChatAgent<any>>({
   id,
   renderToolCall,
   agent,
+  shouldBegin,
   ...converationArgs
 }: MockChatComponentProps<Agent>) {
   const mockRouter = useMemo(() => {
@@ -38,10 +40,10 @@ export function MockChat<Agent extends ChatAgent<any>>({
   });
 
   useEffect(() => {
-    if (!isLoadingConversation) {
+    if (!isLoadingConversation && shouldBegin) {
       beginMessage(converationArgs.seedPrompt || 'hello');
     }
-  }, [isLoadingConversation]);
+  }, [isLoadingConversation, shouldBegin]);
 
   return (
     <div className="flex flex-col">

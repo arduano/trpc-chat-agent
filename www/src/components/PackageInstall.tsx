@@ -7,6 +7,7 @@ interface PackageInstallProps {
   devDependencies?: string[];
 }
 
+// eslint-disable-next-line react/no-unstable-default-props
 export default function PackageInstall({ dependencies = [], devDependencies = [] }: PackageInstallProps) {
   const packageManagers = [
     {

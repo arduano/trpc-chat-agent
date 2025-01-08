@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
@@ -6,6 +5,7 @@ import { Button } from '@site/src/components/ui/button';
 import DemoVideo from '@site/static/img/demo.mp4';
 import Heading from '@theme/Heading';
 import Layout from '@theme/Layout';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { FaGithub } from 'react-icons/fa';
 import { HomePageChat } from '../components/HomePageChat';
 
@@ -39,7 +39,18 @@ function HomepageHeader() {
             </Button>
           </a>
         </div>
-        <p>Better homepage coming soon :)</p>
+        <div className="flex flex-col items-center gap-2 text-xl text-gray-600">
+          <span>Demo below</span>
+          <svg
+            className="w-6 h-6 animate-bounce"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
     </header>
   );
@@ -47,6 +58,29 @@ function HomepageHeader() {
 
 export default function Home(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
+  const [beginChat, setBeginChat] = useState(false);
+  const scrollTriggerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setBeginChat(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: '0px 0px -50% 0px', // Triggers when element reaches middle of viewport
+      }
+    );
+
+    if (scrollTriggerRef.current) {
+      observer.observe(scrollTriggerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <Layout
       title={`${siteConfig.title} - ${siteConfig.tagline}`}
@@ -55,7 +89,16 @@ export default function Home(): ReactNode {
       <HomepageHeader />
       <main className="bg-background">
         <HomepageFeatures />
-        <HomePageChat />
+
+        <HomePageChat shouldBegin={beginChat} />
+        {!beginChat && (
+          <div>
+            <div ref={scrollTriggerRef} className="text-center text-gray-600">
+              Scroll further...
+            </div>
+          </div>
+        )}
+        <div className="h-[50vh]"></div>
       </main>
     </Layout>
   );

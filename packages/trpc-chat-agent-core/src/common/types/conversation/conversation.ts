@@ -89,17 +89,17 @@ export class ChatConversation<AIMessage extends { id: string }> {
       }
       const humanIndex = humanList.length - 1;
       if (humanIndex === -1) {
-        throw new Error('Invalid path');
+        throw new Error('Invalid path when getting default tree');
       }
       humanId = humanList[humanIndex];
 
       const aiList = this.data.humanMessageChildIds?.[humanId];
       if (!aiList) {
-        throw new Error('Invalid path');
+        throw new Error('Invalid path when getting default tree');
       }
       const aiIndex = aiList.length - 1;
       if (aiIndex === -1) {
-        throw new Error('Invalid path');
+        throw new Error('Invalid path when getting default tree');
       }
       aiId = aiList[aiIndex];
 
@@ -227,12 +227,14 @@ export class ChatConversation<AIMessage extends { id: string }> {
       data.aiMessages[aiId] = castDraft(aiMessage);
     });
 
+    const lastPathElement = path[path.length - 1];
+
     // Pop the last path element and push the new one
     return [
       ...path.slice(0, path.length - 1),
       {
         humanMessageChildIndex: newHumanChildIndex,
-        aiMessageChildIndex: 0,
+        aiMessageChildIndex: lastPathElement.aiMessageChildIndex,
       },
     ];
   }

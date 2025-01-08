@@ -512,8 +512,9 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
   const { onUpdate, onComplete } = callbacks;
 
   const cancelStream = () => {
-    if (cancelCurrentStream.value) {
-      cancelCurrentStream.value();
+    const cancel = cancelCurrentStream.peek();
+    if (cancel) {
+      cancel();
       cancelCurrentStream.value = undefined;
     }
   };
@@ -521,9 +522,9 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
   const beginStream = (conversationId: string | undefined, humanMessage: string | null, branch: ChatTreePath) => {
     conversationError.value = undefined;
 
-    if (cancelCurrentStream.value) {
-      throw new Error('Already streaming');
-    }
+    cancelStream();
+
+    const abort = new AbortController();
 
     const subscription = router.promptChat.subscribe(
       {
@@ -551,10 +552,12 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
           conversationError.value = err;
           cancelStream();
         },
+        signal: abort.signal,
       }
     );
 
     cancelCurrentStream.value = () => {
+      abort.abort();
       subscription.unsubscribe();
     };
   };

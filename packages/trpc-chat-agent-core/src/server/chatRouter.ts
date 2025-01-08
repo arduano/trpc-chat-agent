@@ -21,6 +21,7 @@ type MakeChatRouterForAgentArgs<Agent extends ChatAgent<any>, Context extends ob
     conversation: ServerSideConversationData<AgentTools<Agent>>,
     ctx: Context
   ) => Promise<void>;
+  saveIntervalMs?: number;
 };
 
 type ContextCallback = (...args: any[]) => object | Promise<object>;
@@ -34,6 +35,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
   saveConversation,
   createConversation,
   t,
+  saveIntervalMs,
 }: MakeChatRouterForAgentArgs<Agent, Context>) {
   const callbackManager = new CallbackManager();
 
@@ -77,6 +79,17 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
           input.humanMessageContent
         );
         chatPath = newPath;
+
+        let saveInterval: NodeJS.Timeout | undefined;
+        if (typeof saveIntervalMs === 'number') {
+          saveInterval = setInterval(() => {
+            void saveConversation(conversation.data.id, conversation.data, ctx as any);
+          }, saveIntervalMs);
+
+          signal?.addEventListener('abort', () => {
+            clearInterval(saveInterval);
+          });
+        }
 
         try {
           const events = await agent.invoke({
@@ -150,6 +163,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
             path: chatPath,
           };
         } finally {
+          clearInterval(saveInterval);
           conversation.abortAllPendingToolCalls();
           await saveConversation(conversation.data.id, conversation.data, ctx as any);
 
