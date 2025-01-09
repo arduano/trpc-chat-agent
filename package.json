@@ -1,5 +1,5 @@
 {
-  "name": "ai-agent-trpc-langchain",
+  "name": "trpc-chat-agent",
   "version": "1.0.0",
   "private": true,
   "workspaces": [

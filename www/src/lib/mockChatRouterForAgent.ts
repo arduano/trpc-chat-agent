@@ -40,10 +40,6 @@ export function buildMockTrpcChatRouter<Tools extends readonly AnyStructuredChat
               signal: op.signal,
             });
 
-            op.signal?.addEventListener('abort', () => {
-              observer.complete();
-            });
-
             const isIterableResult = isAsyncIterable(result) || isObservable(result);
 
             if (op.type !== 'subscription') {
@@ -87,7 +83,11 @@ export function buildMockTrpcChatRouter<Tools extends readonly AnyStructuredChat
             }
           };
 
-          handler();
+          void handler();
+
+          return () => {
+            observer.complete();
+          };
         });
       };
     };

@@ -4,6 +4,8 @@ sidebar_position: 1
 
 import PackageInstall from '@site/src/components/PackageInstall';
 import CodeBlock from '@theme/CodeBlock';
+import { Button } from '@site/src/components/ui/button';
+import Link from '@docusaurus/Link';
 
 # Installation
 
@@ -22,7 +24,15 @@ version `11.0.0-rc.682`, so for best results, install `@trpc/server@11.0.0-rc.68
 
 Backend adapters provide a bridge between your LLM and tRPC routers.
 
-```
+The adapter exposes:
+- Configuring the backend to use
+- Configuring the tools *(backend-agnostic)*
+- Creating the chat agent *(partly depends on the backend)*
+- Creating the tRPC router from the agent
+
+Below is a simple example of what setting up the backend of tRPC Chat Agent might look like
+
+```ts
 // Defining your tRPC environment
 export const t = initTRPC
   .context<typeof createContext>()
@@ -70,4 +80,154 @@ export type AgentType = typeof agent;
 export type AppRouter = typeof appRouter;
 ```
 
+### Choose your backend
+
+*PRs welcome! 💙*
+
+<div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+  <Button asChild variant="secondary">
+    <Link to="/docs/backend/langchain">LangChain</Link>
+  </Button>
+  <Button variant="outline" disabled>
+    <div>OpenAI</div>
+  </Button>
+  <Button variant="outline" disabled>
+    <div>Anthropic</div>
+  </Button>
+  <Button variant="outline" disabled>
+    <div>More to come...</div>
+  </Button>
+</div>
+
+
 ## Frontend adapters
+
+Frontend adapters only require 3 arguments:
+- The tRPC router to use
+- The conversation ID *(creates a new conversation if undefined)*
+- A callback to update the conversation ID *(optional)*
+
+The frontend adapter mainly provides a list of messages to render, and some helper functions to interact with those messages. All state is handled automatically.
+
+Here is a simple example of the React frontend adapter:
+
+```tsx
+type ChatComponentProps = {
+  id?: string;
+  onUpdateConversationId: (id: string) => void;
+};
+
+function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
+  const [input, setInput] = useState('');
+
+  // The `useConversation` hook manages conversation state,
+  // including fetching the initial conversation data
+  const { messages, beginMessage, isStreaming, /* ... */ } = useConversation({
+    // The initial conversation ID. If undefined, a new conversation will be created
+    // on the first message.
+    initialConversationId: id,
+
+    // If the conversation ID was undefined, this gets called when a new conversation
+    // is created. You can use this to switch routes to the new conversation ID
+    onUpdateConversationId: converationArgs.onUpdateConversationId,
+
+    // The tRPC router to use. Type safety is automatically propagated through
+    router: trpcClient.chat,
+  });
+
+  const handleSubmit = (message: string) => {
+    if (message.trim()) {
+      beginMessage(message);
+      setInput('');
+    }
+  };
+
+  // ... render chat
+}
+```
+
+Under the hood, all state is managed by signals via [@preact/signals-core](https://github.com/preactjs/signals). Any framework that can hook into signals can easily support tRPC Chat Agent.
+
+### Choose your frontend
+
+*PRs welcome! 💙*
+
+<div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+  <Button asChild variant="secondary">
+    <Link to="/docs/frontend/react">React</Link>
+  </Button>
+  <Button variant="outline" disabled>
+    <div>Vue</div>
+  </Button>
+  <Button variant="outline" disabled>
+    <div>Angular</div>
+  </Button>
+  <Button variant="outline" disabled>
+    <div>More to come...</div>
+  </Button>
+</div>
+
+## Tools
+
+Tools are the core purpose of tRPC Chat Agent. Here is a simple overview of what defining a tool might look like:
+
+```ts
+const myTool = ai.tool({
+  // Names are enforced at the type level
+  name: 'greet',
+  description: 'Greet the user',
+  // Schemas (basically tool args) are propagated end-to-end
+  schema: z.object({
+    name: z.string(),
+  }),
+  // (optional) Progress schema for sending progress updates
+  progressSchema: z.object({
+    progressPercent: z.number(),
+  }),
+  // (optional) Tool callbacks for interactive user input
+  callbacks: {
+    pickOption: ai.callback({
+      args: z.object({
+        question: z.string(),
+        options: z.array(z.string()),
+      }),
+      response: z.object({
+        option: z.string(),
+      }),
+    }),
+  },
+  run: async ({ input, progress, callbackInvoker }) => {
+    // Show progress updates
+    await progress.update({ progressPercent: 0 });
+
+    // Example of using callbacks to get user input
+    const { option } = await callbackInvoker.pickOption({
+      question: `Which language would you like to greet ${input.name} in?`,
+      options: ['English', 'Spanish', 'Japanese'],
+    });
+
+    await progress.update({ progressPercent: 50 });
+
+    // Small delay to simulate work
+    await progress.update({ progressPercent: 100 });
+
+    const greetings = {
+      English: 'Hello',
+      Spanish: 'Hola',
+      Japanese: 'こんにちは'
+    };
+    const response = `${greetings[option]}, ${input.name}!`;
+
+    return {
+      response,
+      clientResult: { result: response },
+    };
+  },
+  // (optional) Map arguments to arguments for the client
+  // This is called repeatedly while the chatbot writes arguments,
+  // progressively updating the client-side arguments
+  mapArgsForClient: (args) => args,
+  // (optional) Map an error message for the AI
+  mapErrorForAI: (error) => `An error occurred: ${error}`,
+});
+```

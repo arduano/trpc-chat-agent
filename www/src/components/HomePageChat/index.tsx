@@ -86,7 +86,7 @@ I'm an hardcoded "AI" assistant that showcases the power of this framework. Here
 - User-interactive callbacks
 - Framework-agnostic design
 
-This chat is using the library with a virtual client+server tRPC layer in your browser. You can even regenerate this message or edit the user message!
+**This chat is using the library with a virtual client+server tRPC layer in your browser. You can even regenerate this message or edit the user message!**
 
 ## 🚀 Let's explore how it works...
 

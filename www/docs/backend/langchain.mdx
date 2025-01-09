@@ -2,5 +2,81 @@
 sidebar_position: 1
 ---
 
+import PackageInstall from '@site/src/components/PackageInstall';
+
 # Langchain
 
+<PackageInstall dependencies={['@trpc-chat-agent/langchain']} />
+
+Setting up LangChain is fairly straightforward
+
+```ts
+import { LangChainAgentsBackend, asLangChainMessagesArray } from '@trpc-chat-agent/langchain';
+import { initAgents } from '@trpc-chat-agent/core';
+import { ChatOpenAI } from 'langchain/chatmodels/openai';
+
+export const ai = initAgents
+  .context<typeof createContext>()
+  .backend(new LangChainAgentsBackend()) // LangChain adapter
+  .create();
+
+// Now initialize your agent with these parameters:
+const agent = ai.agent({
+  // The tools for your agent
+  tools: [myTool1, myTool2],
+
+  // LLM, from LangChain. Must extend BaseChatModel
+  llm: new ChatOpenAI({ model: 'gpt-4o' }),
+
+  // (optional) The maximum update rate for client args and progress indicators
+  // defaults to 100ms
+  debounceMs: 100,
+
+  // (optional) Implement a custom message transformer. `ctx` is the tRPC context.
+  // Uses the implementation shown here if you don't provide one
+  transformMessages: async ({ conversation, path, ctx }) => {
+    return asLangChainMessagesArray(conversation, path);
+  },
+
+  // (optional) System message to append at the beginning. Gets
+  // appended after transformMessages runs
+  systemMessage: 'You are a helpful assistant',
+
+  // (optional) LangChain callbacks, e.g. for custom tracing
+  langchainCallbacks: [customTracingCallback],
+});
+```
+
+When defining tool calls, you have access to LangChain's extra function parameters:
+- Callbacks
+- Runnable config
+
+You can treat the `run` call the same as the callbacks in LangChain's `DynamicStructuredTool`.
+
+```ts
+const expertModel = new ChatOpenAI({ model: 'gpt-6-pro' });
+
+const myTool = ai.tool({
+  name: 'callAgent',
+  description: 'Ask an AI agent for help',
+  schema: z.object({
+    question: z.string(),
+  }),
+
+  // When calling `run`, the tool has access to LangChain's:
+  // - Callbacks
+  // - Runnable config
+  run: async ({ input, /* ... */ }, langchainCallbacks, runnableConfig) => {
+    // Invoke other LangChain APIs
+    const chatResult = await expertModel.call({
+      messages: [new HumanMessage(input.question)],
+    });
+    const result = chatResult.content;
+
+    return {
+      response: result,
+      clientResult: null,
+    };
+  },
+});
+```

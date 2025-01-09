@@ -6,15 +6,15 @@ import type { ToolRunFn } from '../common/structuredTool';
 import type { AnyToolCallback, ToolCallback } from './callback';
 import { StructuredChatTool } from '../common/structuredTool';
 
-export abstract class AgentsBackend<ExtraArgs extends readonly any[], BaseMessageType> {
+export abstract class AgentsBackend<ExtraArgs extends readonly any[] = readonly [], BaseMessageType = unknown> {
   // Field to stop typescript from complaining about unused types.
   // It is never actually used.
-  $types = undefined as never | ExtraArgs | BaseMessageType;
+  $types = undefined as any as undefined | [ExtraArgs, BaseMessageType];
 
   abstract createAgent: (...args: any[]) => ChatAgent<any>;
 }
 
-type AnyAgentsBackend = AgentsBackend<any[], any>;
+type AnyAgentsBackend = AgentsBackend<readonly any[], any>;
 
 type BackendExtraArgs<T extends AnyAgentsBackend> = T extends AgentsBackend<infer ExtraArgs, any> ? ExtraArgs : never;
 

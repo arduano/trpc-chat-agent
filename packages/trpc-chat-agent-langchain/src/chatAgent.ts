@@ -46,11 +46,11 @@ export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> 
 
   // Transformation
   systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);
-  transformMessages?: (
-    conversation: Readonly<ServerSideChatConversation<ChatAgent<Tools>>>,
-    path: ChatTreePath,
-    ctx: Tools[number]['TypeInfo']['Context']
-  ) => BaseMessage[] | Promise<BaseMessage[]>;
+  transformMessages?: (args: {
+    conversation: Readonly<ServerSideChatConversation<ChatAgent<Tools>>>;
+    path: ChatTreePath;
+    ctx: Tools[number]['TypeInfo']['Context'];
+  }) => BaseMessage[] | Promise<BaseMessage[]>;
 
   // LangChain
   llm: BaseChatModel;
@@ -102,7 +102,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
     ctx: Tools[number]['TypeInfo']['Context']
   ) => {
     if (typeof args.transformMessages === 'function') {
-      return addSystemMessage(await args.transformMessages(conversation, path, ctx), ctx);
+      return addSystemMessage(await args.transformMessages({ conversation, path, ctx }), ctx);
     }
 
     return addSystemMessage(asLangChainMessagesArray(conversation, path), ctx);
@@ -469,7 +469,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
   };
 }
 
-function asLangChainMessagesArray(
+export function asLangChainMessagesArray(
   conversation: Readonly<ServerSideChatConversation<ChatAgent<any>>>,
   tree: ChatTreePath
 ): BaseMessage[] {

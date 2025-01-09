@@ -52,7 +52,7 @@ const agent = ai.agent({
       // Names are enforced at the type level
       name: 'greet',
       description: 'Greet the user',
-      // Schemas are propagated end-to-end
+      // Schemas (basically tool args) are propagated end-to-end
       schema: z.object({
         name: z.string(),
       }),
@@ -99,6 +99,9 @@ const agent = ai.agent({
           clientResult: { result: response },
         };
       },
+      // (optional) Map arguments to arguments for the client
+      // This is called repeatedly while the chatbot writes arguments,
+      // progressively updating the client-side arguments
       mapArgsForClient: (args) => args,
     }),
   ],

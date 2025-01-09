@@ -12,7 +12,7 @@ export type ToolRunFn<
   ToolProgressData extends z.ZodTypeAny | undefined,
   Return,
   ResultForClient,
-  ExtraArgs extends readonly any[],
+  ExtraArgs extends readonly any[] = [],
 > = (
   args: {
     input: z.infer<Args>;
@@ -68,7 +68,7 @@ export class StructuredChatTool<
   ResultForClient = undefined,
   Context = any,
   Callbacks extends Record<string, AnyToolCallback> = Record<string, never>, // This default type is the only one that seems to work, {} breaks things
-  ExtraArgs extends readonly any[] = [],
+  ExtraArgs extends readonly any[] = readonly any[],
 > {
   // Helpers for type inference. These don't actually exist as values.
   TypeInfo: {
@@ -160,6 +160,6 @@ export class StructuredChatTool<
   }
 }
 
-export type AnyStructuredChatTool = StructuredChatTool<string, any, any, any, any, any, any, any>;
+export type AnyStructuredChatTool = StructuredChatTool<string, any, any, any, any, any, any, any, readonly any[]>;
 
 export type ToolsContext<Tools extends readonly AnyStructuredChatTool[]> = Tools[number]['TypeInfo']['Context'];
