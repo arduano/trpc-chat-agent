@@ -16,9 +16,9 @@ export function buildMockTrpcChatRouter<Tools extends readonly AnyStructuredChat
     t: t as any,
     agent,
     createConversation: async () => ServerSideChatConversation.newConversationData<typeof agent>('chat_id'),
-    getConversation: async (id) => (conversationsMap[id] as any) ?? null,
-    saveConversation: async (id, data) => {
-      conversationsMap[id] = data;
+    getConversation: async ({ id }) => (conversationsMap[id] as any) ?? null,
+    saveConversation: async ({ id, conversation }) => {
+      conversationsMap[id] = conversation;
     },
     saveIntervalMs: 10,
   });

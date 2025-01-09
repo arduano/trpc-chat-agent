@@ -42,7 +42,7 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Con
 export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   // Common
   tools: Tools;
-  debounceMs: number;
+  debounceMs?: number;
 
   // Transformation
   systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);

@@ -21,7 +21,7 @@ export const appRouter = router({
       const id = nanoid();
       return ServerSideChatConversation.newConversationData<typeof agent>(id);
     },
-    getConversation: async (id, ctx) => {
+    getConversation: async ({ id, ctx }) => {
       const data = await ctx.conversations.get(id);
       if (!data) {
         throw new Error('Conversation not found');
@@ -30,8 +30,8 @@ export const appRouter = router({
       return data as any;
     },
     t,
-    saveConversation: async (id, data, ctx) => {
-      await ctx.conversations.set(id, data);
+    saveConversation: async ({ id, conversation, ctx }) => {
+      await ctx.conversations.set(id, conversation);
     },
   }),
 

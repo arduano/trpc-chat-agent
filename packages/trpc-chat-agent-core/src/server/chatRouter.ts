@@ -14,13 +14,13 @@ import { CallbackManager } from './callback';
 type MakeChatRouterForAgentArgs<Agent extends ChatAgent<any>, Context extends object | ContextCallback> = {
   agent: Agent;
   t: TrpcWithContext<Context>;
-  createConversation: (ctx: Context) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
-  getConversation: (conversationId: string, ctx: Context) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
-  saveConversation: (
-    conversationId: string,
-    conversation: ServerSideConversationData<AgentTools<Agent>>,
-    ctx: Context
-  ) => Promise<void>;
+  createConversation: (args: { ctx: Context }) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
+  getConversation: (args: { id: string; ctx: Context }) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
+  saveConversation: (args: {
+    id: string;
+    conversation: ServerSideConversationData<AgentTools<Agent>>;
+    ctx: Context;
+  }) => Promise<void>;
   saveIntervalMs?: number;
 };
 
@@ -65,7 +65,10 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
 
         let conversationData: ServerSideConversationData<AgentTools<Agent>>;
         if (input.conversationId) {
-          conversationData = await getConversation(input.conversationId, ctx as any);
+          conversationData = await getConversation({
+            ctx: ctx as any,
+            id: input.conversationId,
+          });
         } else {
           conversationData = await createConversation(ctx as any);
         }
@@ -80,10 +83,21 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
         );
         chatPath = newPath;
 
+        // Save the conversation with the new messages added
+        await saveConversation({
+          id: conversation.data.id,
+          conversation: conversation.data,
+          ctx: ctx as any,
+        });
+
         let saveInterval: NodeJS.Timeout | undefined;
         if (typeof saveIntervalMs === 'number') {
           saveInterval = setInterval(() => {
-            void saveConversation(conversation.data.id, conversation.data, ctx as any);
+            saveConversation({
+              id: conversation.data.id,
+              conversation: conversation.data,
+              ctx: ctx as any,
+            });
           }, saveIntervalMs);
 
           signal?.addEventListener('abort', () => {
@@ -165,7 +179,11 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
         } finally {
           clearInterval(saveInterval);
           conversation.abortAllPendingToolCalls();
-          await saveConversation(conversation.data.id, conversation.data, ctx as any);
+          saveConversation({
+            id: conversation.data.id,
+            conversation: conversation.data,
+            ctx: ctx as any,
+          });
 
           // Currently, trpc seems to be struggling to trigger "conversation complete".
           // Yielding null to signal the conversation is complete (manually handled client-side)
@@ -174,7 +192,10 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
       }),
 
     getChat: t.procedure.input(z.object({ conversationId: z.string() })).query(async ({ input, ctx }) => {
-      const conversationData = await getConversation(input.conversationId, ctx as any);
+      const conversationData = await getConversation({
+        ctx: ctx as any,
+        id: input.conversationId,
+      });
 
       return new ServerSideChatConversation(conversationData).asClientSideConversation();
     }),

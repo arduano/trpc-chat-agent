@@ -170,7 +170,6 @@ const allTools = [calculatorTool, weatherTool, todoTool, timerTool, toolWithCall
 export const agent = ai.agent({
   llm: new ChatOpenAI({ model: 'gpt-4o' }),
   tools: allTools,
-  debounceMs: 0,
 });
 
 export type AgentType = typeof agent;

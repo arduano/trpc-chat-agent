@@ -3,9 +3,71 @@ sidebar_position: 1
 ---
 
 import PackageInstall from '@site/src/components/PackageInstall';
-import { HomePageChat } from '../src/components/HomePageChat';
+import CodeBlock from '@theme/CodeBlock';
 
 # Installation
 
-<PackageInstall dependencies={['@trpc-chat-agent/core', '@trpc-chat-agent/react', '@trpc-chat-agent/langchain']} />
-<HomePageChat />
+> ⚠️ This library depends on tRPC v11 Beta, which is necessary to allow SSE-based subscriptions in NextJS, avoiding websockets entirely.
+>
+> This means you'll need to use tRPC v11 Beta in your project.
+
+<PackageInstall dependencies={['@trpc-chat-agent/core']} />
+
+### Installing tRPC
+
+Please install [tRPC](https://trpc.io/docs/quickstart) v11 Beta in your project. This package depends on
+version `11.0.0-rc.682`, so for best results, install `@trpc/server@11.0.0-rc.682` and `@trpc/client@11.0.0-rc.682`.
+
+## Backend adapters
+
+Backend adapters provide a bridge between your LLM and tRPC routers.
+
+```
+// Defining your tRPC environment
+export const t = initTRPC
+  .context<typeof createContext>()
+  .create();
+
+// Defining your tRPC Chat Agent environment is near-identical
+export const ai = initAgents
+  .context<typeof createContext>()
+  .backend(new LangChainAgentsBackend())
+  .create();
+
+const myTool = ai.tool({
+  // ... tool args, see the tools section for more details
+});
+
+export const agent = ai.agent({
+  tools: [myTool],
+  // ... other backend-related args
+});
+
+export const appRouter = t.router({
+  // Export the agent as a tRPC router
+  chat: makeChatRouterForAgent({
+    agent,
+    t,
+    createConversation: async ({ ctx }) => {
+      // Use tRPC's ctx to authenticate conversation creation
+      // and create a new conversation ID
+      const id = await ctx.myDatabaseAdapter.createConversation();
+      return ServerSideChatConversation.newConversationData<typeof agent>(id);
+    },
+    getConversation: async ({ id, ctx }) => {
+      // Use tRPC's ctx to get a conversation
+      return ctx.myDatabaseAdapter.getConversation(id);
+    },
+    saveConversation: async ({ id, conversation, ctx }) => {
+      // Use tRPC's ctx to save a conversation
+      await ctx.myDatabaseAdapter.saveConversation(id, conversation);
+    },
+  }),
+});
+
+// Can be imported in the client-side adapter, just like tRPC
+export type AgentType = typeof agent;
+export type AppRouter = typeof appRouter;
+```
+
+## Frontend adapters

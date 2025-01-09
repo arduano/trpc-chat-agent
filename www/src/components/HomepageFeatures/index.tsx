@@ -43,14 +43,14 @@ const FeatureList: FeatureItem[] = [
   {
     title: 'Client-Side Tool Previews',
     description:
-      'Split client/server argument schemas allow the client to preview partial arguments before they are sent to the server.',
+      'Split client/server argument schemas allow the client to preview partial arguments before they are sent to the tool function.',
     icon: <VscTools />,
     iconClassName: 'bg-amber-950 text-amber-400',
   },
   {
     title: 'Minimized Re-rendering',
     description:
-      'Built on tRPC primitives with optimized data flow, ensuring minimal re-renders and maximum performance.',
+      'Built on tRPC primitives with a signals-based state approach, optimizing data flow and ensuring minimal re-renders.',
     icon: <TbActivityHeartbeat />,
     iconClassName: 'bg-emerald-950 text-emerald-400',
   },

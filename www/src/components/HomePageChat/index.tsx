@@ -405,10 +405,10 @@ function WriteCodeFileTool({ tool }: WriteCodeFileToolProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className={cn('w-full', isCollapsed ? 'max-h-[100px]' : '')}>
+          <ScrollArea className={cn('w-full text-sm', isCollapsed ? 'max-h-[100px]' : '')}>
             {!tool.result ? (
               <pre>
-                <code className="text-sm">{tool.args?.content}</code>
+                <code>{tool.args?.content}</code>
               </pre>
             ) : (
               // Yes I know this is lazy

@@ -41,38 +41,67 @@ Check out the [demo](./demo) directory for a complete Next.js reference implemen
 One of the most powerful features is the type-safe tool call system:
 
 ```typescript
-// Server-side tool definition
-const myTool = createTool({
-  // Schema for what the AI sees
-  aiSchema: z.object({
-    query: z.string(),
-  }),
-  // Schema for what the client sees (can be partial/different)
-  clientSchema: z.object({
-    partialQuery: z.string(),
-  }),
-  // Optional progress updates
-  progressSchema: z.object({
-    status: z.string(),
-    percent: z.number(),
-  }),
-  // Execute the tool
-  async execute(args, ctx) {
-    // Send progress updates
-    ctx.progress({ status: 'Searching...', percent: 50 });
+import { initAgents, LangChainBackend } from '@trpc-chat-agent/core';
+import { z } from 'zod';
 
-    // Can request client input mid-execution
-    const confirmation = await ctx.callback('confirm', {
-      message: 'Proceed with action?',
-    });
+const ai = initAgents.backend(new LangChainBackend()).create();
 
-    return {
-      // Response for the AI
-      ai: { result: '...' },
-      // Response for the client
-      client: { partialResult: '...' },
-    };
-  },
+const agent = ai.agent({
+  tools: [
+    ai.tool({
+      // Names are enforced at the type level
+      name: 'greet',
+      description: 'Greet the user',
+      // Schemas are propagated end-to-end
+      schema: z.object({
+        name: z.string(),
+      }),
+      // (optional) Progress schema for sending progress updates
+      progressSchema: z.object({
+        progressPercent: z.number(),
+      }),
+      // (optional) Tool callbacks for interactive user input
+      callbacks: {
+        pickOption: ai.callback({
+          args: z.object({
+            question: z.string(),
+            options: z.array(z.string()),
+          }),
+          response: z.object({
+            option: z.string(),
+          }),
+        }),
+      },
+      run: async ({ input, progress, callbackInvoker }) => {
+        // Show progress updates
+        await progress.update({ progressPercent: 0 });
+
+        // Example of using callbacks to get user input
+        const { option } = await callbackInvoker.pickOption({
+          question: `Which language would you like to greet ${input.name} in?`,
+          options: ['English', 'Spanish', 'Japanese'],
+        });
+
+        await progress.update({ progressPercent: 50 });
+
+        // Small delay to simulate work
+        await progress.update({ progressPercent: 100 });
+
+        const greetings = {
+          English: 'Hello',
+          Spanish: 'Hola',
+          Japanese: 'こんにちは'
+        };
+        const response = `${greetings[option]}, ${input.name}!`;
+
+        return {
+          response,
+          clientResult: { result: response },
+        };
+      },
+      mapArgsForClient: (args) => args,
+    }),
+  ],
 });
 ```
 

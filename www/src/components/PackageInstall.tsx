@@ -28,6 +28,12 @@ export default function PackageInstall({ dependencies = [], devDependencies = []
       install: 'add',
       devFlag: '-D',
     },
+    {
+      value: 'bun',
+      label: 'bun',
+      install: 'add',
+      devFlag: '-D',
+    },
   ];
 
   return (
