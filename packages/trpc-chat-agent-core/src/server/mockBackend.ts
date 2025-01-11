@@ -1,7 +1,7 @@
 import type { GetToolByName } from '../clientState';
 import type {
-  AdvancedAIMessageData,
   AgentUpdateMessage,
+  AIMessageData,
   AnyStructuredChatTool,
   ChatAgent,
   ClientSideConversationUpdate,
@@ -82,7 +82,7 @@ export type ResponseUpdate = {
 export type CreateMockAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   tools: Tools;
   generateResponseUpdates: (args: {
-    messages: (UserMessageData | AdvancedAIMessageData<Tools>)[];
+    messages: (UserMessageData | AIMessageData<Tools>)[];
     lastUserMessage: string;
     messageId?: string;
     conversationId?: string;

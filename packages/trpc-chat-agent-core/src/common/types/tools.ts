@@ -3,7 +3,7 @@ import type { AnyStructuredChatTool } from '../structuredTool';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
 
-export type AdvancedToolCall<Tool extends AnyStructuredChatTool> = {
+export type ToolCall<Tool extends AnyStructuredChatTool> = {
   id: string;
   name: Tool['TypeInfo']['Name'];
   args: Tool['TypeInfo']['Args'];
@@ -17,11 +17,11 @@ export type AdvancedToolCall<Tool extends AnyStructuredChatTool> = {
   };
 };
 
-export type AdvancedToolCallFromToolsArray<Tools extends readonly AnyStructuredChatTool[]> = {
-  [K in keyof Tools]: AdvancedToolCall<Tools[K]>;
+export type ToolCallFromToolsArray<Tools extends readonly AnyStructuredChatTool[]> = {
+  [K in keyof Tools]: ToolCall<Tools[K]>;
 }[number];
 
-export type AdvancedToolCallClientSide<Tool extends AnyStructuredChatTool> = {
+export type ToolCallClientSide<Tool extends AnyStructuredChatTool> = {
   id: string;
 
   name: string extends Tool['TypeInfo']['Name'] ? string : Tool['TypeInfo']['Name']; // This hack is necessary because of some complex edge cases around the `any` type
@@ -35,6 +35,6 @@ export type AdvancedToolCallClientSide<Tool extends AnyStructuredChatTool> = {
   state: ToolCallState;
 };
 
-export type AdvancedToolCallClientSideFromToolsArray<Tools extends readonly AnyStructuredChatTool[]> = {
-  [K in keyof Tools]: AdvancedToolCallClientSide<Tools[K]>;
+export type ToolCallClientSideFromToolsArray<Tools extends readonly AnyStructuredChatTool[]> = {
+  [K in keyof Tools]: ToolCallClientSide<Tools[K]>;
 }[number];

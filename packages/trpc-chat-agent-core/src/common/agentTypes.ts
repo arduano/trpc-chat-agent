@@ -1,11 +1,5 @@
 import type { AnyStructuredChatTool, ToolCallbackInvoker, ToolsContext } from './structuredTool';
-import type {
-  AgentUpdateMessage,
-  ChatTreePath,
-  ClientSideChatConversationHelper,
-  ServerSideChatConversationHelper,
-  ServerSideConversation,
-} from './types';
+import type { AgentUpdateMessage, ChatTreePath, ServerSideConversation } from './types';
 
 /**
  * Takes an agent type or tools type, and returns the tools type
@@ -17,14 +11,6 @@ export type AgentTools<AgentOrTools extends ChatAgentOrTools> = AgentOrTools ext
     : AgentOrTools extends ChatAgent<infer Tools>
       ? Tools
       : never;
-
-export type AdvancedReactAgentConversation<Agent extends ChatAgent<any>> = ServerSideChatConversationHelper<
-  AgentTools<Agent>
->;
-
-export type AdvancedReactAgentClientConversation<Agent extends ChatAgent<any>> = ClientSideChatConversationHelper<
-  AgentTools<Agent>
->;
 
 export type ChatAgentInvokeArgs<Tools extends readonly AnyStructuredChatTool[]> = {
   conversationData: ServerSideConversation<Tools>;

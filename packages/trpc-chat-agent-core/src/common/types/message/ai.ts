@@ -2,25 +2,25 @@ import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type { MessageContent, MessageContentText } from '../../messageContent';
 import type { AnyStructuredChatTool } from '../../structuredTool';
-import type { AdvancedToolCallClientSideFromToolsArray, AdvancedToolCallFromToolsArray } from '../tools';
+import type { ToolCallClientSideFromToolsArray, ToolCallFromToolsArray } from '../tools';
 import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import { processMessageContentForClient } from '../../messageContent';
 
-export type AdvancedAIMessagePartData<Tools extends readonly AnyStructuredChatTool[]> = {
+export type AIMessagePartData<Tools extends readonly AnyStructuredChatTool[]> = {
   content: MessageContent;
-  toolCalls: AdvancedToolCallFromToolsArray<Tools>[];
+  toolCalls: ToolCallFromToolsArray<Tools>[];
   responseMetadata?: Record<string, any>;
   usageMetadata?: UsageMetadata;
 };
 
-export type AdvancedAIMessageData<Tools extends readonly AnyStructuredChatTool[]> = {
+export type AIMessageData<Tools extends readonly AnyStructuredChatTool[]> = {
   kind: 'ai';
   id: string;
-  parts: AdvancedAIMessagePartData<Tools>[];
+  parts: AIMessagePartData<Tools>[];
 };
 
 export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]> {
-  constructor(readonly data: AdvancedAIMessageData<Tools>) {}
+  constructor(readonly data: AIMessageData<Tools>) {}
 
   public get id() {
     return this.data.id;
@@ -52,7 +52,7 @@ export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]
     }
   }
 
-  public updateLastPartToolCall(toolCall: AdvancedToolCallFromToolsArray<Tools>) {
+  public updateLastPartToolCall(toolCall: ToolCallFromToolsArray<Tools>) {
     const lastPart = this.lastPart;
     const index = lastPart.toolCalls.findIndex((tc) => tc.id === toolCall.id);
     if (index === -1) {
@@ -63,11 +63,11 @@ export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]
   }
 
   public asLangChainMessages(): BaseMessage[] {
-    function partHasContentOrToolCalls(part: AdvancedAIMessagePartData<Tools>): boolean {
+    function partHasContentOrToolCalls(part: AIMessagePartData<Tools>): boolean {
       return part.content.length > 0 || part.toolCalls.length > 0;
     }
 
-    function partAsLangchainMessages(part: AdvancedAIMessagePartData<Tools>): BaseMessage[] {
+    function partAsLangchainMessages(part: AIMessagePartData<Tools>): BaseMessage[] {
       const aiMessage = new AIMessage({
         content: part.content,
         tool_calls: part.toolCalls.map<ToolCall>((tc) => ({
@@ -94,13 +94,13 @@ export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]
     return this.data.parts.filter(partHasContentOrToolCalls).flatMap(partAsLangchainMessages);
   }
 
-  public asClientSideMessageData(): AdvancedAIMessageDataClientSide<Tools> {
+  public asClientSideMessageData(): AIMessageDataClientSide<Tools> {
     return {
       id: this.data.id,
       kind: this.data.kind,
-      parts: this.data.parts.map<AdvancedAIMessageDataPartClientSide<Tools>>((part) => ({
+      parts: this.data.parts.map<AIMessageDataPartClientSide<Tools>>((part) => ({
         content: processMessageContentForClient(part.content),
-        toolCalls: part.toolCalls.map<AdvancedToolCallClientSideFromToolsArray<Tools>>((tc) => ({
+        toolCalls: part.toolCalls.map<ToolCallClientSideFromToolsArray<Tools>>((tc) => ({
           id: tc.id,
           name: tc.name,
           args: tc.client.args,
@@ -112,13 +112,13 @@ export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]
   }
 }
 
-export type AdvancedAIMessageDataPartClientSide<Tools extends readonly AnyStructuredChatTool[]> = {
+export type AIMessageDataPartClientSide<Tools extends readonly AnyStructuredChatTool[]> = {
   content: MessageContent;
-  toolCalls: AdvancedToolCallClientSideFromToolsArray<Tools>[];
+  toolCalls: ToolCallClientSideFromToolsArray<Tools>[];
 };
 
-export type AdvancedAIMessageDataClientSide<Tools extends readonly AnyStructuredChatTool[]> = {
+export type AIMessageDataClientSide<Tools extends readonly AnyStructuredChatTool[]> = {
   kind: 'ai';
   id: string;
-  parts: AdvancedAIMessageDataPartClientSide<Tools>[];
+  parts: AIMessageDataPartClientSide<Tools>[];
 };

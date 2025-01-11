@@ -1,7 +1,7 @@
 import type { initTRPC } from '@trpc/server';
 import type { AgentTools, ChatAgent } from '../common/agentTypes';
 import type {
-  AdvancedAIMessageData,
+  AIMessageData,
   ChatTreePath,
   ClientSideUpdate,
   ServerSideConversation,
@@ -241,7 +241,7 @@ function addMessagePairToConversation<Agent extends ChatAgent<any>>(
       content: userMessageContent,
     };
 
-    const newAIMessage: AdvancedAIMessageData<AgentTools<Agent>> = {
+    const newAIMessage: AIMessageData<AgentTools<Agent>> = {
       kind: 'ai',
       id: aiMessageId,
       parts: [],
@@ -252,7 +252,7 @@ function addMessagePairToConversation<Agent extends ChatAgent<any>>(
   } else {
     const aiMessageId = 'ai-' + conversation.generateId();
 
-    const newAIMessage: AdvancedAIMessageData<AgentTools<Agent>> = {
+    const newAIMessage: AIMessageData<AgentTools<Agent>> = {
       kind: 'ai',
       id: aiMessageId,
       parts: [],

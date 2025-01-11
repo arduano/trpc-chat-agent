@@ -1,7 +1,7 @@
 import type { AgentTools, ChatAgentOrTools } from '../../../common/agentTypes';
 import type { AnyStructuredChatTool } from '../../../common/structuredTool';
-import type { AdvancedAIMessageDataClientSide } from '../message/ai';
-import type { AdvancedToolCallFromToolsArray } from '../tools';
+import type { AIMessageDataClientSide } from '../message/ai';
+import type { ToolCallFromToolsArray } from '../tools';
 import type {
   ClientBeginNewAIMessagePart,
   ClientSideConversationUpdate,
@@ -16,13 +16,13 @@ import { UnreachableError } from '../../../common/unreachable';
 import { ChatConversationHelper, concatMessageContent } from './conversation';
 
 export type ClientSideConversation<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
-  AdvancedAIMessageDataClientSide<Tools>
+  AIMessageDataClientSide<Tools>
 >;
 
 export class ClientSideChatConversationHelper<Agent extends ChatAgentOrTools> extends ChatConversationHelper<
-  AdvancedAIMessageDataClientSide<AgentTools<Agent>>
+  AIMessageDataClientSide<AgentTools<Agent>>
 > {
-  constructor(data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>) {
+  constructor(data: ConversationData<AIMessageDataClientSide<AgentTools<Agent>>>) {
     super(data);
   }
 
@@ -37,7 +37,7 @@ export class ClientSideChatConversationHelper<Agent extends ChatAgentOrTools> ex
     });
   }
 
-  public mergeInNewData(data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>) {
+  public mergeInNewData(data: ConversationData<AIMessageDataClientSide<AgentTools<Agent>>>) {
     this.data = mergeKeepingOldReferences(this.data, data);
   }
 
@@ -70,7 +70,7 @@ export class ClientSideChatConversationHelper<Agent extends ChatAgentOrTools> ex
         id: update.toolCallId,
         state: 'loading',
         name: update.toolCallName,
-      } as AdvancedToolCallFromToolsArray<AgentTools<Agent>>;
+      } as ToolCallFromToolsArray<AgentTools<Agent>>;
 
       lastPart.toolCalls.push(castDraft(newToolCall));
     });

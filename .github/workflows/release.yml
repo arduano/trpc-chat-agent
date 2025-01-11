@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version: 22.x
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup PNPM
@@ -40,8 +40,8 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm release
-          commit: "chore: version packages"
-          title: "chore: version packages"
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

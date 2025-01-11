@@ -2,9 +2,9 @@ import type { ReadonlySignal } from '@preact/signals-core';
 import type { createTRPCProxyClient } from '@trpc/client';
 import type { z } from 'zod';
 import type {
-  AdvancedAIMessageDataClientSide,
-  AdvancedAIMessageDataPartClientSide,
   AgentTools,
+  AIMessageDataClientSide,
+  AIMessageDataPartClientSide,
   AnyStructuredChatTool,
   ChatAgent,
   ChatAgentOrTools,
@@ -343,7 +343,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   });
 
   const mapAiMessagePartAddCallbacks = (
-    part: AdvancedAIMessageDataPartClientSide<Tools>,
+    part: AIMessageDataPartClientSide<Tools>,
     callbacks: AnyActiveCallbackWithResponse[]
   ): ChatAIMessagePart<Tools> => {
     return {
@@ -356,7 +356,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   };
 
   const mapAiMessageAddCallbacks = (
-    message: AdvancedAIMessageDataClientSide<Tools>,
+    message: AIMessageDataClientSide<Tools>,
     callbacks: AnyActiveCallbackWithResponse[]
   ): ChatAIMessage<Tools> => {
     const path = conversation.value.getPathInfoForMessageId(message.id);

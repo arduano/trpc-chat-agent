@@ -1,7 +1,7 @@
 import type { AgentTools, ChatAgent } from '../../agentTypes';
 import type { AnyStructuredChatTool } from '../../structuredTool';
-import type { AdvancedAIMessageData } from '../message/ai';
-import type { AdvancedToolCallFromToolsArray } from '../tools';
+import type { AIMessageData } from '../message/ai';
+import type { ToolCallFromToolsArray } from '../tools';
 import type {
   ServerBeginNewAIMessagePart,
   ServerSideConversationUpdate,
@@ -17,11 +17,11 @@ import { ChatAIMessageWrapper } from '../message/ai';
 import { ChatConversationHelper } from './conversation';
 
 export type ServerSideConversation<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
-  AdvancedAIMessageData<Tools>
+  AIMessageData<Tools>
 >;
 
 export class ServerSideChatConversationHelper<Agent extends ChatAgent<any>> extends ChatConversationHelper<
-  AdvancedAIMessageData<AgentTools<Agent>>
+  AIMessageData<AgentTools<Agent>>
 > {
   constructor(data: Readonly<ServerSideConversation<AgentTools<Agent>>>) {
     super(data);
@@ -87,7 +87,7 @@ export class ServerSideChatConversationHelper<Agent extends ChatAgent<any>> exte
         client: {
           args: update.newClientArgs,
         },
-      } as AdvancedToolCallFromToolsArray<AgentTools<Agent>>;
+      } as ToolCallFromToolsArray<AgentTools<Agent>>;
 
       lastPart.toolCalls.push(castDraft(newToolCall));
     });
