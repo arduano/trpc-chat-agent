@@ -1,6 +1,6 @@
 import type { MessageContent } from '../messageContent';
 import type { ChatTreePath } from './branching';
-import type { ClientSideConversationData } from './conversation/client';
+import type { ClientSideConversation } from './conversation/client';
 import type { ToolCallState } from './tools';
 
 export type ClientUpdateMessageContent = {
@@ -38,7 +38,7 @@ export type ClientBeginNewAIMessagePart = {
 export type ClientSyncConversation = {
   kind: 'sync-conversation';
   conversationId: string;
-  conversationData: ClientSideConversationData<any>;
+  conversationData: ClientSideConversation<any>;
   path: ChatTreePath;
 };
 

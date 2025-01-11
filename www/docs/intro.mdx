@@ -62,7 +62,7 @@ export const appRouter = t.router({
       // Use tRPC's ctx to authenticate conversation creation
       // and create a new conversation ID
       const id = await ctx.myDatabaseAdapter.createConversation();
-      return ServerSideChatConversation.newConversationData<typeof agent>(id);
+      return ServerSideChatConversationHelper.newConversationData<typeof agent>(id);
     },
     getConversation: async ({ id, ctx }) => {
       // Use tRPC's ctx to get a conversation

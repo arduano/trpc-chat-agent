@@ -1,6 +1,6 @@
 import type { createContext } from './context';
 import { EventEmitter } from 'node:events';
-import { makeChatRouterForAgent, ServerSideChatConversation } from '@trpc-chat-agent/core';
+import { makeChatRouterForAgent, ServerSideChatConversationHelper } from '@trpc-chat-agent/core';
 import { initTRPC } from '@trpc/server';
 import { observable } from '@trpc/server/observable';
 import { nanoid } from 'nanoid';
@@ -19,7 +19,7 @@ export const appRouter = router({
     agent,
     createConversation: async (_ctx) => {
       const id = nanoid();
-      return ServerSideChatConversation.newConversationData<typeof agent>(id);
+      return ServerSideChatConversationHelper.newConversationData<typeof agent>(id);
     },
     getConversation: async ({ id, ctx }) => {
       const data = await ctx.conversations.get(id);

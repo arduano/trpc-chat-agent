@@ -10,7 +10,7 @@ import type {
   ToolCallOutput,
   UserMessageData,
 } from '../common';
-import { ServerSideChatConversation } from '../common';
+import { ServerSideChatConversationHelper } from '../common';
 import { AgentsBackend } from './builder';
 
 export class MockAgentBackend extends AgentsBackend<[], any> {
@@ -26,7 +26,7 @@ export class MockAgentBackend extends AgentsBackend<[], any> {
         const conversationId = chatArgs.conversationData.id ?? 'dummy_conversation';
 
         const { conversationData, chatPath } = chatArgs;
-        const conversation = new ServerSideChatConversation(conversationData);
+        const conversation = new ServerSideChatConversationHelper(conversationData);
         const messages = conversation.asMessagesArray(chatPath);
 
         const aiMessageId = conversation.getAIMessageIdAt(chatPath);
@@ -111,7 +111,7 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[]> {
     readonly messageId: string,
     readonly conversationId: string,
     readonly tools: Tools,
-    readonly conversation: ServerSideChatConversation<ChatAgent<AnyStructuredChatTool[]>>,
+    readonly conversation: ServerSideChatConversationHelper<ChatAgent<AnyStructuredChatTool[]>>,
     readonly callbackInvoker: ToolCallbackInvoker
   ) {}
 

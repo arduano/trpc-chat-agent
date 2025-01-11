@@ -1,7 +1,7 @@
-import type { AnyStructuredChatTool, ChatAgent, ClientSideConversationData } from '@trpc-chat-agent/core';
+import type { AnyStructuredChatTool, ChatAgent, ClientSideConversation } from '@trpc-chat-agent/core';
 import type { TRPCLink } from '@trpc/client';
 import type { AnyRouter } from '@trpc/server';
-import { makeChatRouterForAgent, ServerSideChatConversation } from '@trpc-chat-agent/core';
+import { makeChatRouterForAgent, ServerSideChatConversationHelper } from '@trpc-chat-agent/core';
 import { createTRPCClient } from '@trpc/client';
 import { callTRPCProcedure, initTRPC } from '@trpc/server';
 import { isObservable, observable, observableToAsyncIterable } from '@trpc/server/observable';
@@ -10,12 +10,12 @@ import { isAsyncIterable, TRPCError } from '@trpc/server/unstable-core-do-not-im
 export function buildMockTrpcChatRouter<Tools extends readonly AnyStructuredChatTool[]>(agent: ChatAgent<Tools>) {
   const t = initTRPC.create({ isServer: true });
 
-  const conversationsMap: Record<string, ClientSideConversationData> = {};
+  const conversationsMap: Record<string, ClientSideConversation> = {};
 
   const appRouter = makeChatRouterForAgent({
     t: t as any,
     agent,
-    createConversation: async () => ServerSideChatConversation.newConversationData<typeof agent>('chat_id'),
+    createConversation: async () => ServerSideChatConversationHelper.newConversationData<typeof agent>('chat_id'),
     getConversation: async ({ id }) => (conversationsMap[id] as any) ?? null,
     saveConversation: async ({ id, conversation }) => {
       conversationsMap[id] = conversation;
