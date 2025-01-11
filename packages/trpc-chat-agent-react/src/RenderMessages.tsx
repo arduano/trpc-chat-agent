@@ -4,8 +4,7 @@ import type {
   ChatAIMessagePart,
   ChatAIMessageToolCall,
   ChatHumanMessage,
-  ChatToolCall,
-  GetToolByNameFromList,
+  GetToolByName,
   MessageContent,
 } from '@trpc-chat-agent/core';
 
@@ -24,7 +23,7 @@ export type RenderMessagesProps<Tools extends readonly AnyStructuredChatTool[]> 
   renderToolCall:
     | {
         [K in Tools[number]['TypeInfo']['Name']]: (
-          toolCall: ChatToolCall<GetToolByNameFromList<K, Tools>>
+          toolCall: ChatAIMessageToolCall<GetToolByName<K, Tools>>
         ) => JSX.Element;
       }
     | ((toolCall: ChatAIMessageToolCall<Tools>) => JSX.Element);

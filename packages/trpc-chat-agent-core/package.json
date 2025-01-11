@@ -1,6 +1,24 @@
 {
   "name": "@trpc-chat-agent/core",
   "version": "0.1.0",
+  "description": "The core for trpc-chat-agent (TODO: Elaborate)",
+  "author": "arduano",
+  "license": "MIT",
+  "homepage": "https://github.com/arduano/trpc-chat-agent#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arduano/trpc-chat-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arduano/trpc-chat-agent/issues"
+  },
+  "keywords": [
+    "trpc",
+    "types",
+    "ai",
+    "agent",
+    "chat"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
@@ -30,23 +48,5 @@
     "@types/react": "18.2.43",
     "rollup": "^4.29.1",
     "typescript": "^5.0.0"
-  },
-  "description": "The core for trpc-chat-agent (TODO: Elaborate)",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/arduano/trpc-chat-agent.git"
-  },
-  "keywords": [
-    "trpc",
-    "types",
-    "ai",
-    "agent",
-    "chat"
-  ],
-  "author": "arduano",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/arduano/trpc-chat-agent/issues"
-  },
-  "homepage": "https://github.com/arduano/trpc-chat-agent#readme"
+  }
 }

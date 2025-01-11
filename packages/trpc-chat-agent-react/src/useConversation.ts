@@ -37,7 +37,7 @@ export function useConversation<Agent extends ChatAgentOrTools>(args: UseConvers
     messages: useSignalValue(subscriber.messages),
     isStreaming: useSignalValue(subscriber.isStreaming),
     conversationError: useSignalValue(subscriber.conversationError),
-    hasConversation: useSignalValue(subscriber.hasConversation),
+    conversationId: useSignalValue(subscriber.conversationId),
     isLoadingConversation: useSignalValue(subscriber.isLoadingConversation),
     isMissingConversation: useSignalValue(subscriber.isMissingConversation),
   };

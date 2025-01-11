@@ -1,11 +1,10 @@
-import type { ChatToolCall, GetToolByName } from '@trpc-chat-agent/core';
+import type { ChatAIMessageToolCall, GetToolByName } from '@trpc-chat-agent/core';
 import Link from '@docusaurus/Link';
 import { cn } from '@site/src/lib/utils';
 import { initAgents, MockAgentBackend } from '@trpc-chat-agent/core';
 import { useEffect, useState } from 'react';
 import { HiCheck, HiOutlineCode, HiOutlineDocument } from 'react-icons/hi';
 import { LuBrainCircuit } from 'react-icons/lu';
-import Markdown from 'react-markdown';
 import { z } from 'zod';
 import { MockChat } from '../chat/MockChat';
 import { StyledMarkdown } from '../chat/StyledMarkdown';
@@ -379,7 +378,7 @@ export function HomePageChat({ shouldBegin }: { shouldBegin: boolean }) {
 }
 
 type WriteCodeFileToolProps = {
-  tool: ChatToolCall<GetToolByName<'writeCodeFile', typeof agent>>;
+  tool: ChatAIMessageToolCall<GetToolByName<'writeCodeFile', typeof agent>>;
 };
 
 function WriteCodeFileTool({ tool }: WriteCodeFileToolProps) {

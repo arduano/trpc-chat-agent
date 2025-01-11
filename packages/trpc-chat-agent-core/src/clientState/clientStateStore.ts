@@ -471,17 +471,13 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     beginStream(conversationId.peek(), null, path);
   };
 
-  const hasConversation = computed(() => {
-    return !!conversationId.peek();
-  });
-
   return {
     conversation,
     messages: pastMappedMessages,
     beginMessage,
     isStreaming,
     cancelStream,
-    hasConversation,
+    conversationId,
     conversationError,
     isLoadingConversation: computed(() => {
       const id = conversationId.peek();
@@ -645,7 +641,7 @@ type CallbacksFromToolCallbacks<Tool extends AnyStructuredChatTool> = {
   >;
 }[keyof Tool['TypeInfo']['Callbacks']];
 
-export type ChatToolCall<Tool extends AnyStructuredChatTool> = {
+type ChatToolCall<Tool extends AnyStructuredChatTool> = {
   id: string;
 
   name: Tool['TypeInfo']['Name'];
@@ -687,7 +683,7 @@ export type ChatHumanMessage = HumanMessageData & {
   edit: (content: string) => void;
 };
 
-export type GetToolByNameFromList<
+type GetToolByNameFromList<
   Name extends Tools[number]['TypeInfo']['Name'],
   Tools extends readonly AnyStructuredChatTool[],
 > = {

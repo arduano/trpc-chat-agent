@@ -1,0 +1,195 @@
+---
+sidebar_position: 1
+---
+
+import PackageInstall from '@site/src/components/PackageInstall';
+
+# React
+
+<PackageInstall dependencies={['@trpc-chat-agent/react']} />
+
+React exposes 2 primary helpers:
+- A react hook to manage a conversation
+- A helper component to render messages and tool calls
+- Coming soon: shadcn components for rendering the messages/tools
+
+## Using the right tRPC client
+
+Make sure you use the right tRPC client. When using tRPC in React, you generally wrap the client in `react-query`. tRPC Chat Agents uses the raw tRPC client instead.
+
+```ts
+import type { AppRouter } from '@/server/trpc';
+import { httpBatchLink, splitLink, unstable_httpSubscriptionLink } from '@trpc/client';
+import { createTRPCReact } from '@trpc/react-query';
+
+// Use this for react
+export const trpc = createTRPCReact<AppRouter>();
+
+// Use this for for tRPC Chat Agent
+export const trpcClient = trpc.createClient({
+  links: [
+    splitLink({
+      // uses the httpSubscriptionLink for subscriptions
+      condition: (op) => op.type === 'subscription',
+      true: unstable_httpSubscriptionLink({
+        url: `/api/trpc`,
+      }),
+      false: httpBatchLink({
+        url: `/api/trpc`,
+      }),
+    }),
+  ],
+});
+```
+
+## Conversation hook
+
+The `useConversation` hook manages conversation state, including fetching the initial conversation data.
+
+For example:
+
+```tsx
+import { useConversation } from '@trpc-chat-agent/react';
+
+type ChatComponentProps = {
+  id?: string;
+  onUpdateConversationId: (id: string) => void;
+};
+
+function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
+  const [input, setInput] = useState('');
+
+  const {
+    // Messages list for the current conversation path
+    messages,
+
+    // Function to begin a new message
+    beginMessage,
+    // Function to cancel the current stream, no-op if no stream is active
+    cancelStream,
+    // Boolean to indicate if the conversation is streaming
+    isStreaming,
+
+    // The full conversation object
+    conversation,
+
+    // The conversation ID. It can change if initialConversationId was undefined.
+    conversationId,
+
+    // Boolean to indicate if the conversation is loading (when the conversation ID is specified)
+    isLoadingConversation,
+    // Boolean to indicate if the conversation is missing (when the conversation ID is specified but not found)
+    isMissingConversation,
+
+  } = useConversation({
+    // The initial conversation ID. If undefined, a new conversation will be created
+    // on the first message.
+    initialConversationId: id,
+
+    // If the conversation ID was undefined, this gets called when a new conversation
+    // is created. You can use this to switch routes to the new conversation ID
+    onUpdateConversationId: converationArgs.onUpdateConversationId,
+
+    // The tRPC router to use. Type safety is automatically propagated through
+    router: trpcClient.chat,
+  });
+
+  const handleSubmit = (message: string) => {
+    if (message.trim()) {
+      beginMessage(message);
+      setInput('');
+    }
+  };
+
+  // ... render chat
+}
+```
+
+## Rendering the messages
+
+When rendering the messages, it is *critical* to ensure you avoid unnecessary re-renders. tRPC Chat Agent always returns the same reference for the same object data, so you can safely memoize the rendered data.
+
+To help with memoization, this library provides a `RenderMessages` helper component which assists with all the memoization.
+
+```tsx
+import { useConversation, RenderMessages } from '@trpc-chat-agent/react';
+
+function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
+  const [input, setInput] = useState('');
+
+  const { messages, beginMessage } = useConversation({
+    initialConversationId: id,
+    onUpdateConversationId: converationArgs.onUpdateConversationId,
+    router: trpcClient.chat,
+  });
+
+  const handleSubmit = (message: string) => {
+    if (message.trim()) {
+      beginMessage(message);
+      setInput('');
+    }
+  };
+
+  return (
+    <div>
+      <div>
+        <RenderMessages
+          // The messages to render. Type definitions are automatically propagated through.
+          messages={messages}
+
+          // (optional) A shell for rendering AI messages.
+          // An AI message consists of multiple parts, and each part has "content" and "tool calls".
+          // This shell wraps around all parts at once, e.g. for adding "re-generate" buttons to AI messages.
+          renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
+
+          // Rendering the AI message content. This can appear multiple times within each AI message.
+          renderAiMessagePartContent={(content) => <StyledMarkdown>{content}</StyledMarkdown>}
+
+          // Rendering tool calls. You can either:
+          // - Provide a dictionary for rendering each tool call by name
+          // - Provide a function which renders all tool calls
+          // Example of object mode:
+          renderToolCall={{ myTool: (tool) => <RenderMyTool tool={tool} /> }}
+          // Example of single function mode:
+          renderToolCall={(tool) => <RenderAnyTool tool={tool} />}
+
+          // Rendering a human message. Theres no shell/content separation here because human messages only have a single part
+          renderHumanMessage={(message) => <HumanMessage message={message} />}
+        />
+      </div>
+      <div>
+        <input value={input} onChange={(e) => setInput(e.target.value)} />
+        <button onClick={() => handleSubmit(input)}>Send</button>
+      </div>
+    </div>
+  )
+}
+
+function AIMessageShell({ message, children }: { message: ChatAIMessage<MyAgentType>; children: ReactNode }) {
+  const regenerate = () => {
+    message.regenerate();
+  };
+
+  // ...
+}
+
+function HumanMessage({ message }: { message: ChatAIMessage<MyAgentType> }) {
+  const edit = (newConent: string) => {
+    message.edit(newConent);
+  };
+
+  // ...
+}
+
+function RenderAnyTool({ tool }: { tool: ChatAIMessageToolCall<MyAgentType> }) {
+  if (tool.name === 'myTool') {
+    return <RenderMyTool tool={tool} />;
+  }
+
+  return null;
+}
+
+function RenderMyTool({ tool }: { tool: ChatAIMessageToolCall<GetToolByName<'myTool', MyAgentType>> }) {
+  // ...
+}
+```

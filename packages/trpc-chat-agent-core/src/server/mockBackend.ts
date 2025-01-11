@@ -1,4 +1,4 @@
-import type { GetToolByName, GetToolByNameFromList } from '../clientState';
+import type { GetToolByName } from '../clientState';
 import type {
   AdvancedAIMessageData,
   AgentUpdateMessage,
@@ -325,10 +325,7 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[]> {
       Tools extends readonly AnyStructuredChatTool[],
       Calls extends readonly MockToolCallSchema<Tools, Tools[number]['TypeInfo']['Name']>[],
     > = {
-      [Index in keyof Calls]: ToolCallOutput<
-        string,
-        GetToolResult<GetToolByNameFromList<Calls[Index]['toolName'], Tools>>
-      >;
+      [Index in keyof Calls]: ToolCallOutput<string, GetToolResult<GetToolByName<Calls[Index]['toolName'], Tools>>>;
     };
 
     return allResponses as TransformCalls<Tools, Calls>;

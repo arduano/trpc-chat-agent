@@ -1,5 +1,5 @@
 import { kvsLocalStorage } from '@kvs/node-localstorage';
-import { AgentsBackend, initAgents } from '@trpc-chat-agent/core';
+import { initAgents } from '@trpc-chat-agent/core';
 import { LangChainAgentsBackend } from '@trpc-chat-agent/langchain';
 import { initTRPC } from '@trpc/server';
 import AsyncLock from 'async-lock';

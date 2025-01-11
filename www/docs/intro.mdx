@@ -25,7 +25,7 @@ version `11.0.0-rc.682`, so for best results, install `@trpc/server@11.0.0-rc.68
 Backend adapters provide a bridge between your LLM and tRPC routers.
 
 The adapter exposes:
-- Configuring the backend to use
+- Configuring which backend to use
 - Configuring the tools *(backend-agnostic)*
 - Creating the chat agent *(partly depends on the backend)*
 - Creating the tRPC router from the agent
@@ -178,7 +178,7 @@ const myTool = ai.tool({
   description: 'Greet the user',
   // Schemas (basically tool args) are propagated end-to-end
   schema: z.object({
-    name: z.string(),
+    name: z.string().description('The name to greet'),
   }),
   // (optional) Progress schema for sending progress updates
   progressSchema: z.object({
@@ -207,8 +207,7 @@ const myTool = ai.tool({
     });
 
     await progress.update({ progressPercent: 50 });
-
-    // Small delay to simulate work
+    // (pretend we did more work between here)
     await progress.update({ progressPercent: 100 });
 
     const greetings = {
