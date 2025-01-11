@@ -11,7 +11,8 @@ import PackageInstall from '@site/src/components/PackageInstall';
 React exposes 2 primary helpers:
 - A react hook to manage a conversation
 - A helper component to render messages and tool calls
-- Coming soon: shadcn components for rendering the messages/tools
+
+*Coming soon: shadcn components for rendering the messages/tools*
 
 ## Using the right tRPC client
 
@@ -88,7 +89,7 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
 
     // If the conversation ID was undefined, this gets called when a new conversation
     // is created. You can use this to switch routes to the new conversation ID
-    onUpdateConversationId: converationArgs.onUpdateConversationId,
+    onUpdateConversationId: onUpdateConversationId,
 
     // The tRPC router to use. Type safety is automatically propagated through
     router: trpcClient.chat,
@@ -119,7 +120,7 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
 
   const { messages, beginMessage } = useConversation({
     initialConversationId: id,
-    onUpdateConversationId: converationArgs.onUpdateConversationId,
+    onUpdateConversationId: onUpdateConversationId,
     router: trpcClient.chat,
   });
 
