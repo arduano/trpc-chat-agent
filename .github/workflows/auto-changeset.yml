@@ -1,0 +1,35 @@
+name: Auto Changeset
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  auto-changeset:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.12.2
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Create Changeset
+        uses: changesets/action@v1
+        with:
+          # This will create a changeset based on the PR title
+          title: ${{ github.event.pull_request.title }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}

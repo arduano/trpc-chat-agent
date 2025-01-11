@@ -14,10 +14,13 @@
   "scripts": {
     "demo": "cd demo && pnpm",
     "lint:fix": "eslint . --fix",
-    "check-types": "pnpm -r exec tsc --noEmit"
+    "check-types": "pnpm -r exec tsc --noEmit",
+    "release": "changeset publish",
+    "version-packages": "changeset version"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^3.12.0",
+    "@changesets/cli": "^2.27.11",
     "@eslint-react/eslint-plugin": "^1.19.0",
     "@eslint/eslintrc": "^3",
     "@rollup/plugin-node-resolve": "^16.0.0",

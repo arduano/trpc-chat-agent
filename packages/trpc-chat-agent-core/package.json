@@ -19,6 +19,9 @@
     "agent",
     "chat"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
