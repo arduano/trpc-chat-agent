@@ -29,8 +29,8 @@ export class ClientSideChatConversation<Agent extends ChatAgentOrTools> extends 
   public static makePlaceholderConversation<Agent extends ChatAgentOrTools>(): ClientSideChatConversation<Agent> {
     return new ClientSideChatConversation({
       aiMessageChildIds: {},
-      humanMessageChildIds: {},
-      humanMessages: {},
+      userMessageChildIds: {},
+      userMessages: {},
       aiMessages: {},
       id: '',
       messageIdCounter: 0,

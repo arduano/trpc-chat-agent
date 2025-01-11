@@ -10,8 +10,8 @@ import { RenderMessages, useConversation } from '@trpc-chat-agent/react';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { AIMessageShell } from './AIMessage';
-import { HumanMessage } from './HumanMessage';
 import { StyledMarkdown } from './StyledMarkdown';
+import { UserMessage } from './UserMessage';
 
 export type ChatComponentProps<Agent extends ChatAgent<any>> = Omit<
   UseConversationArgs<Agent>,
@@ -77,7 +77,7 @@ function ChatComponentWithStaticId<Agent extends AgentType>({
               messages={messages}
               renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
               renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
-              renderHumanMessage={(message) => <HumanMessage message={message} />}
+              renderUserMessage={(message) => <UserMessage message={message} />}
               renderToolCall={renderToolCall}
             />
             <div ref={messagesEndRef} />

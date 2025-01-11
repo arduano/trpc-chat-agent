@@ -153,8 +153,8 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
           // Example of single function mode:
           renderToolCall={(tool) => <RenderAnyTool tool={tool} />}
 
-          // Rendering a human message. Theres no shell/content separation here because human messages only have a single part
-          renderHumanMessage={(message) => <HumanMessage message={message} />}
+          // Rendering a user message. Theres no shell/content separation here because user messages only have a single part
+          renderUserMessage={(message) => <UserMessage message={message} />}
         />
       </div>
       <div>
@@ -173,7 +173,7 @@ function AIMessageShell({ message, children }: { message: ChatAIMessage<MyAgentT
   // ...
 }
 
-function HumanMessage({ message }: { message: ChatAIMessage<MyAgentType> }) {
+function UserMessage({ message }: { message: ChatAIMessage<MyAgentType> }) {
   const edit = (newConent: string) => {
     message.edit(newConent);
   };

@@ -34,9 +34,9 @@ export class ServerSideChatConversation<Agent extends ChatAgent<any>> extends Ch
       id,
       messageIdCounter: 0,
       aiMessages: {},
-      humanMessages: {},
+      userMessages: {},
       aiMessageChildIds: {},
-      humanMessageChildIds: {},
+      userMessageChildIds: {},
     };
   }
 

@@ -3,7 +3,7 @@ import type {
   ChatAIMessage,
   ChatAIMessagePart,
   ChatAIMessageToolCall,
-  ChatHumanMessage,
+  ChatUserMessage,
   GetToolByName,
   MessageContent,
 } from '@trpc-chat-agent/core';
@@ -16,7 +16,7 @@ function RenderMemoed<T extends readonly any[]>({ data, render }: { data: T; ren
 }
 
 export type RenderMessagesProps<Tools extends readonly AnyStructuredChatTool[]> = {
-  messages: (ChatAIMessage<Tools> | ChatHumanMessage)[];
+  messages: (ChatAIMessage<Tools> | ChatUserMessage)[];
   renderAiMessageShell?: (message: ChatAIMessage<Tools>, children: JSX.Element) => JSX.Element;
   renderAiMessagePartContent: (content: MessageContent) => JSX.Element;
   renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Tools>, children: JSX.Element) => JSX.Element;
@@ -27,12 +27,12 @@ export type RenderMessagesProps<Tools extends readonly AnyStructuredChatTool[]> 
         ) => JSX.Element;
       }
     | ((toolCall: ChatAIMessageToolCall<Tools>) => JSX.Element);
-  renderHumanMessage: (message: ChatHumanMessage) => JSX.Element;
+  renderUserMessage: (message: ChatUserMessage) => JSX.Element;
 };
 
 export function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
   messages,
-  renderHumanMessage,
+  renderUserMessage,
   renderAiMessagePartContent,
   renderToolCall,
   renderAiMessageShell,
@@ -87,12 +87,12 @@ export function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
     return <RenderMemoed data={[message, parts]} render={renderAiMessageShell} />;
   };
 
-  const renderAllMessages = (messages: (ChatAIMessage<Tools> | ChatHumanMessage)[]) => {
+  const renderAllMessages = (messages: (ChatAIMessage<Tools> | ChatUserMessage)[]) => {
     return (
       <>
         {messages.map((message) => {
-          if (message.kind === 'human') {
-            return <RenderMemoed key={message.id} data={[message]} render={renderHumanMessage} />;
+          if (message.kind === 'user') {
+            return <RenderMemoed key={message.id} data={[message]} render={renderUserMessage} />;
           } else {
             return <RenderMemoed key={message.id} data={[message]} render={renderAiMessage} />;
           }

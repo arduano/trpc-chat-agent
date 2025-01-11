@@ -69,7 +69,7 @@ const myTool = ai.tool({
   run: async ({ input, /* ... */ }, langchainCallbacks, runnableConfig) => {
     // Invoke other LangChain APIs
     const chatResult = await expertModel.call({
-      messages: [new HumanMessage(input.question)],
+      messages: [new UserMessage(input.question)],
     });
     const result = chatResult.content;
 

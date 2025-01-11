@@ -5,7 +5,7 @@ import { ChatConversation } from './conversation/conversation';
 
 export const chatBranchZod = z.array(
   z.object({
-    humanMessageChildIndex: z.number(),
+    userMessageChildIndex: z.number(),
     aiMessageChildIndex: z.number(),
   })
 );
@@ -22,7 +22,7 @@ export class ConversationBranchState {
 
   // Passed in from conversation
   readonly aiMessageChildren: Record<string, string[]>;
-  readonly humanMessageChildren: Record<string, string[]>;
+  readonly userMessageChildren: Record<string, string[]>;
 
   // Derived
   readonly selectedPath: ChatTreePath;
@@ -31,14 +31,14 @@ export class ConversationBranchState {
 
   private constructor(args: {
     aiMessageChildren: Record<string, string[]>;
-    humanMessageChildren: Record<string, string[]>;
+    userMessageChildren: Record<string, string[]>;
     messageChildChoice: Record<string, string>;
     selectedPath: ChatTreePath;
     messageBranchStates: Record<string, ChatBranchState>;
     messageParent: Record<string, string>;
   }) {
     this.aiMessageChildren = args.aiMessageChildren;
-    this.humanMessageChildren = args.humanMessageChildren;
+    this.userMessageChildren = args.userMessageChildren;
     this.messageChildChoice = args.messageChildChoice;
     this.selectedPath = args.selectedPath;
     this.messageBranchStates = args.messageBranchStates;
@@ -62,7 +62,7 @@ export class ConversationBranchState {
         newChoice[id] = children[children.length - 1];
       }
     }
-    for (const [id, children] of Object.entries(conversation.humanMessageChildIds)) {
+    for (const [id, children] of Object.entries(conversation.userMessageChildIds)) {
       if (!newChoice[id] && children.length > 0) {
         newChoice[id] = children[children.length - 1];
       }
@@ -70,7 +70,7 @@ export class ConversationBranchState {
 
     const next = ConversationBranchState.build(
       conversation.aiMessageChildIds,
-      conversation.humanMessageChildIds,
+      conversation.userMessageChildIds,
       newChoice
     );
 
@@ -94,18 +94,18 @@ export class ConversationBranchState {
    */
   private static build(
     aiMessageChildren: Record<string, string[]>,
-    humanMessageChildren: Record<string, string[]>,
+    userMessageChildren: Record<string, string[]>,
     messageChildChoice: Record<string, string>
   ): ConversationBranchState {
     const { selectedPath, messageBranchStates, messageParent } = ConversationBranchState.buildDerivedData(
       aiMessageChildren,
-      humanMessageChildren,
+      userMessageChildren,
       messageChildChoice
     );
 
     return new ConversationBranchState({
       aiMessageChildren,
-      humanMessageChildren,
+      userMessageChildren,
       messageChildChoice,
       selectedPath,
       messageBranchStates,
@@ -125,7 +125,7 @@ export class ConversationBranchState {
 
     // Build the selected path from the root
     let aiId = ChatConversation.aiMessageRootId;
-    let humanId = '';
+    let userId = '';
     while (true) {
       const aiChildren = aiMsg[aiId];
       const chosenAiChild = choice[aiId];
@@ -137,23 +137,23 @@ export class ConversationBranchState {
         throw new Error('Invalid AI choice');
       }
 
-      humanId = chosenAiChild;
+      userId = chosenAiChild;
 
-      const humanChildren = huMsg[humanId];
-      const chosenHumanChild = choice[humanId];
+      const userChildren = huMsg[userId];
+      const chosenUserChild = choice[userId];
 
-      if (!humanChildren) {
-        throw new Error('Invalid Human choice');
+      if (!userChildren) {
+        throw new Error('Invalid User choice');
       }
-      const humanIndex = humanChildren.indexOf(chosenHumanChild);
-      if (humanIndex === -1) {
-        throw new Error('Invalid Human choice');
+      const userIndex = userChildren.indexOf(chosenUserChild);
+      if (userIndex === -1) {
+        throw new Error('Invalid User choice');
       }
 
-      aiId = chosenHumanChild;
+      aiId = chosenUserChild;
 
       selectedPath.push({
-        humanMessageChildIndex: humanIndex,
+        userMessageChildIndex: userIndex,
         aiMessageChildIndex: aiIndex,
       });
     }
@@ -186,7 +186,7 @@ export class ConversationBranchState {
    */
   private setMessageChoice(messageId: string, childId: string): ConversationBranchState {
     const newChoice = { ...this.messageChildChoice, [messageId]: childId };
-    const next = ConversationBranchState.build(this.aiMessageChildren, this.humanMessageChildren, newChoice);
+    const next = ConversationBranchState.build(this.aiMessageChildren, this.userMessageChildren, newChoice);
     return this.mergeWith(next);
   }
 
@@ -194,23 +194,23 @@ export class ConversationBranchState {
     const path: ChatTreePath = [];
 
     let aiId = messageId;
-    let humanId = '';
+    let userId = '';
 
     while (aiId !== ChatConversation.aiMessageRootId) {
-      humanId = this.messageParent[aiId];
-      if (!humanId) {
+      userId = this.messageParent[aiId];
+      if (!userId) {
         throw new Error('Invalid messageId');
       }
-      const humanChildIndex = this.humanMessageChildren[humanId].indexOf(aiId);
+      const userChildIndex = this.userMessageChildren[userId].indexOf(aiId);
 
-      aiId = this.messageParent[humanId];
+      aiId = this.messageParent[userId];
       if (!aiId) {
         throw new Error('Invalid messageId');
       }
-      const aiChildIndex = this.aiMessageChildren[aiId].indexOf(humanId);
+      const aiChildIndex = this.aiMessageChildren[aiId].indexOf(userId);
 
       path.push({
-        humanMessageChildIndex: humanChildIndex,
+        userMessageChildIndex: userChildIndex,
         aiMessageChildIndex: aiChildIndex,
       });
     }
@@ -218,7 +218,7 @@ export class ConversationBranchState {
     return path.reverse();
   }
 
-  getPathToHumanMessage(messageId: string): ChatTreePath {
+  getPathToUserMessage(messageId: string): ChatTreePath {
     if (!this.messageParent[messageId]) {
       throw new Error('Invalid messageId');
     }
@@ -234,18 +234,18 @@ export class ConversationBranchState {
     let state: ConversationBranchState = this;
     let aiId = ChatConversation.aiMessageRootId;
 
-    for (const { humanMessageChildIndex: humanMessageIndex, aiMessageChildIndex: aiMessageIndex } of path) {
-      const nextHuman = state.aiMessageChildren[aiId]?.[aiMessageIndex];
-      if (!nextHuman) {
-        throw new Error('Invalid path (Human pick)');
+    for (const { userMessageChildIndex: userMessageIndex, aiMessageChildIndex: aiMessageIndex } of path) {
+      const nextUser = state.aiMessageChildren[aiId]?.[aiMessageIndex];
+      if (!nextUser) {
+        throw new Error('Invalid path (User pick)');
       }
-      state = state.setMessageChoice(aiId, nextHuman);
+      state = state.setMessageChoice(aiId, nextUser);
 
-      const nextAi = state.humanMessageChildren[nextHuman]?.[humanMessageIndex];
+      const nextAi = state.userMessageChildren[nextUser]?.[userMessageIndex];
       if (!nextAi) {
         throw new Error('Invalid path (AI pick)');
       }
-      state = state.setMessageChoice(nextHuman, nextAi);
+      state = state.setMessageChoice(nextUser, nextAi);
 
       aiId = nextAi;
     }
@@ -261,7 +261,7 @@ export class ConversationBranchState {
       throw new Error('Invalid messageId');
     }
 
-    const children = this.aiMessageChildren[parent] ?? this.humanMessageChildren[parent];
+    const children = this.aiMessageChildren[parent] ?? this.userMessageChildren[parent];
     if (!children?.[newIndex]) {
       throw new Error('Invalid child index');
     }
@@ -282,7 +282,7 @@ export class ConversationBranchState {
   private mergeWith(next: ConversationBranchState): ConversationBranchState {
     const merged = new ConversationBranchState({
       aiMessageChildren: mergeKeepingOldReferences(this.aiMessageChildren, next.aiMessageChildren),
-      humanMessageChildren: mergeKeepingOldReferences(this.humanMessageChildren, next.humanMessageChildren),
+      userMessageChildren: mergeKeepingOldReferences(this.userMessageChildren, next.userMessageChildren),
       messageChildChoice: mergeKeepingOldReferences(this.messageChildChoice, next.messageChildChoice),
       selectedPath: mergeKeepingOldReferences(this.selectedPath, next.selectedPath),
       messageBranchStates: mergeKeepingOldReferences(this.messageBranchStates, next.messageBranchStates),

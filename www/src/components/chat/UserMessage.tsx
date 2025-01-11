@@ -1,5 +1,5 @@
-import type { ChatHumanMessage } from '@trpc-chat-agent/core';
-import { cn } from '@/lib/utils';
+import type { ChatUserMessage } from '@trpc-chat-agent/core';
+import { cn } from '@site/src/lib/utils';
 import { useState } from 'react';
 import { RiPencilFill } from 'react-icons/ri';
 import { Button } from '../ui/button';
@@ -8,7 +8,7 @@ import { Textarea } from '../ui/textarea';
 import { MessageVariants } from './MessageVariants';
 import { StyledMarkdown } from './StyledMarkdown';
 
-export function HumanMessage({ message }: { message: ChatHumanMessage }) {
+export function UserMessage({ message }: { message: ChatUserMessage }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(message.content as string);
 
@@ -81,7 +81,7 @@ export function HumanMessage({ message }: { message: ChatHumanMessage }) {
             </Card>
           </form>
         ) : (
-          <Card className="p-4 bg-secondary markdown">
+          <Card className="p-4 bg-secondary motion-ease-in motion-preset-slide-up-md motion-duration-100">
             <StyledMarkdown>{message.content as string}</StyledMarkdown>
           </Card>
         )}

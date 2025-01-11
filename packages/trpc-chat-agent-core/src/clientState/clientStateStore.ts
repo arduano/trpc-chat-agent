@@ -12,9 +12,9 @@ import type {
   ChatTreePath,
   ClientSideConversationData,
   ClientSideUpdate,
-  HumanMessageData,
   MessageContent,
   ToolCallState,
+  UserMessageData,
 } from '../common';
 import type { AnyToolCallback, makeChatRouterForAgent } from '../server';
 import { computed, effect, signal } from '@preact/signals-core';
@@ -227,6 +227,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   const router = typedRouter as RouterTypeFromAgent<ChatAgentOrTools>; // There are cases where this is better, due to generic typing
 
   const branchState = signal(ConversationBranchState.default());
+  const placeholderPath = signal<ChatTreePath>([]);
 
   function adjustPathFromConversationAndPath(conversation: ClientSideConversationData, path?: ChatTreePath) {
     let updatedBranch = branchState.value.withConversationData(conversation);
@@ -291,8 +292,6 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     },
   });
 
-  const placeholderConversation = signal(ClientSideChatConversation.makePlaceholderConversation<Agent>());
-
   // Get either the current or the placeholder conversation
   const conversation = computed(() => {
     if (conversationId.value) {
@@ -301,7 +300,17 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
         return conversation as ClientSideChatConversation<Agent>;
       }
     }
+
     return placeholderConversation.value as ClientSideChatConversation<Agent>;
+  });
+
+  const placeholderConversation = signal(ClientSideChatConversation.makePlaceholderConversation<Agent>());
+
+  const isUsingPlaceholder = computed(() => {
+    if (conversationId.value && store.getConversation<Agent>(conversationId.value)) {
+      return false;
+    }
+    return true;
   });
 
   const callbacks = computed(() => {
@@ -371,7 +380,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     };
   };
 
-  const mapHumanMessageAddCallbacks = (message: HumanMessageData): ChatHumanMessage => {
+  const mapUserMessageAddCallbacks = (message: UserMessageData): ChatUserMessage => {
     const path = conversation.value.getPathInfoForMessageId(message.id);
     return {
       ...message,
@@ -388,7 +397,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   };
 
   const mappedMessages = computed(() => {
-    const rawMessages = conversation.value.asMessagesArray(branchState.value.selectedPath);
+    const selectedPath = isUsingPlaceholder.value ? placeholderPath.value : branchState.value.selectedPath;
+    const rawMessages = conversation.value.asMessagesArray(selectedPath);
 
     callbackCache.resetUsage();
     editMsgClosureCache.resetUsage();
@@ -399,8 +409,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
       if (message.kind === 'ai') {
         return mapAiMessageAddCallbacks(message, CallbacksMapped.value);
       }
-      if (message.kind === 'human') {
-        return mapHumanMessageAddCallbacks(message);
+      if (message.kind === 'user') {
+        return mapUserMessageAddCallbacks(message);
       }
 
       throw new UnreachableError(message, 'Unknown message kind');
@@ -434,17 +444,19 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     }
   };
 
-  const beginMessage = (humanMessage: string) => {
+  const beginMessage = (userMessage: string) => {
     assertCanBeginStream();
+
+    beginStream(conversationId.peek(), userMessage, branchState.peek().selectedPath);
 
     // Set the placeholder conversation, in case the conversation doesn't exist yet
     const newPlaceholderConversation = ClientSideChatConversation.makePlaceholderConversation<Agent>();
-    newPlaceholderConversation.pushHumanAiMessagePair(
+    const newPath = newPlaceholderConversation.pushUserAiMessagePair(
       [],
       {
-        content: humanMessage,
-        id: '-human-placeholder-',
-        kind: 'human',
+        content: userMessage,
+        id: '-user-placeholder-',
+        kind: 'user',
       },
       {
         id: '-ai-placeholder-',
@@ -453,14 +465,13 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
       }
     );
     placeholderConversation.value = newPlaceholderConversation;
-
-    beginStream(conversationId.peek(), humanMessage, branchState.peek().selectedPath);
+    placeholderPath.value = newPath;
   };
 
-  const editMessage = (humanMessageId: string, message: string) => {
+  const editMessage = (userMessageId: string, message: string) => {
     assertCanBeginStream();
 
-    const path = branchState.peek().getPathToHumanMessage(humanMessageId);
+    const path = branchState.peek().getPathToUserMessage(userMessageId);
     beginStream(conversationId.peek(), message, path);
   };
 
@@ -515,7 +526,7 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
     }
   };
 
-  const beginStream = (conversationId: string | undefined, humanMessage: string | null, branch: ChatTreePath) => {
+  const beginStream = (conversationId: string | undefined, userMessage: string | null, branch: ChatTreePath) => {
     conversationError.value = undefined;
 
     cancelStream();
@@ -526,7 +537,7 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
       {
         conversationId,
         branch,
-        humanMessageContent: humanMessage,
+        userMessageContent: userMessage,
       },
       {
         onData: (updateEvent) => {
@@ -678,7 +689,7 @@ export type ChatAIMessage<AgentOrTools extends ChatAgentOrTools> = {
   regenerate: () => void;
 };
 
-export type ChatHumanMessage = HumanMessageData & {
+export type ChatUserMessage = UserMessageData & {
   path: ChatPathStateWithSwitch;
   edit: (content: string) => void;
 };

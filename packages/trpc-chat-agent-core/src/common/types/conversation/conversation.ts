@@ -1,7 +1,7 @@
 import type { Draft, WritableDraft } from 'immer';
 import type { MessageContent } from '../..';
 import type { ChatBranchState, ChatTreePath } from '../branching';
-import type { HumanMessageData } from '../message/human';
+import type { UserMessageData } from '../message/user';
 import { castDraft, produce } from 'immer';
 
 export type ConversationData<AIMessage> = {
@@ -10,10 +10,10 @@ export type ConversationData<AIMessage> = {
   messageIdCounter: number;
 
   aiMessages: Record<string, AIMessage>;
-  humanMessages: Record<string, HumanMessageData>;
+  userMessages: Record<string, UserMessageData>;
 
   aiMessageChildIds: Record<string, string[]>;
-  humanMessageChildIds: Record<string, string[]>;
+  userMessageChildIds: Record<string, string[]>;
 };
 
 export class ChatConversation<AIMessage extends { id: string }> {
@@ -49,21 +49,21 @@ export class ChatConversation<AIMessage extends { id: string }> {
   public getMessageIdPairAt(tree: ChatTreePath) {
     if (tree.length === 0) {
       return {
-        human: null,
+        user: null,
         ai: ChatConversation.aiMessageRootId,
       };
     }
 
-    let humanId = '';
+    let userId = '';
     let aiId = ChatConversation.aiMessageRootId;
 
     for (const selection of tree) {
-      const nextHumanId = this.data.aiMessageChildIds?.[aiId]?.[selection.aiMessageChildIndex];
-      if (!nextHumanId) {
+      const nextUserId = this.data.aiMessageChildIds?.[aiId]?.[selection.aiMessageChildIndex];
+      if (!nextUserId) {
         return null;
       }
-      humanId = nextHumanId;
-      const nextAiId = this.data.humanMessageChildIds?.[humanId]?.[selection.humanMessageChildIndex];
+      userId = nextUserId;
+      const nextAiId = this.data.userMessageChildIds?.[userId]?.[selection.userMessageChildIndex];
       if (!nextAiId) {
         return null;
       }
@@ -71,7 +71,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     }
 
     return {
-      human: humanId,
+      user: userId,
       ai: aiId,
     };
   }
@@ -79,21 +79,21 @@ export class ChatConversation<AIMessage extends { id: string }> {
   public getDefaultTree(): ChatTreePath {
     const tree: ChatTreePath = [];
 
-    let humanId = '';
+    let userId = '';
     let aiId = ChatConversation.aiMessageRootId;
 
     while (true) {
-      const humanList = this.data.aiMessageChildIds?.[aiId];
-      if (!humanList) {
+      const userList = this.data.aiMessageChildIds?.[aiId];
+      if (!userList) {
         break;
       }
-      const humanIndex = humanList.length - 1;
-      if (humanIndex === -1) {
+      const userIndex = userList.length - 1;
+      if (userIndex === -1) {
         throw new Error('Invalid path when getting default tree');
       }
-      humanId = humanList[humanIndex];
+      userId = userList[userIndex];
 
-      const aiList = this.data.humanMessageChildIds?.[humanId];
+      const aiList = this.data.userMessageChildIds?.[userId];
       if (!aiList) {
         throw new Error('Invalid path when getting default tree');
       }
@@ -104,7 +104,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
       aiId = aiList[aiIndex];
 
       tree.push({
-        humanMessageChildIndex: humanIndex,
+        userMessageChildIndex: userIndex,
         aiMessageChildIndex: aiIndex,
       });
     }
@@ -112,12 +112,12 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return tree;
   }
 
-  public getHumanMessageIdAt(tree: ChatTreePath) {
+  public getUserMessageIdAt(tree: ChatTreePath) {
     const pair = this.getMessageIdPairAt(tree);
     if (!pair) {
       return null;
     }
-    return pair.human;
+    return pair.user;
   }
 
   public getAIMessageIdAt(tree: ChatTreePath) {
@@ -136,21 +136,21 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return this.data.aiMessages?.[aiId];
   }
 
-  public getHumanMessageAt(tree: ChatTreePath) {
-    const humanId = this.getHumanMessageIdAt(tree);
-    if (!humanId) {
+  public getUserMessageAt(tree: ChatTreePath) {
+    const userId = this.getUserMessageIdAt(tree);
+    if (!userId) {
       return null;
     }
-    return this.data.humanMessages?.[humanId];
+    return this.data.userMessages?.[userId];
   }
 
-  private pushNewIndexforHumanMessageChildren(humanId: string, childAiId: string) {
+  private pushNewIndexforUserMessageChildren(userId: string, childAiId: string) {
     let newIndex = 0;
     this.produceData((data) => {
-      if (!data.humanMessageChildIds?.[humanId]) {
-        data.humanMessageChildIds[humanId] = [];
+      if (!data.userMessageChildIds?.[userId]) {
+        data.userMessageChildIds[userId] = [];
       }
-      const array = data.humanMessageChildIds[humanId];
+      const array = data.userMessageChildIds[userId];
       newIndex = array.length;
       array.push(childAiId);
     });
@@ -158,7 +158,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return newIndex;
   }
 
-  private pushNewIndexforAIMessageChildren(aiId: string, childHumanId: string) {
+  private pushNewIndexforAIMessageChildren(aiId: string, childUserId: string) {
     let newIndex = 0;
     this.produceData((data) => {
       if (!data.aiMessageChildIds?.[aiId]) {
@@ -166,19 +166,15 @@ export class ChatConversation<AIMessage extends { id: string }> {
       }
       const array = data.aiMessageChildIds[aiId];
       newIndex = array.length;
-      array.push(childHumanId);
+      array.push(childUserId);
     });
 
     return newIndex;
   }
 
-  public pushHumanAiMessagePair(
-    path: ChatTreePath,
-    humanMessage: HumanMessageData,
-    aiMessage: AIMessage
-  ): ChatTreePath {
-    if (this.data.humanMessages[humanMessage.id]) {
-      throw new Error('Human message already exists');
+  public pushUserAiMessagePair(path: ChatTreePath, userMessage: UserMessageData, aiMessage: AIMessage): ChatTreePath {
+    if (this.data.userMessages[userMessage.id]) {
+      throw new Error('User message already exists');
     }
     if (this.data.aiMessages[aiMessage.id]) {
       throw new Error('AI message already exists');
@@ -189,21 +185,21 @@ export class ChatConversation<AIMessage extends { id: string }> {
       throw new Error('Invalid path');
     }
 
-    const humanId = humanMessage.id;
+    const userId = userMessage.id;
     const aiId = aiMessage.id;
 
-    const newAiChildIndex = this.pushNewIndexforAIMessageChildren(parentAiId, humanId);
-    const newHumanChildIndex = this.pushNewIndexforHumanMessageChildren(humanId, aiId);
+    const newAiChildIndex = this.pushNewIndexforAIMessageChildren(parentAiId, userId);
+    const newUserChildIndex = this.pushNewIndexforUserMessageChildren(userId, aiId);
 
     this.produceData((data) => {
-      data.humanMessages[humanId] = humanMessage;
+      data.userMessages[userId] = userMessage;
       data.aiMessages[aiId] = castDraft(aiMessage);
     });
 
     return [
       ...path,
       {
-        humanMessageChildIndex: newHumanChildIndex,
+        userMessageChildIndex: newUserChildIndex,
         aiMessageChildIndex: newAiChildIndex,
       },
     ];
@@ -216,12 +212,12 @@ export class ChatConversation<AIMessage extends { id: string }> {
 
     const aiId = aiMessage.id;
 
-    const humanMessageId = this.getHumanMessageIdAt(path);
-    if (!humanMessageId) {
+    const userMessageId = this.getUserMessageIdAt(path);
+    if (!userMessageId) {
       throw new Error('Invalid path');
     }
 
-    const newHumanChildIndex = this.pushNewIndexforHumanMessageChildren(humanMessageId, aiId);
+    const newUserChildIndex = this.pushNewIndexforUserMessageChildren(userMessageId, aiId);
 
     this.produceData((data) => {
       data.aiMessages[aiId] = castDraft(aiMessage);
@@ -233,35 +229,35 @@ export class ChatConversation<AIMessage extends { id: string }> {
     return [
       ...path.slice(0, path.length - 1),
       {
-        humanMessageChildIndex: newHumanChildIndex,
+        userMessageChildIndex: newUserChildIndex,
         aiMessageChildIndex: lastPathElement.aiMessageChildIndex,
       },
     ];
   }
 
-  public asMessagesArray(path: ChatTreePath): (HumanMessageData | AIMessage)[] {
-    const messages: (HumanMessageData | AIMessage)[] = [];
+  public asMessagesArray(path: ChatTreePath): (UserMessageData | AIMessage)[] {
+    const messages: (UserMessageData | AIMessage)[] = [];
 
     if (path.length === 0) {
       return messages;
     }
 
-    let humanId = '';
+    let userId = '';
     let aiId = ChatConversation.aiMessageRootId;
 
     for (const selection of path) {
-      const nextHumanId = this.data.aiMessageChildIds[aiId]?.[selection.aiMessageChildIndex];
-      if (!nextHumanId) {
+      const nextUserId = this.data.aiMessageChildIds[aiId]?.[selection.aiMessageChildIndex];
+      if (!nextUserId) {
         throw new Error('Invalid path');
       }
-      humanId = nextHumanId;
-      const nextAiId = this.data.humanMessageChildIds[humanId]?.[selection.humanMessageChildIndex];
+      userId = nextUserId;
+      const nextAiId = this.data.userMessageChildIds[userId]?.[selection.userMessageChildIndex];
       if (!nextAiId) {
         throw new Error('Invalid path');
       }
       aiId = nextAiId;
 
-      messages.push(this.data.humanMessages[humanId]);
+      messages.push(this.data.userMessages[userId]);
       messages.push(this.data.aiMessages[aiId]);
     }
 
@@ -274,7 +270,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     };
 
     const variants =
-      getVariantsForMessageId(this.data.aiMessageChildIds) ?? getVariantsForMessageId(this.data.humanMessageChildIds);
+      getVariantsForMessageId(this.data.aiMessageChildIds) ?? getVariantsForMessageId(this.data.userMessageChildIds);
 
     if (!variants) {
       return {

@@ -219,9 +219,9 @@ const agent = ai.agent({
       mapArgsForClient: (args) => args,
     }),
   ],
-  generateResponseUpdates: async ({ create, lastHumanMessage }) => {
-    const lastHumanMessageNormalized = lastHumanMessage.replace(/\W+/g, '').toLowerCase();
-    const shouldGiveDemoMessage = lastHumanMessageNormalized === 'hiwhoareyou';
+  generateResponseUpdates: async ({ create, lastUserMessage }) => {
+    const lastUserMessageNormalized = lastUserMessage.replace(/\W+/g, '').toLowerCase();
+    const shouldGiveDemoMessage = lastUserMessageNormalized === 'hiwhoareyou';
 
     if (!shouldGiveDemoMessage) {
       await create.beginMessagePart(0);

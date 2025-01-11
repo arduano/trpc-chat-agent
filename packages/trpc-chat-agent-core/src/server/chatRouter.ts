@@ -4,8 +4,8 @@ import type {
   AdvancedAIMessageData,
   ChatTreePath,
   ClientSideUpdate,
-  HumanMessageData,
   ServerSideConversationData,
+  UserMessageData,
 } from '../common/types';
 import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversation } from '../common/types';
@@ -44,7 +44,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
       .input(
         z.object({
           conversationId: z.string().optional(),
-          humanMessageContent: z.string().nullable(),
+          userMessageContent: z.string().nullable(),
           branch: chatBranchZod,
         })
       )
@@ -79,7 +79,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
         const { chatPath: newPath, aiMessageId } = addMessagePairToConversation(
           conversation,
           chatPath,
-          input.humanMessageContent
+          input.userMessageContent
         );
         chatPath = newPath;
 
@@ -229,16 +229,16 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
 function addMessagePairToConversation<Agent extends ChatAgent<any>>(
   conversation: ServerSideChatConversation<Agent>,
   chatPath: ChatTreePath,
-  humanMessageContent: string | null
+  userMessageContent: string | null
 ): { chatPath: ChatTreePath; aiMessageId: string } {
-  if (humanMessageContent !== null) {
+  if (userMessageContent !== null) {
     const aiMessageId = 'ai-' + conversation.generateId();
-    const humanMessageId = 'human-' + conversation.generateId();
+    const userMessageId = 'user-' + conversation.generateId();
 
-    const newHumanMessage: HumanMessageData = {
-      kind: 'human',
-      id: humanMessageId,
-      content: humanMessageContent,
+    const newUserMessage: UserMessageData = {
+      kind: 'user',
+      id: userMessageId,
+      content: userMessageContent,
     };
 
     const newAIMessage: AdvancedAIMessageData<AgentTools<Agent>> = {
@@ -247,7 +247,7 @@ function addMessagePairToConversation<Agent extends ChatAgent<any>>(
       parts: [],
     };
 
-    const newPath = conversation.pushHumanAiMessagePair(chatPath, newHumanMessage, newAIMessage);
+    const newPath = conversation.pushUserAiMessagePair(chatPath, newUserMessage, newAIMessage);
     return { chatPath: newPath, aiMessageId };
   } else {
     const aiMessageId = 'ai-' + conversation.generateId();

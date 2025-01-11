@@ -2,14 +2,14 @@ import type { BaseMessage } from '@langchain/core/messages';
 import type { MessageContent } from '../../messageContent';
 import { HumanMessage } from '@langchain/core/messages';
 
-export type HumanMessageData = {
-  kind: 'human';
+export type UserMessageData = {
+  kind: 'user';
   id: string;
   content: MessageContent;
 };
 
-export class ChatHumanMessageWrapper {
-  constructor(readonly data: HumanMessageData) {}
+export class ChatUserMessageWrapper {
+  constructor(readonly data: UserMessageData) {}
 
   public get id() {
     return this.data.id;

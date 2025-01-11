@@ -23,7 +23,7 @@ import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
 import {
   ChatAIMessageWrapper,
-  ChatHumanMessageWrapper,
+  ChatUserMessageWrapper,
   Debouncer,
   processMessageContentForClient,
   ServerSideChatConversation,
@@ -477,8 +477,8 @@ export function asLangChainMessagesArray(
     switch (message.kind) {
       case 'ai':
         return new ChatAIMessageWrapper<AgentTools<any>>(message).asLangChainMessages();
-      case 'human':
-        return [new ChatHumanMessageWrapper(message).asLangChainMessage()];
+      case 'user':
+        return [new ChatUserMessageWrapper(message).asLangChainMessage()];
       default:
         throw new UnreachableError(message);
     }
