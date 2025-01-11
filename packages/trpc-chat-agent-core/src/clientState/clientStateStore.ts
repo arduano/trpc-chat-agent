@@ -10,7 +10,7 @@ import type {
   ChatAgentOrTools,
   ChatBranchState as ChatPathState,
   ChatTreePath,
-  ClientSideConversationData,
+  ClientSideConversation,
   ClientSideUpdate,
   MessageContent,
   ToolCallState,
@@ -19,7 +19,7 @@ import type {
 import type { AnyToolCallback, makeChatRouterForAgent } from '../server';
 import { computed, effect, signal } from '@preact/signals-core';
 import { produce } from 'immer';
-import { ClientSideChatConversation, ConversationBranchState } from '../common';
+import { ClientSideChatConversationHelper, ConversationBranchState } from '../common';
 import { mergeKeepingOldReferences } from '../common/merge';
 import { UnreachableError } from '../common/unreachable';
 
@@ -42,7 +42,7 @@ export type RouterTypeFromAgent<Agent extends ChatAgentOrTools> = ReturnType<
 >;
 
 type ConversationRelatedData = {
-  conversation: ClientSideChatConversation<ChatAgentOrTools>;
+  conversation: ClientSideChatConversationHelper<ChatAgentOrTools>;
   callbacks: Callbacks;
 };
 
@@ -74,7 +74,7 @@ export function createSystemStateStore() {
   }
 
   function getConversation<Agent extends ChatAgentOrTools>(conversationId: string) {
-    return state.value[conversationId]?.data?.conversation as ClientSideChatConversation<Agent> | undefined;
+    return state.value[conversationId]?.data?.conversation as ClientSideChatConversationHelper<Agent> | undefined;
   }
 
   function getConversationState(conversationId: string) {
@@ -83,9 +83,9 @@ export function createSystemStateStore() {
 
   function setConversationData(
     conversationId: string,
-    conversationData: ClientSideConversationData<AgentTools<ChatAgentOrTools>>
+    conversationData: ClientSideConversation<AgentTools<ChatAgentOrTools>>
   ) {
-    const newConversation = new ClientSideChatConversation(conversationData);
+    const newConversation = new ClientSideChatConversationHelper(conversationData);
 
     state.value = produce(state.value, (draft) => {
       if (!draft[conversationId] || draft[conversationId]!.kind !== 'loaded') {
@@ -173,7 +173,7 @@ export function createSystemStateStore() {
 
   function setConversationIfNotPresent(
     conversationId: string,
-    newConversation: ClientSideChatConversation<ChatAgentOrTools>
+    newConversation: ClientSideChatConversationHelper<ChatAgentOrTools>
   ) {
     if (!getConversation(conversationId)) {
       setConversationData(conversationId, newConversation.data);
@@ -182,7 +182,7 @@ export function createSystemStateStore() {
 
   function triggerConversationLoad(
     conversationId: string,
-    resolver: Promise<ClientSideConversationData<AgentTools<ChatAgentOrTools>>>
+    resolver: Promise<ClientSideConversation<AgentTools<ChatAgentOrTools>>>
   ) {
     if (!state.value[conversationId]) {
       state.value[conversationId] = {
@@ -229,7 +229,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   const branchState = signal(ConversationBranchState.default());
   const placeholderPath = signal<ChatTreePath>([]);
 
-  function adjustPathFromConversationAndPath(conversation: ClientSideConversationData, path?: ChatTreePath) {
+  function adjustPathFromConversationAndPath(conversation: ClientSideConversation, path?: ChatTreePath) {
     let updatedBranch = branchState.value.withConversationData(conversation);
     if (path) {
       updatedBranch = updatedBranch.withBranchSelected(path);
@@ -297,14 +297,14 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     if (conversationId.value) {
       const conversation = store.getConversation<Agent>(conversationId.value);
       if (conversation) {
-        return conversation as ClientSideChatConversation<Agent>;
+        return conversation as ClientSideChatConversationHelper<Agent>;
       }
     }
 
-    return placeholderConversation.value as ClientSideChatConversation<Agent>;
+    return placeholderConversation.value as ClientSideChatConversationHelper<Agent>;
   });
 
-  const placeholderConversation = signal(ClientSideChatConversation.makePlaceholderConversation<Agent>());
+  const placeholderConversation = signal(ClientSideChatConversationHelper.makePlaceholderConversation<Agent>());
 
   const isUsingPlaceholder = computed(() => {
     if (conversationId.value && store.getConversation<Agent>(conversationId.value)) {
@@ -450,7 +450,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     beginStream(conversationId.peek(), userMessage, branchState.peek().selectedPath);
 
     // Set the placeholder conversation, in case the conversation doesn't exist yet
-    const newPlaceholderConversation = ClientSideChatConversation.makePlaceholderConversation<Agent>();
+    const newPlaceholderConversation = ClientSideChatConversationHelper.makePlaceholderConversation<Agent>();
     const newPath = newPlaceholderConversation.pushUserAiMessagePair(
       [],
       {

@@ -13,21 +13,21 @@ import type { ConversationData } from './conversation';
 import { castDraft } from 'immer';
 import { mergeKeepingOldReferences } from '../../../common/merge';
 import { UnreachableError } from '../../../common/unreachable';
-import { ChatConversation, concatMessageContent } from './conversation';
+import { ChatConversationHelper, concatMessageContent } from './conversation';
 
-export type ClientSideConversationData<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
+export type ClientSideConversation<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
   AdvancedAIMessageDataClientSide<Tools>
 >;
 
-export class ClientSideChatConversation<Agent extends ChatAgentOrTools> extends ChatConversation<
+export class ClientSideChatConversationHelper<Agent extends ChatAgentOrTools> extends ChatConversationHelper<
   AdvancedAIMessageDataClientSide<AgentTools<Agent>>
 > {
   constructor(data: ConversationData<AdvancedAIMessageDataClientSide<AgentTools<Agent>>>) {
     super(data);
   }
 
-  public static makePlaceholderConversation<Agent extends ChatAgentOrTools>(): ClientSideChatConversation<Agent> {
-    return new ClientSideChatConversation({
+  public static makePlaceholderConversation<Agent extends ChatAgentOrTools>(): ClientSideChatConversationHelper<Agent> {
+    return new ClientSideChatConversationHelper({
       aiMessageChildIds: {},
       userMessageChildIds: {},
       userMessages: {},

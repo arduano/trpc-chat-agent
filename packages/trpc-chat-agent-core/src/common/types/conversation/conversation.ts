@@ -16,7 +16,7 @@ export type ConversationData<AIMessage> = {
   userMessageChildIds: Record<string, string[]>;
 };
 
-export class ChatConversation<AIMessage extends { id: string }> {
+export class ChatConversationHelper<AIMessage extends { id: string }> {
   data: ConversationData<AIMessage>;
 
   constructor(data: ConversationData<AIMessage>) {
@@ -50,12 +50,12 @@ export class ChatConversation<AIMessage extends { id: string }> {
     if (tree.length === 0) {
       return {
         user: null,
-        ai: ChatConversation.aiMessageRootId,
+        ai: ChatConversationHelper.aiMessageRootId,
       };
     }
 
     let userId = '';
-    let aiId = ChatConversation.aiMessageRootId;
+    let aiId = ChatConversationHelper.aiMessageRootId;
 
     for (const selection of tree) {
       const nextUserId = this.data.aiMessageChildIds?.[aiId]?.[selection.aiMessageChildIndex];
@@ -80,7 +80,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     const tree: ChatTreePath = [];
 
     let userId = '';
-    let aiId = ChatConversation.aiMessageRootId;
+    let aiId = ChatConversationHelper.aiMessageRootId;
 
     while (true) {
       const userList = this.data.aiMessageChildIds?.[aiId];
@@ -243,7 +243,7 @@ export class ChatConversation<AIMessage extends { id: string }> {
     }
 
     let userId = '';
-    let aiId = ChatConversation.aiMessageRootId;
+    let aiId = ChatConversationHelper.aiMessageRootId;
 
     for (const selection of path) {
       const nextUserId = this.data.aiMessageChildIds[aiId]?.[selection.aiMessageChildIndex];

@@ -1,7 +1,7 @@
 import type { ConversationData } from './conversation/conversation';
 import { z } from 'zod';
 import { mergeKeepingOldReferences } from '../merge';
-import { ChatConversation } from './conversation/conversation';
+import { ChatConversationHelper } from './conversation/conversation';
 
 export const chatBranchZod = z.array(
   z.object({
@@ -124,7 +124,7 @@ export class ConversationBranchState {
     const messageParent: Record<string, string> = {};
 
     // Build the selected path from the root
-    let aiId = ChatConversation.aiMessageRootId;
+    let aiId = ChatConversationHelper.aiMessageRootId;
     let userId = '';
     while (true) {
       const aiChildren = aiMsg[aiId];
@@ -196,7 +196,7 @@ export class ConversationBranchState {
     let aiId = messageId;
     let userId = '';
 
-    while (aiId !== ChatConversation.aiMessageRootId) {
+    while (aiId !== ChatConversationHelper.aiMessageRootId) {
       userId = this.messageParent[aiId];
       if (!userId) {
         throw new Error('Invalid messageId');
@@ -232,7 +232,7 @@ export class ConversationBranchState {
   withBranchSelected(path: ChatTreePath): ConversationBranchState {
     // eslint-disable-next-line ts/no-this-alias
     let state: ConversationBranchState = this;
-    let aiId = ChatConversation.aiMessageRootId;
+    let aiId = ChatConversationHelper.aiMessageRootId;
 
     for (const { userMessageChildIndex: userMessageIndex, aiMessageChildIndex: aiMessageIndex } of path) {
       const nextUser = state.aiMessageChildren[aiId]?.[aiMessageIndex];
