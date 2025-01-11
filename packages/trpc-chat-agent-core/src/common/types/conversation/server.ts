@@ -9,27 +9,27 @@ import type {
   ServerUpdateMessageContent,
   ServerUpdateMessageToolCall,
 } from '../updates';
-import type { ClientSideConversationData } from './client';
+import type { ClientSideConversation } from './client';
 import type { ConversationData } from './conversation';
 import { castDraft } from 'immer';
 import { UnreachableError } from '../../unreachable';
 import { ChatAIMessageWrapper } from '../message/ai';
-import { ChatConversation } from './conversation';
+import { ChatConversationHelper } from './conversation';
 
-export type ServerSideConversationData<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
+export type ServerSideConversation<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
   AdvancedAIMessageData<Tools>
 >;
 
-export class ServerSideChatConversation<Agent extends ChatAgent<any>> extends ChatConversation<
+export class ServerSideChatConversationHelper<Agent extends ChatAgent<any>> extends ChatConversationHelper<
   AdvancedAIMessageData<AgentTools<Agent>>
 > {
-  constructor(data: Readonly<ServerSideConversationData<AgentTools<Agent>>>) {
+  constructor(data: Readonly<ServerSideConversation<AgentTools<Agent>>>) {
     super(data);
   }
 
   public static newConversationData<Agent extends ChatAgent<any>>(
     id: string
-  ): ServerSideConversationData<AgentTools<Agent>> {
+  ): ServerSideConversation<AgentTools<Agent>> {
     return {
       id,
       messageIdCounter: 0,
@@ -125,7 +125,7 @@ export class ServerSideChatConversation<Agent extends ChatAgent<any>> extends Ch
     });
   }
 
-  public asClientSideConversation(): ClientSideConversationData<AgentTools<Agent>> {
+  public asClientSideConversation(): ClientSideConversation<AgentTools<Agent>> {
     return {
       ...this.data,
       aiMessages: Object.fromEntries(
