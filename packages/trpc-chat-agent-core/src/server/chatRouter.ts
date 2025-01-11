@@ -4,21 +4,21 @@ import type {
   AdvancedAIMessageData,
   ChatTreePath,
   ClientSideUpdate,
-  ServerSideConversationData,
+  ServerSideConversation,
   UserMessageData,
 } from '../common/types';
 import { z } from 'zod';
-import { chatBranchZod, ServerSideChatConversation } from '../common/types';
+import { chatBranchZod, ServerSideChatConversationHelper } from '../common/types';
 import { CallbackManager } from './callback';
 
 type MakeChatRouterForAgentArgs<Agent extends ChatAgent<any>, Context extends object | ContextCallback> = {
   agent: Agent;
   t: TrpcWithContext<Context>;
-  createConversation: (args: { ctx: Context }) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
-  getConversation: (args: { id: string; ctx: Context }) => Promise<ServerSideConversationData<AgentTools<Agent>>>;
+  createConversation: (args: { ctx: Context }) => Promise<ServerSideConversation<AgentTools<Agent>>>;
+  getConversation: (args: { id: string; ctx: Context }) => Promise<ServerSideConversation<AgentTools<Agent>>>;
   saveConversation: (args: {
     id: string;
-    conversation: ServerSideConversationData<AgentTools<Agent>>;
+    conversation: ServerSideConversation<AgentTools<Agent>>;
     ctx: Context;
   }) => Promise<void>;
   saveIntervalMs?: number;
@@ -63,7 +63,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
           emitter.emit(null);
         };
 
-        let conversationData: ServerSideConversationData<AgentTools<Agent>>;
+        let conversationData: ServerSideConversation<AgentTools<Agent>>;
         if (input.conversationId) {
           conversationData = await getConversation({
             ctx: ctx as any,
@@ -73,7 +73,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
           conversationData = await createConversation(ctx as any);
         }
 
-        const conversation = new ServerSideChatConversation(conversationData);
+        const conversation = new ServerSideChatConversationHelper(conversationData);
         let chatPath: ChatTreePath = input.branch;
 
         const { chatPath: newPath, aiMessageId } = addMessagePairToConversation(
@@ -197,7 +197,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
         id: input.conversationId,
       });
 
-      return new ServerSideChatConversation(conversationData).asClientSideConversation();
+      return new ServerSideChatConversationHelper(conversationData).asClientSideConversation();
     }),
 
     handleCallback: t.procedure
@@ -227,7 +227,7 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
 }
 
 function addMessagePairToConversation<Agent extends ChatAgent<any>>(
-  conversation: ServerSideChatConversation<Agent>,
+  conversation: ServerSideChatConversationHelper<Agent>,
   chatPath: ChatTreePath,
   userMessageContent: string | null
 ): { chatPath: ChatTreePath; aiMessageId: string } {
