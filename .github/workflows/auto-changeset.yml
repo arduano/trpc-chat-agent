@@ -32,4 +32,4 @@ jobs:
           # This will create a changeset based on the PR title
           title: ${{ github.event.pull_request.title }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
