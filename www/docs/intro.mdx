@@ -100,16 +100,16 @@ export type AppRouter = typeof appRouter;
 </div>
 
 
-## Frontend adapters
+## Client adapters
 
-Frontend adapters only require 3 arguments:
+Client adapters only require 3 arguments:
 - The tRPC router to use
 - The conversation ID *(creates a new conversation if undefined)*
 - A callback to update the conversation ID *(optional)*
 
-The frontend adapter mainly provides a list of messages to render, and some helper functions to interact with those messages. All state is handled automatically.
+The client adapter mainly provides a list of messages to render, and some helper functions to interact with those messages. All state is handled automatically.
 
-Here is a simple example of the React frontend adapter:
+Here is a simple example of the React client adapter:
 
 ```tsx
 type ChatComponentProps = {
@@ -148,13 +148,13 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
 
 Under the hood, all state is managed by signals via [@preact/signals-core](https://github.com/preactjs/signals). Any framework that can hook into signals can easily support tRPC Chat Agent.
 
-### Choose your frontend
+### Choose your client
 
 *PRs welcome! 💙*
 
 <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
   <Button asChild variant="secondary">
-    <Link to="/docs/frontend/react">React</Link>
+    <Link to="/docs/client/react">React</Link>
   </Button>
   <Button variant="outline" disabled>
     <div>Vue</div>
