@@ -1,5 +1,16 @@
 # @trpc-chat-agent/react
 
+## 0.3.0
+
+### Minor Changes
+
+- 79b7170: Added extra invocation argument support
+
+### Patch Changes
+
+- Updated dependencies [79b7170]
+  - @trpc-chat-agent/core@0.3.0
+
 ## 0.2.2
 
 ### Patch Changes
