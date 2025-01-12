@@ -133,11 +133,15 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
 
     // The tRPC router to use. Type safety is automatically propagated through
     router: trpcClient.chat,
+
+    // (optional, default: true) Use IndexDB cache to speed up the
+    // user seeing the conversation beore load
+    useIndexdbCache: true
   });
 
   const handleSubmit = (message: string) => {
     if (message.trim()) {
-      beginMessage(message);
+      beginMessage({ userMessage: message, invokeArgs: {} });
       setInput('');
     }
   };

@@ -101,7 +101,7 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
 
   const handleSubmit = (message: string) => {
     if (message.trim()) {
-      beginMessage(message);
+      beginMessage({ userMessage: message, invokeArgs: {} });
       setInput('');
     }
   };
@@ -115,6 +115,10 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
 When rendering the messages, it is *critical* to ensure you avoid unnecessary re-renders. tRPC Chat Agent always returns the same reference for the same object data, so you can safely memoize the rendered data.
 
 To help with memoization, this library provides a `RenderMessages` helper component which assists with all the memoization.
+
+:::warning
+Do not pass dynamic props into `RenderMessages` prop functions. The functions are memoized, and do not take dependencies. Any changes to external props won't propage through. Instead, using signals via `@preact/signals-core` and `@preact/signals-react` is recommended.
+:::
 
 ```tsx
 import { useConversation, RenderMessages } from '@trpc-chat-agent/react';
@@ -130,7 +134,7 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
 
   const handleSubmit = (message: string) => {
     if (message.trim()) {
-      beginMessage(message);
+      beginMessage({ userMessage: message, invokeArgs: {} });
       setInput('');
     }
   };
