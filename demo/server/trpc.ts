@@ -22,12 +22,17 @@ export const appRouter = router({
       return ServerSideChatConversationHelper.newConversationData<typeof agent>(id);
     },
     getConversation: async ({ id, ctx }) => {
-      const data = await ctx.conversations.get(id);
-      if (!data) {
-        throw new Error('Conversation not found');
-      }
+      try {
+        const data = await ctx.conversations.get(id);
+        if (!data) {
+          return null;
+        }
 
-      return data as any;
+        return data as any;
+      } catch (e) {
+        console.error(e);
+        return null;
+      }
     },
     t,
     saveConversation: async ({ id, conversation, ctx }) => {

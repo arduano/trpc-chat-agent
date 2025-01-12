@@ -50,7 +50,7 @@ function ChatComponentWithStaticId<Agent extends AgentType>({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const { messages, beginMessage, isStreaming } = useConversation({
+  const { messages, beginMessage, isStreaming, isLoadingConversation, isMissingConversation } = useConversation({
     initialConversationId: id,
     onUpdateConversationId: converationArgs.onUpdateConversationId,
     router: converationArgs.router,
@@ -73,13 +73,17 @@ function ChatComponentWithStaticId<Agent extends AgentType>({
       <ScrollArea className="flex-1 h-full">
         <Card className=" border-0 rounded-none shadow-none relative">
           <div className="flex flex-col gap-4 p-4 max-w-4xl mx-auto">
-            <RenderMessages
-              messages={messages}
-              renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
-              renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
-              renderUserMessage={(message) => <UserMessage message={message} />}
-              renderToolCall={renderToolCall}
-            />
+            {isMissingConversation ? (
+              <div className="text-center p-4 text-destructive">This conversation could not be found.</div>
+            ) : (
+              <RenderMessages
+                messages={messages}
+                renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
+                renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
+                renderUserMessage={(message) => <UserMessage message={message} />}
+                renderToolCall={renderToolCall}
+              />
+            )}
             <div ref={messagesEndRef} />
           </div>
         </Card>
@@ -90,7 +94,7 @@ function ChatComponentWithStaticId<Agent extends AgentType>({
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            disabled={isStreaming}
+            disabled={isStreaming || isLoadingConversation || isMissingConversation}
             placeholder="Type a message..."
             className="resize-none rounded-xl min-h-[44px] max-h-[200px] overflow-y-auto scrollbar scrollbar-thumb-secondary scrollbar-track-transparent"
             rows={1}

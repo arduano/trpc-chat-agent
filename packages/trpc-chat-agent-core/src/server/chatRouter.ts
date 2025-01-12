@@ -1,4 +1,3 @@
-import type { initTRPC } from '@trpc/server';
 import type { AgentTools, ChatAgent } from '../common/agentTypes';
 import type {
   AIMessageData,
@@ -7,6 +6,7 @@ import type {
   ServerSideConversation,
   UserMessageData,
 } from '../common/types';
+import { type initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversationHelper } from '../common/types';
 import { CallbackManager } from './callback';
@@ -15,7 +15,7 @@ type MakeChatRouterForAgentArgs<Agent extends ChatAgent<any>, Context extends ob
   agent: Agent;
   t: TrpcWithContext<Context>;
   createConversation: (args: { ctx: Context }) => Promise<ServerSideConversation<AgentTools<Agent>>>;
-  getConversation: (args: { id: string; ctx: Context }) => Promise<ServerSideConversation<AgentTools<Agent>>>;
+  getConversation: (args: { id: string; ctx: Context }) => Promise<ServerSideConversation<AgentTools<Agent>> | null>;
   saveConversation: (args: {
     id: string;
     conversation: ServerSideConversation<AgentTools<Agent>>;
@@ -65,10 +65,15 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
 
         let conversationData: ServerSideConversation<AgentTools<Agent>>;
         if (input.conversationId) {
-          conversationData = await getConversation({
+          const foundConversation = await getConversation({
             ctx: ctx as any,
             id: input.conversationId,
           });
+          if (foundConversation) {
+            conversationData = foundConversation;
+          } else {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Conversation not found' });
+          }
         } else {
           conversationData = await createConversation(ctx as any);
         }
@@ -196,6 +201,10 @@ export function makeChatRouterForAgent<Agent extends ChatAgent<any>, Context ext
         ctx: ctx as any,
         id: input.conversationId,
       });
+
+      if (!conversationData) {
+        return null;
+      }
 
       return new ServerSideChatConversationHelper(conversationData).asClientSideConversation();
     }),

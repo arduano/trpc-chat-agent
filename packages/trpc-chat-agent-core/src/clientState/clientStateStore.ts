@@ -1,5 +1,5 @@
 import type { ReadonlySignal } from '@preact/signals-core';
-import type { createTRPCProxyClient } from '@trpc/client';
+import type { createTRPCClient } from '@trpc/client';
 import type { z } from 'zod';
 import type {
   AgentTools,
@@ -19,9 +19,10 @@ import type {
 import type { AnyToolCallback, makeChatRouterForAgent } from '../server';
 import { computed, effect, signal } from '@preact/signals-core';
 import { produce } from 'immer';
-import { ClientSideChatConversationHelper, ConversationBranchState } from '../common';
+import { ClientSideChatConversationHelper, ConversationBranchState, Debouncer } from '../common';
 import { mergeKeepingOldReferences } from '../common/merge';
 import { UnreachableError } from '../common/unreachable';
+import { ConversationStorage } from './conversationStorage';
 
 export type ActiveCallback<ToolName extends string, CallbackName extends string, ToolArgs> = {
   conversationId: string;
@@ -38,7 +39,7 @@ type AnyActiveCallback = ActiveCallback<string, string, any>;
 type Callbacks = Record<string, AnyActiveCallback | undefined>;
 
 export type RouterTypeFromAgent<Agent extends ChatAgentOrTools> = ReturnType<
-  typeof createTRPCProxyClient<ReturnType<typeof makeChatRouterForAgent<ChatAgent<AgentTools<Agent>>, any>>>
+  typeof createTRPCClient<ReturnType<typeof makeChatRouterForAgent<ChatAgent<AgentTools<Agent>>, any>>>
 >;
 
 type ConversationRelatedData = {
@@ -53,7 +54,7 @@ type PotentialConversationRelatedData =
     }
   | {
       kind: 'loading';
-      data: undefined;
+      data: ConversationRelatedData | undefined;
     }
   | {
       kind: 'missing';
@@ -66,6 +67,17 @@ type AllConversations = {
 
 export function createSystemStateStore() {
   const state = signal<AllConversations>({});
+
+  const localCacheDb = ConversationStorage.create();
+  const getLocalDb = () => {
+    return localCacheDb;
+  };
+
+  const getConversationFromCache = async (conversationId: string) => {
+    const localDb = await getLocalDb();
+    const data = await localDb.getConversation(conversationId);
+    return data;
+  };
 
   let callbackKeyCounter = 0;
   function generateCallbackKey() {
@@ -171,28 +183,74 @@ export function createSystemStateStore() {
     return state.value[conversationId]?.data?.callbacks;
   }
 
-  function setConversationIfNotPresent(
-    conversationId: string,
-    newConversation: ClientSideChatConversationHelper<ChatAgentOrTools>
-  ) {
-    if (!getConversation(conversationId)) {
-      setConversationData(conversationId, newConversation.data);
-    }
-  }
-
   function triggerConversationLoad(
     conversationId: string,
-    resolver: Promise<ClientSideConversation<AgentTools<ChatAgentOrTools>>>
+    resolver: Promise<ClientSideConversation<AgentTools<ChatAgentOrTools>> | null>,
+    useCache: boolean
   ) {
-    if (!state.value[conversationId]) {
-      state.value[conversationId] = {
+    const existingConversation = getConversation(conversationId);
+
+    // If we have a conversation locally already, continue using it as the loading placeholder
+    state.value = produce(state.value, (draft) => {
+      draft[conversationId] = {
         kind: 'loading',
-        data: undefined,
+        data: existingConversation && {
+          conversation: existingConversation,
+          callbacks: {},
+        },
       };
-    }
-    resolver.then((data) => {
-      setConversationData(conversationId, data);
     });
+
+    if (useCache) {
+      const cachedConversationPromise = getConversationFromCache(conversationId);
+      cachedConversationPromise.then((data) => {
+        if (data) {
+          // If our conversation state is still loading, set the cached data
+          if (state.value[conversationId]?.kind === 'loading') {
+            state.value = produce(state.value, (draft) => {
+              draft[conversationId] = {
+                kind: 'loading',
+                data: {
+                  conversation: new ClientSideChatConversationHelper(data),
+                  callbacks: {},
+                },
+              };
+            });
+          }
+        }
+      });
+    }
+
+    resolver
+      .then((data) => {
+        if (!data) {
+          state.value = produce(state.value, (draft) => {
+            draft[conversationId] = {
+              kind: 'missing',
+              data: undefined,
+            };
+          });
+        } else {
+          setConversationData(conversationId, data);
+          saveConversationToCache(conversationId);
+        }
+      })
+      .catch(() => {
+        state.value = produce(state.value, (draft) => {
+          draft[conversationId] = {
+            kind: 'missing',
+            data: undefined,
+          };
+        });
+      });
+  }
+
+  async function saveConversationToCache(conversationId: string) {
+    const db = await getLocalDb();
+    const data = getConversation(conversationId)?.data;
+    if (data) {
+      await db.saveConversation(data);
+    }
   }
 
   return {
@@ -202,8 +260,8 @@ export function createSystemStateStore() {
     setConversationData,
     clearCallbacksForConversation,
     processConversationUpdate,
+    saveConversationToCache,
     getCallbacks,
-    setConversationIfNotPresent,
     triggerConversationLoad,
   };
 }
@@ -216,6 +274,7 @@ type CreateSystemStateStoreSubscriberArgs<Agent extends ChatAgentOrTools> = {
   initialConversationId?: string;
   initialPath?: ChatTreePath;
   onUpdateConversationId?: (conversationId: string) => void;
+  useIndexdbCache?: boolean;
 };
 
 export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>(
@@ -223,11 +282,28 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
 ) {
   type Tools = AgentTools<Agent>;
 
-  const { store, router: typedRouter, initialConversationId, initialPath, onUpdateConversationId } = args;
+  const {
+    store,
+    router: typedRouter,
+    initialConversationId,
+    initialPath,
+    onUpdateConversationId,
+    useIndexdbCache: useIndexdbCacheOptional,
+  } = args;
+  const useIndexdbCache = useIndexdbCacheOptional ?? true;
+
   const router = typedRouter as RouterTypeFromAgent<ChatAgentOrTools>; // There are cases where this is better, due to generic typing
 
   const branchState = signal(ConversationBranchState.default());
   const placeholderPath = signal<ChatTreePath>([]);
+
+  // Cache every 500ms to indexdb (but only when there's new updates)
+  const cacheConversationDebouncer = new Debouncer<void>(500, () => {
+    const id = conversationId.value;
+    if (id) {
+      store.saveConversationToCache(id);
+    }
+  });
 
   function adjustPathFromConversationAndPath(conversation: ClientSideConversation, path?: ChatTreePath) {
     let updatedBranch = branchState.value.withConversationData(conversation);
@@ -249,7 +325,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
         initialConversationId,
         router.getChat.query({
           conversationId: initialConversationId,
-        })
+        }),
+        useIndexdbCache
       );
 
       // Create a "conversation loaded" listener to adjust things like the branch state
@@ -282,6 +359,10 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
       if (conversationId.value !== update.conversationId) {
         onUpdateConversationId?.(update.conversationId);
         conversationId.value = update.conversationId;
+      }
+
+      if (useIndexdbCache) {
+        cacheConversationDebouncer.debounce();
       }
     },
     onComplete: () => {

@@ -7,6 +7,7 @@ export type UseConversationArgs<Agent extends ChatAgentOrTools> = {
   initialConversationId?: string;
   router: RouterTypeFromAgent<Agent>;
   onUpdateConversationId?: (conversationId: string) => void;
+  useIndexdbCache?: boolean;
 };
 
 const store = createSystemStateStore();
@@ -18,6 +19,7 @@ export function useConversation<Agent extends ChatAgentOrTools>(args: UseConvers
       initialConversationId: args.initialConversationId,
       router: args.router,
       onUpdateConversationId: args.onUpdateConversationId,
+      useIndexdbCache: args.useIndexdbCache,
     });
   }, []);
 

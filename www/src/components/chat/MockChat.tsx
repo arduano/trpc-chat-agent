@@ -37,6 +37,7 @@ export function MockChat<Agent extends ChatAgent<any>>({
     initialConversationId: id,
     onUpdateConversationId: converationArgs.onUpdateConversationId,
     router: mockRouter as any,
+    useIndexdbCache: false,
   });
 
   useEffect(() => {
