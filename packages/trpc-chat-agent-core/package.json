@@ -1,6 +1,6 @@
 {
   "name": "@trpc-chat-agent/core",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "The core for trpc-chat-agent (TODO: Elaborate)",
   "author": "arduano",
   "license": "MIT",
