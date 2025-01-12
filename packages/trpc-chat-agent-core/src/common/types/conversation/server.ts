@@ -1,4 +1,4 @@
-import type { AgentTools, ChatAgent } from '../../agentTypes';
+import type { AgentTools, AnyChatAgent } from '../../agentTypes';
 import type { AnyStructuredChatTool } from '../../structuredTool';
 import type { AIMessageData } from '../message/ai';
 import type { ToolCallFromToolsArray } from '../tools';
@@ -20,16 +20,14 @@ export type ServerSideConversation<Tools extends readonly AnyStructuredChatTool[
   AIMessageData<Tools>
 >;
 
-export class ServerSideChatConversationHelper<Agent extends ChatAgent<any>> extends ChatConversationHelper<
+export class ServerSideChatConversationHelper<Agent extends AnyChatAgent> extends ChatConversationHelper<
   AIMessageData<AgentTools<Agent>>
 > {
   constructor(data: Readonly<ServerSideConversation<AgentTools<Agent>>>) {
     super(data);
   }
 
-  public static newConversationData<Agent extends ChatAgent<any>>(
-    id: string
-  ): ServerSideConversation<AgentTools<Agent>> {
+  public static newConversationData<Agent extends AnyChatAgent>(id: string): ServerSideConversation<AgentTools<Agent>> {
     return {
       id,
       messageIdCounter: 0,

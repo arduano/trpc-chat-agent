@@ -1,5 +1,6 @@
 import type {
-  AnyStructuredChatTool,
+  AgentTools,
+  AnyChatAgent,
   ChatAIMessage,
   ChatAIMessagePart,
   ChatAIMessageToolCall,
@@ -15,35 +16,35 @@ function RenderMemoed<T extends readonly any[]>({ data, render }: { data: T; ren
   return jsx;
 }
 
-export type RenderMessagesProps<Tools extends readonly AnyStructuredChatTool[]> = {
-  messages: (ChatAIMessage<Tools> | ChatUserMessage)[];
-  renderAiMessageShell?: (message: ChatAIMessage<Tools>, children: JSX.Element) => JSX.Element;
+export type RenderMessagesProps<Agent extends AnyChatAgent> = {
+  messages: (ChatAIMessage<Agent> | ChatUserMessage<Agent>)[];
+  renderAiMessageShell?: (message: ChatAIMessage<Agent>, children: JSX.Element) => JSX.Element;
   renderAiMessagePartContent: (content: MessageContent) => JSX.Element;
-  renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Tools>, children: JSX.Element) => JSX.Element;
+  renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Agent>, children: JSX.Element) => JSX.Element;
   renderToolCall:
     | {
-        [K in Tools[number]['TypeInfo']['Name']]: (
-          toolCall: ChatAIMessageToolCall<GetToolByName<K, Tools>>
+        [K in AgentTools<Agent>[number]['TypeInfo']['Name']]: (
+          toolCall: ChatAIMessageToolCall<GetToolByName<K, Agent>>
         ) => JSX.Element;
       }
-    | ((toolCall: ChatAIMessageToolCall<Tools>) => JSX.Element);
-  renderUserMessage: (message: ChatUserMessage) => JSX.Element;
+    | ((toolCall: ChatAIMessageToolCall<Agent>) => JSX.Element);
+  renderUserMessage: (message: ChatUserMessage<Agent>) => JSX.Element;
 };
 
-export function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
+export function RenderMessages<Agent extends AnyChatAgent>({
   messages,
   renderUserMessage,
   renderAiMessagePartContent,
   renderToolCall,
   renderAiMessageShell,
   renderToolCallShell,
-}: RenderMessagesProps<Tools>) {
+}: RenderMessagesProps<Agent>) {
   const defaultShellRender = useCallback((_data: any, children: JSX.Element) => <>{children}</>, []);
 
   renderAiMessageShell ??= defaultShellRender;
   renderToolCallShell ??= defaultShellRender;
 
-  const renderSingleToolCall = (toolCall: ChatAIMessageToolCall<Tools>) => {
+  const renderSingleToolCall = (toolCall: ChatAIMessageToolCall<Agent>) => {
     const toolCallRenderFn = typeof renderToolCall === 'function' ? renderToolCall : renderToolCall[toolCall.name];
 
     if (!toolCallRenderFn) {
@@ -53,7 +54,7 @@ export function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
     return <RenderMemoed key={toolCall.id} data={[toolCall as any]} render={toolCallRenderFn as any} />;
   };
 
-  const renderAllToolCalls = (toolCalls: ChatAIMessageToolCall<Tools>[]) => {
+  const renderAllToolCalls = (toolCalls: ChatAIMessageToolCall<Agent>[]) => {
     return (
       <>
         {toolCalls.map((toolCall) => {
@@ -64,7 +65,7 @@ export function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
     );
   };
 
-  const renderAiMessagePart = (message: ChatAIMessagePart<Tools>) => {
+  const renderAiMessagePart = (message: ChatAIMessagePart<Agent>) => {
     const content = <RenderMemoed data={[message.content]} render={renderAiMessagePartContent} />;
     const toolCalls = <RenderMemoed data={[message.toolCalls]} render={renderAllToolCalls} />;
     return (
@@ -75,7 +76,7 @@ export function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
     );
   };
 
-  const renderAiMessage = (message: ChatAIMessage<Tools>) => {
+  const renderAiMessage = (message: ChatAIMessage<Agent>) => {
     const parts = (
       <>
         {message.parts.map((part, i) => (
@@ -87,7 +88,7 @@ export function RenderMessages<Tools extends readonly AnyStructuredChatTool[]>({
     return <RenderMemoed data={[message, parts]} render={renderAiMessageShell} />;
   };
 
-  const renderAllMessages = (messages: (ChatAIMessage<Tools> | ChatUserMessage)[]) => {
+  const renderAllMessages = (messages: (ChatAIMessage<Agent> | ChatUserMessage<Agent>)[]) => {
     return (
       <>
         {messages.map((message) => {

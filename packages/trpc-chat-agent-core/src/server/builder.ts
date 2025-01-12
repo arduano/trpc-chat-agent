@@ -1,7 +1,7 @@
 import type { MessageContent } from '@langchain/core/messages';
 import type { DeepPartial } from '@trpc/server';
 import type { z, ZodType } from 'zod';
-import type { ChatAgent } from '../common';
+import type { AnyChatAgent } from '../common';
 import type { ToolRunFn } from '../common/structuredTool';
 import type { AnyToolCallback, ToolCallback } from './callback';
 import { StructuredChatTool } from '../common/structuredTool';
@@ -11,7 +11,7 @@ export abstract class AgentsBackend<ExtraArgs extends readonly any[] = readonly 
   // It is never actually used.
   $types = undefined as any as undefined | [ExtraArgs, BaseMessageType];
 
-  abstract createAgent: (...args: any[]) => ChatAgent<any>;
+  abstract createAgent: (...args: any[]) => AnyChatAgent;
 }
 
 type AnyAgentsBackend = AgentsBackend<readonly any[], any>;

@@ -1,4 +1,5 @@
-import type { ChatUserMessage } from '@trpc-chat-agent/core';
+import type { ReadonlySignal } from '@preact/signals-core';
+import type { AgentExtraArgs, AnyChatAgent, ChatUserMessage } from '@trpc-chat-agent/core';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { RiPencilFill } from 'react-icons/ri';
@@ -8,13 +9,19 @@ import { Textarea } from '../ui/textarea';
 import { MessageVariants } from './MessageVariants';
 import { StyledMarkdown } from './StyledMarkdown';
 
-export function UserMessage({ message }: { message: ChatUserMessage }) {
+export function UserMessage<Agent extends AnyChatAgent>({
+  message,
+  invokeArgs: extraArgs,
+}: {
+  message: ChatUserMessage<Agent>;
+  invokeArgs: ReadonlySignal<AgentExtraArgs<Agent>>;
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(message.content as string);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    message.edit(editedContent);
+    message.edit({ content: editedContent, invokeArgs: extraArgs.peek() });
     setIsEditing(false);
   };
 

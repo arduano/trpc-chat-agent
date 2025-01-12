@@ -1,6 +1,6 @@
 import type { AnyToolCallback, CallbackFunctions } from 'src/server';
 import type { z } from 'zod';
-import type { ChatAgent } from './agentTypes';
+import type { AnyChatAgent } from './agentTypes';
 import type { MessageContent } from './messageContent';
 import type { ServerSideChatConversationHelper } from './types';
 import { Debouncer } from './debounce';
@@ -22,7 +22,7 @@ export type ToolRunFn<
     conversationId: string;
 
     // We cannot infer this type as it would be circular. We have to use AnyStructuredChatTool instead.
-    conversation: ServerSideChatConversationHelper<ChatAgent<AnyStructuredChatTool[]>>;
+    conversation: ServerSideChatConversationHelper<AnyChatAgent>;
   },
   ...extraArgs: ExtraArgs
 ) => Promise<ToolCallOutput<Return, ResultForClient>>;
@@ -41,7 +41,7 @@ export type ToolCallInput<Args extends z.AnyZodObject, Context, ToolProgressData
   ctx: Context;
   callbackInvoker: ToolCallbackInvoker;
   progressCallback: ToolProgressCallback<ToolProgressData>;
-  conversation: ServerSideChatConversationHelper<ChatAgent<AnyStructuredChatTool[]>>;
+  conversation: ServerSideChatConversationHelper<AnyChatAgent>;
 };
 
 export type ToolCallOutput<Return, ResultForClient> = {

@@ -13,7 +13,7 @@ export function AIMessageShell({ message, children }: { message: ChatAIMessage<a
         <div className="space-y-4">{children}</div>
       </div>
       <Button
-        onClick={() => message.regenerate()}
+        onClick={() => message.regenerate({ invokeArgs: {} })}
         variant="ghost"
         size="sm"
         className={cn(

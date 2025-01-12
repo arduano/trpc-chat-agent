@@ -1,6 +1,6 @@
 'use client';
 
-import type { AgentTools, ChatAgent } from '@trpc-chat-agent/core';
+import type { AgentTools, AnyChatAgent } from '@trpc-chat-agent/core';
 import type { RenderMessagesProps, UseConversationArgs } from '@trpc-chat-agent/react';
 import { Card } from '@site/src/components/ui/card';
 import { buildMockTrpcChatRouter } from '@site/src/lib/mockChatRouterForAgent';
@@ -11,7 +11,7 @@ import { AIMessageShell } from './AIMessage';
 import { StyledMarkdown } from './StyledMarkdown';
 import { UserMessage } from './UserMessage';
 
-export type MockChatComponentProps<Agent extends ChatAgent<any>> = Omit<
+export type MockChatComponentProps<Agent extends AnyChatAgent> = Omit<
   UseConversationArgs<Agent>,
   'initialConversationId' | 'router'
 > &
@@ -22,7 +22,7 @@ export type MockChatComponentProps<Agent extends ChatAgent<any>> = Omit<
     shouldBegin: boolean;
   };
 
-export function MockChat<Agent extends ChatAgent<any>>({
+export function MockChat<Agent extends AnyChatAgent>({
   id,
   renderToolCall,
   agent,
@@ -42,7 +42,7 @@ export function MockChat<Agent extends ChatAgent<any>>({
 
   useEffect(() => {
     if (!isLoadingConversation && shouldBegin) {
-      beginMessage(converationArgs.seedPrompt || 'hello');
+      beginMessage({ userMessage: converationArgs.seedPrompt || 'hello', invokeArgs: {} });
     }
   }, [isLoadingConversation, shouldBegin]);
 

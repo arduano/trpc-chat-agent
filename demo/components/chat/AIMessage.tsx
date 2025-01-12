@@ -1,11 +1,19 @@
-import type { AgentType } from '@/server/agent';
-import type { ChatAIMessage } from '@trpc-chat-agent/core';
+import type { ReadonlySignal } from '@preact/signals-core';
+import type { AgentExtraArgs, AnyChatAgent, ChatAIMessage } from '@trpc-chat-agent/core';
 import { cn } from '@/lib/utils';
 import { CgRedo } from 'react-icons/cg';
 import { Button } from '../ui/button';
 import { MessageVariants } from './MessageVariants';
 
-export function AIMessageShell({ message, children }: { message: ChatAIMessage<AgentType>; children: JSX.Element }) {
+export function AIMessageShell<Agent extends AnyChatAgent>({
+  message,
+  children,
+  invokeArgs,
+}: {
+  message: ChatAIMessage<Agent>;
+  children: JSX.Element;
+  invokeArgs: ReadonlySignal<AgentExtraArgs<Agent>>;
+}) {
   return (
     <div className="group flex items-start max-w-full gap-2 pr-12 lg:pr-48">
       <div className="flex-1 max-w-full">
@@ -13,7 +21,7 @@ export function AIMessageShell({ message, children }: { message: ChatAIMessage<A
         <div className="space-y-4">{children}</div>
       </div>
       <Button
-        onClick={() => message.regenerate()}
+        onClick={() => message.regenerate({ invokeArgs: invokeArgs.peek() })}
         variant="ghost"
         size="sm"
         className={cn(

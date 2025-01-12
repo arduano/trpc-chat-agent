@@ -2,11 +2,12 @@ import type { ReadonlySignal } from '@preact/signals-core';
 import type { createTRPCClient } from '@trpc/client';
 import type { z } from 'zod';
 import type {
+  AgentExtraArgs,
   AgentTools,
   AIMessageDataClientSide,
   AIMessageDataPartClientSide,
+  AnyChatAgent,
   AnyStructuredChatTool,
-  ChatAgent,
   ChatAgentOrTools,
   ChatBranchState as ChatPathState,
   ChatTreePath,
@@ -38,8 +39,8 @@ export type ActiveCallback<ToolName extends string, CallbackName extends string,
 type AnyActiveCallback = ActiveCallback<string, string, any>;
 type Callbacks = Record<string, AnyActiveCallback | undefined>;
 
-export type RouterTypeFromAgent<Agent extends ChatAgentOrTools> = ReturnType<
-  typeof createTRPCClient<ReturnType<typeof makeChatRouterForAgent<ChatAgent<AgentTools<Agent>>, any>>>
+export type RouterTypeFromAgent<Agent extends AnyChatAgent> = ReturnType<
+  typeof createTRPCClient<ReturnType<typeof makeChatRouterForAgent<Agent, any>>>
 >;
 
 type ConversationRelatedData = {
@@ -268,7 +269,7 @@ export function createSystemStateStore() {
 
 export type SystemStateStore = ReturnType<typeof createSystemStateStore>;
 
-type CreateSystemStateStoreSubscriberArgs<Agent extends ChatAgentOrTools> = {
+type CreateSystemStateStoreSubscriberArgs<Agent extends AnyChatAgent> = {
   store: SystemStateStore;
   router: RouterTypeFromAgent<Agent>;
   initialConversationId?: string;
@@ -277,7 +278,7 @@ type CreateSystemStateStoreSubscriberArgs<Agent extends ChatAgentOrTools> = {
   useIndexdbCache?: boolean;
 };
 
-export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>(
+export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
   args: CreateSystemStateStoreSubscriberArgs<Agent>
 ) {
   type Tools = AgentTools<Agent>;
@@ -292,7 +293,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   } = args;
   const useIndexdbCache = useIndexdbCacheOptional ?? true;
 
-  const router = typedRouter as RouterTypeFromAgent<ChatAgentOrTools>; // There are cases where this is better, due to generic typing
+  const router = typedRouter as RouterTypeFromAgent<Agent>; // There are cases where this is better, due to generic typing
 
   const branchState = signal(ConversationBranchState.default());
   const placeholderPath = signal<ChatTreePath>([]);
@@ -325,7 +326,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
         initialConversationId,
         router.getChat.query({
           conversationId: initialConversationId,
-        }),
+        }) as Promise<ClientSideConversation<any[]>>,
         useIndexdbCache
       );
 
@@ -402,8 +403,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   });
 
   const callbackCache = makeItemCache<AnyActiveCallbackWithResponse>();
-  const editMsgClosureCache = makeItemCache<(content: string) => void>();
-  const regenerateMsgClosureCache = makeItemCache<() => void>();
+  const editMsgClosureCache = makeItemCache<(args: { content: string; invokeArgs: AgentExtraArgs<Agent> }) => void>();
+  const regenerateMsgClosureCache = makeItemCache<(args: { invokeArgs: AgentExtraArgs<Agent> }) => void>();
   const switchPathMsgClosureCache = makeItemCache<(index: number) => void>();
 
   const CallbacksMapped = computed(() => {
@@ -426,7 +427,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   const mapAiMessagePartAddCallbacks = (
     part: AIMessageDataPartClientSide<Tools>,
     callbacks: AnyActiveCallbackWithResponse[]
-  ): ChatAIMessagePart<Tools> => {
+  ): ChatAIMessagePart<Agent> => {
     return {
       ...part,
       toolCalls: part.toolCalls.map((toolCall) => ({
@@ -439,7 +440,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
   const mapAiMessageAddCallbacks = (
     message: AIMessageDataClientSide<Tools>,
     callbacks: AnyActiveCallbackWithResponse[]
-  ): ChatAIMessage<Tools> => {
+  ): ChatAIMessage<Agent> => {
     const path = conversation.value.getPathInfoForMessageId(message.id);
     return {
       ...message,
@@ -449,8 +450,8 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
           callbacks.filter((c) => c.messageId === message.id)
         )
       ),
-      regenerate: regenerateMsgClosureCache.get(message.id, () => () => {
-        regenerateMessage(message.id);
+      regenerate: regenerateMsgClosureCache.get(message.id, () => (args) => {
+        regenerateMessage(message.id, args);
       }),
       path: {
         ...path,
@@ -461,12 +462,15 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     };
   };
 
-  const mapUserMessageAddCallbacks = (message: UserMessageData): ChatUserMessage => {
+  const mapUserMessageAddCallbacks = (message: UserMessageData): ChatUserMessage<Agent> => {
     const path = conversation.value.getPathInfoForMessageId(message.id);
     return {
       ...message,
-      edit: editMsgClosureCache.get(message.id, () => (content: string) => {
-        editMessage(message.id, content);
+      edit: editMsgClosureCache.get(message.id, () => (args) => {
+        editMessage(message.id, {
+          message: args.content,
+          invokeArgs: args.invokeArgs,
+        });
       }),
       path: {
         ...path,
@@ -525,17 +529,21 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     }
   };
 
-  const beginMessage = (userMessage: string) => {
+  const beginMessage = (args: { userMessage: string; invokeArgs: AgentExtraArgs<Agent> }) => {
     assertCanBeginStream();
-
-    beginStream(conversationId.peek(), userMessage, branchState.peek().selectedPath);
+    beginStream({
+      branch: branchState.peek().selectedPath,
+      conversationId: conversationId.peek(),
+      userMessage: args.userMessage,
+      invokeArgs: args.invokeArgs,
+    });
 
     // Set the placeholder conversation, in case the conversation doesn't exist yet
     const newPlaceholderConversation = ClientSideChatConversationHelper.makePlaceholderConversation<Agent>();
     const newPath = newPlaceholderConversation.pushUserAiMessagePair(
       [],
       {
-        content: userMessage,
+        content: args.userMessage,
         id: '-user-placeholder-',
         kind: 'user',
       },
@@ -549,18 +557,28 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
     placeholderPath.value = newPath;
   };
 
-  const editMessage = (userMessageId: string, message: string) => {
+  const editMessage = (userMessageId: string, args: { message: string; invokeArgs: AgentExtraArgs<Agent> }) => {
     assertCanBeginStream();
 
     const path = branchState.peek().getPathToUserMessage(userMessageId);
-    beginStream(conversationId.peek(), message, path);
+    beginStream({
+      branch: path,
+      conversationId: conversationId.peek(),
+      userMessage: args.message,
+      invokeArgs: args.invokeArgs,
+    });
   };
 
-  const regenerateMessage = (aiMessageId: string) => {
+  const regenerateMessage = (aiMessageId: string, args: { invokeArgs: AgentExtraArgs<Agent> }) => {
     assertCanBeginStream();
 
     const path = branchState.peek().getPathToAiMessage(aiMessageId);
-    beginStream(conversationId.peek(), null, path);
+    beginStream({
+      branch: path,
+      conversationId: conversationId.peek(),
+      invokeArgs: args.invokeArgs,
+      userMessage: null,
+    });
   };
 
   return {
@@ -590,7 +608,7 @@ export function createSystemStateStoreSubscriber<Agent extends ChatAgentOrTools>
 
 type SignalValue<T extends ReadonlySignal<any>> = T extends ReadonlySignal<infer V> ? V : never;
 
-function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
+function makeConversationStreamerState<Agent extends AnyChatAgent>(
   router: RouterTypeFromAgent<Agent>,
   callbacks: { onUpdate: (event: ClientSideUpdate) => void; onComplete: () => void }
 ) {
@@ -607,7 +625,12 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
     }
   };
 
-  const beginStream = (conversationId: string | undefined, userMessage: string | null, branch: ChatTreePath) => {
+  const beginStream = (args: {
+    conversationId: string | undefined;
+    userMessage: string | null;
+    branch: ChatTreePath;
+    invokeArgs: AgentExtraArgs<Agent>;
+  }) => {
     conversationError.value = undefined;
 
     cancelStream();
@@ -616,9 +639,10 @@ function makeConversationStreamerState<Agent extends ChatAgentOrTools>(
 
     const subscription = router.promptChat.subscribe(
       {
-        conversationId,
-        branch,
-        userMessageContent: userMessage,
+        conversationId: args.conversationId,
+        branch: args.branch,
+        userMessageContent: args.userMessage,
+        invokeArgs: args.invokeArgs,
       },
       {
         onData: (updateEvent) => {
@@ -762,17 +786,17 @@ export type ChatAIMessagePart<AgentOrTools extends ChatAgentOrTools> = {
   toolCalls: ChatAIMessageToolCall<AgentOrTools>[];
 };
 
-export type ChatAIMessage<AgentOrTools extends ChatAgentOrTools> = {
+export type ChatAIMessage<Agent extends AnyChatAgent> = {
   kind: 'ai';
   id: string;
-  parts: ChatAIMessagePart<AgentOrTools>[];
+  parts: ChatAIMessagePart<Agent>[];
   path: ChatPathStateWithSwitch;
-  regenerate: () => void;
+  regenerate: (args: { invokeArgs: AgentExtraArgs<Agent> }) => void;
 };
 
-export type ChatUserMessage = UserMessageData & {
+export type ChatUserMessage<Agent extends AnyChatAgent> = UserMessageData & {
   path: ChatPathStateWithSwitch;
-  edit: (content: string) => void;
+  edit: (args: { content: string; invokeArgs: AgentExtraArgs<Agent> }) => void;
 };
 
 type GetToolByNameFromList<

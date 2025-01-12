@@ -1,9 +1,9 @@
 import type { ReadonlySignal } from '@preact/signals-core';
-import type { ChatAgentOrTools, RouterTypeFromAgent } from '@trpc-chat-agent/core';
+import type { AnyChatAgent, RouterTypeFromAgent } from '@trpc-chat-agent/core';
 import { createSystemStateStore, createSystemStateStoreSubscriber } from '@trpc-chat-agent/core';
 import { useEffect, useMemo, useState } from 'react';
 
-export type UseConversationArgs<Agent extends ChatAgentOrTools> = {
+export type UseConversationArgs<Agent extends AnyChatAgent> = {
   initialConversationId?: string;
   router: RouterTypeFromAgent<Agent>;
   onUpdateConversationId?: (conversationId: string) => void;
@@ -12,7 +12,7 @@ export type UseConversationArgs<Agent extends ChatAgentOrTools> = {
 
 const store = createSystemStateStore();
 
-export function useConversation<Agent extends ChatAgentOrTools>(args: UseConversationArgs<Agent>) {
+export function useConversation<Agent extends AnyChatAgent>(args: UseConversationArgs<Agent>) {
   const subscriber = useMemo(() => {
     return createSystemStateStoreSubscriber({
       store,

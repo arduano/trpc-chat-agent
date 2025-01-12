@@ -2,6 +2,7 @@ import type { GetToolByName } from '../clientState';
 import type {
   AgentUpdateMessage,
   AIMessageData,
+  AnyChatAgent,
   AnyStructuredChatTool,
   ChatAgent,
   ClientSideConversationUpdate,
@@ -10,6 +11,7 @@ import type {
   ToolCallOutput,
   UserMessageData,
 } from '../common';
+import { z } from 'zod';
 import { ServerSideChatConversationHelper } from '../common';
 import { AgentsBackend } from './builder';
 
@@ -20,7 +22,7 @@ export class MockAgentBackend extends AgentsBackend<[], any> {
 
   public createAgent = <const Tools extends readonly AnyStructuredChatTool[]>(
     agentArgs: CreateMockAgentArgs<Tools>
-  ): ChatAgent<Tools> => {
+  ): ChatAgent<Tools, z.ZodUndefined> => {
     return {
       async *invoke(chatArgs) {
         const conversationId = chatArgs.conversationData.id ?? 'dummy_conversation';
@@ -70,6 +72,7 @@ export class MockAgentBackend extends AgentsBackend<[], any> {
           }
         }
       },
+      extraArgsSchema: z.undefined(),
     };
   };
 }
@@ -111,7 +114,7 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[]> {
     readonly messageId: string,
     readonly conversationId: string,
     readonly tools: Tools,
-    readonly conversation: ServerSideChatConversationHelper<ChatAgent<AnyStructuredChatTool[]>>,
+    readonly conversation: ServerSideChatConversationHelper<AnyChatAgent>,
     readonly callbackInvoker: ToolCallbackInvoker
   ) {}
 

@@ -1,10 +1,10 @@
 import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
-import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
 import type {
   AgentTools,
+  AnyChatAgent,
   AnyStructuredChatTool,
   ChatAgent,
   ChatAgentInvokeArgs,
@@ -17,6 +17,7 @@ import type {
   ToolCallbackInvoker,
 } from '@trpc-chat-agent/core';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { RunnableLambda } from '@langchain/core/runnables';
@@ -28,7 +29,12 @@ import {
   processMessageContentForClient,
   ServerSideChatConversationHelper,
 } from '@trpc-chat-agent/core';
+import { z } from 'zod';
 import { StructuredChatToolLangChain } from './tool';
+
+type CommonExtraArgs = {
+  selectedLlm?: string;
+};
 
 function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context>() {
   return Annotation.Root({
@@ -36,10 +42,24 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Con
     chatPath: Annotation<ChatTreePath>,
     ctx: Annotation<Context>,
     callbackInvoker: Annotation<ToolCallbackInvoker>,
+    extraArgs: Annotation<CommonExtraArgs>,
   });
 }
 
-export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> = {
+type ExtraArgsFromSelectedLlms<SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>> =
+  SelectedLlms extends BaseChatModel
+    ? // eslint-disable-next-line ts/no-empty-object-type
+      z.ZodObject<{}>
+    : SelectedLlms extends Record<string, BaseChatModel>
+      ? z.ZodObject<{
+          selectedLlm: z.ZodType<keyof SelectedLlms>;
+        }>
+      : never;
+
+export type CreateChatAgentArgs<
+  Tools extends readonly AnyStructuredChatTool[],
+  SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>,
+> = {
   // Common
   tools: Tools;
   debounceMs?: number;
@@ -47,37 +67,68 @@ export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> 
   // Transformation
   systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);
   transformMessages?: (args: {
-    conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools>>>;
+    conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraArgsFromSelectedLlms<SelectedLlms>>>>;
     path: ChatTreePath;
     ctx: Tools[number]['TypeInfo']['Context'];
   }) => BaseMessage[] | Promise<BaseMessage[]>;
 
   // LangChain
-  llm: BaseChatModel;
+  llm: SelectedLlms;
   langchainCallbacks?: LangchainCallbacks;
 };
 
-export function createChatAgentLangchain<Tools extends readonly AnyStructuredChatTool[]>(
-  args: CreateChatAgentArgs<Tools>
-): ChatAgent<Tools> {
+export function createChatAgentLangchain<
+  const Tools extends readonly AnyStructuredChatTool[],
+  const SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>,
+>(args: CreateChatAgentArgs<Tools, SelectedLlms>): ChatAgent<Tools, ExtraArgsFromSelectedLlms<SelectedLlms>> {
   const { llm, tools, debounceMs: _debounceMs, langchainCallbacks } = args;
   const debounceMs = _debounceMs || 100;
+
+  type ExtraArgsSchema = ExtraArgsFromSelectedLlms<SelectedLlms>;
+  const extraArgsSchema = (
+    args.llm instanceof BaseChatModel
+      ? z.object({})
+      : z.object({
+          selectedLlm: z.string(),
+        })
+  ) as ExtraArgsSchema;
 
   const toolsList = tools.map((t) => new StructuredChatToolLangChain(t));
 
   const StateAnnotation = makeStateAnnotation();
   type AgentState = typeof StateAnnotation.State;
 
-  if (!('bindTools' in llm) || typeof llm.bindTools !== 'function') {
-    throw new Error(`llm ${llm} must define bindTools method.`);
-  }
-  const modelWithTools = llm.bindTools(toolsList);
-
   const stateModifierRunnable = RunnableLambda.from(
     (state: typeof MessagesAnnotation.State) => state.messages
   ).withConfig({ runName: 'state_modifier' });
 
-  const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
+  function mapSelectedLlmAndBindTools<SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>>(
+    llm: SelectedLlms
+  ) {
+    if (llm instanceof BaseChatModel) {
+      if (!('bindTools' in llm) || typeof llm.bindTools !== 'function') {
+        throw new Error(`llm ${llm} must define bindTools method.`);
+      }
+      const modelWithTools = llm.bindTools(toolsList);
+      const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
+      return {
+        default: modelRunnable,
+      };
+    } else {
+      return Object.fromEntries(
+        Object.entries(llm).map(([key, value]) => {
+          if (!('bindTools' in value) || typeof value.bindTools !== 'function') {
+            throw new Error(`llm ${value} must define bindTools method.`);
+          }
+          const modelWithTools = value.bindTools(toolsList);
+          const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
+          return [key, modelRunnable];
+        })
+      );
+    }
+  }
+
+  const modelRunnables = mapSelectedLlmAndBindTools(llm);
 
   const sendClientSideUpdateToConfig = (update: ClientSideUpdate, config: RunnableConfig) => {
     dispatchCustomEvent('on_conversation_client_update', update, config);
@@ -97,7 +148,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
   };
 
   const transformMessages = async (
-    conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools>>>,
+    conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraArgsSchema>>>,
     path: ChatTreePath,
     ctx: Tools[number]['TypeInfo']['Context']
   ) => {
@@ -168,6 +219,9 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
     };
 
     try {
+      const selectedModelName = state.extraArgs.selectedLlm ?? 'default';
+      const modelRunnable = modelRunnables[selectedModelName];
+
       const stream = await modelRunnable.streamEvents(
         { messages: messageList },
         {
@@ -431,13 +485,15 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
   const compiled = workflow.compile({});
 
   return {
-    async *invoke(args: ChatAgentInvokeArgs<Tools>) {
+    extraArgsSchema,
+    async *invoke(args: ChatAgentInvokeArgs<Tools, ExtraArgsSchema>) {
       const iter = compiled.streamEvents(
         {
           conversationData: args.conversationData,
           chatPath: args.chatPath,
           ctx: args.ctx,
           callbackInvoker: args.callbackInvoker,
+          extraArgs: args.extraArgs,
         },
         {
           version: 'v2',
@@ -470,7 +526,7 @@ export function createChatAgentLangchain<Tools extends readonly AnyStructuredCha
 }
 
 export function asLangChainMessagesArray(
-  conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<any>>>,
+  conversation: Readonly<ServerSideChatConversationHelper<AnyChatAgent>>,
   tree: ChatTreePath
 ): BaseMessage[] {
   return conversation.asMessagesArray(tree).flatMap((message) => {

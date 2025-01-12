@@ -1,27 +1,26 @@
 'use client';
 
 import type { AgentType } from '@/server/agent';
-import type { AgentTools, ChatAgent } from '@trpc-chat-agent/core';
-import type { RenderMessagesProps, UseConversationArgs } from '@trpc-chat-agent/react';
+import type { AgentExtraArgs } from '@trpc-chat-agent/core';
+import type { UseConversationArgs } from '@trpc-chat-agent/react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
+import { trpcClient } from '@/utils/trpc';
+
+import { useSignal } from '@preact/signals-react';
 import { RenderMessages, useConversation } from '@trpc-chat-agent/react';
 import React, { useEffect, useRef, useState } from 'react';
+import { AIMessageShell } from '../../components/chat/AIMessage';
+import { StyledMarkdown } from '../../components/chat/StyledMarkdown';
+import { UserMessage } from '../../components/chat/UserMessage';
+import { RenderTool } from './RenderTool';
 
-import { AIMessageShell } from './AIMessage';
-import { StyledMarkdown } from './StyledMarkdown';
-import { UserMessage } from './UserMessage';
+export type ChatComponentProps = Omit<UseConversationArgs<AgentType>, 'initialConversationId' | 'router'> & {
+  id?: string;
+};
 
-export type ChatComponentProps<Agent extends ChatAgent<any>> = Omit<
-  UseConversationArgs<Agent>,
-  'initialConversationId'
-> &
-  Pick<RenderMessagesProps<AgentTools<Agent>>, 'renderToolCall'> & {
-    id?: string;
-  };
-
-export function Chat<Agent extends AgentType>({ id, ...props }: ChatComponentProps<Agent>) {
+export function Chat({ id, ...props }: ChatComponentProps) {
   const [key, setKey] = useState(0);
   const [pastId, setPastId] = useState(id);
 
@@ -38,11 +37,7 @@ export function Chat<Agent extends AgentType>({ id, ...props }: ChatComponentPro
   return <ChatComponentWithStaticId key={key} id={id} {...props} />;
 }
 
-function ChatComponentWithStaticId<Agent extends AgentType>({
-  id,
-  renderToolCall,
-  ...converationArgs
-}: ChatComponentProps<Agent>) {
+function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -50,21 +45,24 @@ function ChatComponentWithStaticId<Agent extends AgentType>({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const { messages, beginMessage, isStreaming, isLoadingConversation, isMissingConversation } = useConversation({
-    initialConversationId: id,
-    onUpdateConversationId: converationArgs.onUpdateConversationId,
-    router: converationArgs.router,
-  });
+  const { messages, beginMessage, isStreaming, isLoadingConversation, isMissingConversation } =
+    useConversation<AgentType>({
+      initialConversationId: id,
+      onUpdateConversationId: converationArgs.onUpdateConversationId,
+      router: trpcClient.chat,
+    });
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  const invokeArgs = useSignal<AgentExtraArgs<AgentType>>({});
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    beginMessage(input);
+    beginMessage({ userMessage: input, invokeArgs: invokeArgs.peek() });
     setInput('');
   };
 
@@ -78,10 +76,12 @@ function ChatComponentWithStaticId<Agent extends AgentType>({
             ) : (
               <RenderMessages
                 messages={messages}
-                renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
+                renderAiMessageShell={(message, children) => (
+                  <AIMessageShell message={message} children={children} invokeArgs={invokeArgs} />
+                )}
                 renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
-                renderUserMessage={(message) => <UserMessage message={message} />}
-                renderToolCall={renderToolCall}
+                renderUserMessage={(message) => <UserMessage message={message} invokeArgs={invokeArgs} />}
+                renderToolCall={(tool) => <RenderTool tool={tool} />}
               />
             )}
             <div ref={messagesEndRef} />
