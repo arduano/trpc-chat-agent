@@ -22,7 +22,8 @@ export class MockAgentBackend extends AgentsBackend<[], any> {
 
   public createAgent = <const Tools extends readonly AnyStructuredChatTool[]>(
     agentArgs: CreateMockAgentArgs<Tools>
-  ): ChatAgent<Tools, z.ZodUndefined> => {
+    // eslint-disable-next-line ts/no-empty-object-type
+  ): ChatAgent<Tools, z.ZodObject<{}>> => {
     return {
       async *invoke(chatArgs) {
         const conversationId = chatArgs.conversationData.id ?? 'dummy_conversation';
@@ -72,7 +73,7 @@ export class MockAgentBackend extends AgentsBackend<[], any> {
           }
         }
       },
-      extraArgsSchema: z.undefined(),
+      extraArgsSchema: z.object({}),
     };
   };
 }

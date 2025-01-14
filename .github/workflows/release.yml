@@ -29,12 +29,6 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
-      - name: Install Dependencies
-        run: pnpm install
-
-      - name: Build the packages
-        run: pnpm run -r --parallel --filter "@trpc-chat-agent*" build
-
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
