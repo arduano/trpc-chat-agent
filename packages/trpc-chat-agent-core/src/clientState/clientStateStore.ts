@@ -546,11 +546,13 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
         content: args.userMessage,
         id: '-user-placeholder-',
         kind: 'user',
+        createdAt: new Date().toISOString(),
       },
       {
         id: '-ai-placeholder-',
         kind: 'ai',
         parts: [],
+        createdAt: new Date().toISOString(),
       }
     );
     placeholderConversation.value = newPlaceholderConversation;

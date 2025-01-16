@@ -6,6 +6,7 @@ export type UserMessageData = {
   kind: 'user';
   id: string;
   content: MessageContent;
+  createdAt: string;
 };
 
 export class ChatUserMessageWrapper {

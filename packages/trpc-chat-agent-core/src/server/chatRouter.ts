@@ -250,12 +250,14 @@ function addMessagePairToConversation<Agent extends AnyChatAgent>(
       kind: 'user',
       id: userMessageId,
       content: userMessageContent,
+      createdAt: new Date().toISOString(),
     };
 
     const newAIMessage: AIMessageData<AgentTools<Agent>> = {
       kind: 'ai',
       id: aiMessageId,
       parts: [],
+      createdAt: new Date().toISOString(),
     };
 
     const newPath = conversation.pushUserAiMessagePair(chatPath, newUserMessage, newAIMessage);
@@ -267,6 +269,7 @@ function addMessagePairToConversation<Agent extends AnyChatAgent>(
       kind: 'ai',
       id: aiMessageId,
       parts: [],
+      createdAt: new Date().toISOString(),
     };
 
     const newPath = conversation.pushUpdatedAiMessage(chatPath, newAIMessage);
