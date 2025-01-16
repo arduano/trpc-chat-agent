@@ -119,6 +119,7 @@ export class ServerSideChatConversationHelper<Agent extends AnyChatAgent> extend
       message.parts.push({
         content: '',
         toolCalls: [],
+        createdAt: new Date().toISOString(),
       });
     });
   }

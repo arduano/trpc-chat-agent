@@ -11,12 +11,14 @@ export type AIMessagePartData<Tools extends readonly AnyStructuredChatTool[]> = 
   toolCalls: ToolCallFromToolsArray<Tools>[];
   responseMetadata?: Record<string, any>;
   usageMetadata?: UsageMetadata;
+  createdAt: string;
 };
 
 export type AIMessageData<Tools extends readonly AnyStructuredChatTool[]> = {
   kind: 'ai';
   id: string;
   parts: AIMessagePartData<Tools>[];
+  createdAt: string;
 };
 
 export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]> {
@@ -107,7 +109,9 @@ export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]
           result: tc.client.result,
           state: tc.state,
         })),
+        createdAt: part.createdAt,
       })),
+      createdAt: this.data.createdAt,
     };
   }
 }
@@ -121,4 +125,5 @@ export type AIMessageDataClientSide<Tools extends readonly AnyStructuredChatTool
   kind: 'ai';
   id: string;
   parts: AIMessageDataPartClientSide<Tools>[];
+  createdAt: string;
 };
