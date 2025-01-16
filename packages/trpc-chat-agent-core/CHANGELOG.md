@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 0.3.2
+
+### Patch Changes
+
+- 3b5721b: Added createdAt for messages
+
 ## 0.3.1
 
 ### Patch Changes
