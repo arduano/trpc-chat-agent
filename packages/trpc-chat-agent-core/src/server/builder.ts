@@ -6,19 +6,24 @@ import type { ToolRunFn } from '../common/structuredTool';
 import type { AnyToolCallback, ToolCallback } from './callback';
 import { StructuredChatTool } from '../common/structuredTool';
 
-export abstract class AgentsBackend<ExtraArgs extends readonly any[] = readonly [], BaseMessageType = unknown> {
+export abstract class AgentsBackend<ExtraArgs extends readonly any[], BaseMessageType, ToolReturn> {
   // Field to stop typescript from complaining about unused types.
   // It is never actually used.
-  $types = undefined as any as undefined | [ExtraArgs, BaseMessageType];
+  $types = undefined as any as {
+    ExtraArgs: ExtraArgs;
+    BaseMessageType: BaseMessageType;
+    ToolReturn: ToolReturn;
+  };
 
   abstract createAgent: (...args: any[]) => AnyChatAgent;
 }
 
-type AnyAgentsBackend = AgentsBackend<readonly any[], any>;
+type AnyAgentsBackend = AgentsBackend<readonly any[], any, any>;
 
-type BackendExtraArgs<T extends AnyAgentsBackend> = T extends AgentsBackend<infer ExtraArgs, any> ? ExtraArgs : never;
+type BackendExtraArgs<T extends AnyAgentsBackend> =
+  T extends AgentsBackend<infer ExtraArgs, any, any> ? ExtraArgs : never;
 
-export class NoBackend extends AgentsBackend<[], never> {
+export class NoBackend extends AgentsBackend<[], never, never> {
   createAgent = () => {
     throw new Error('No backend provided');
   };
@@ -56,7 +61,6 @@ class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
     const Name extends string,
     const Args extends z.AnyZodObject,
     const ToolProgressData extends ZodType<any> | undefined = undefined,
-    const Return = undefined,
     const ArgsForClient = undefined,
     const ResultForClient = undefined,
     const Callbacks extends Record<string, AnyToolCallback> = Record<string, never>, // This default type is the only one that seems to work, {} breaks things
@@ -66,7 +70,15 @@ class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
     toolProgressSchema?: ToolProgressData;
     description: string;
     callbacks?: Callbacks;
-    run: ToolRunFn<Args, Context, Callbacks, ToolProgressData, Return, ResultForClient, BackendExtraArgs<Backend>>;
+    run: ToolRunFn<
+      Args,
+      Context,
+      Callbacks,
+      ToolProgressData,
+      Backend['$types']['ToolReturn'],
+      ResultForClient,
+      BackendExtraArgs<Backend>
+    >;
     mapErrorForAI?: (error: unknown) => MessageContent;
     mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
   }) {
@@ -74,7 +86,7 @@ class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
       Name,
       Args,
       ToolProgressData,
-      Return,
+      Backend['$types']['ToolReturn'],
       ArgsForClient,
       ResultForClient,
       Context,

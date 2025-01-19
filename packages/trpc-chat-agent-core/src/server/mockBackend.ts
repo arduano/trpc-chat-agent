@@ -6,6 +6,7 @@ import type {
   AnyStructuredChatTool,
   ChatAgent,
   ClientSideConversationUpdate,
+  MessageContent,
   ServerSideConversationUpdate,
   ToolCallbackInvoker,
   ToolCallOutput,
@@ -15,7 +16,7 @@ import { z } from 'zod';
 import { ServerSideChatConversationHelper } from '../common';
 import { AgentsBackend } from './builder';
 
-export class MockAgentBackend extends AgentsBackend<[], any> {
+export class MockAgentBackend extends AgentsBackend<[], any, MessageContent> {
   constructor() {
     super();
   }

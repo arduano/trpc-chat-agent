@@ -1,0 +1,49 @@
+{
+  "name": "@trpc-chat-agent/bee",
+  "version": "0.3.2",
+  "private": true,
+  "description": "The Bee Agent Framework backend adapter for trpc-chat-agent",
+  "author": "arduano",
+  "license": "MIT",
+  "homepage": "https://github.com/arduano/trpc-chat-agent#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arduano/trpc-chat-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arduano/trpc-chat-agent/issues"
+  },
+  "keywords": [
+    "trpc",
+    "types",
+    "ai",
+    "agent",
+    "chat"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rollup --config rollup.config.ts --configPlugin rollup-plugin-swc3",
+    "dev": "pnpm build --watch"
+  },
+  "dependencies": {
+    "@trpc-chat-agent/core": "workspace:*",
+    "bee-agent-framework": "^0.0.57",
+    "openai-chat-tokens": "^0.2.8",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "rollup": "^4.29.1",
+    "typescript": "^5.0.0"
+  }
+}
