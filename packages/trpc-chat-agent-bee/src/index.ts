@@ -11,7 +11,7 @@ export type LangchainToolExtraArgs = readonly [
   Partial<BaseToolRunOptions>,
   GetRunContext<AnyStructuredChatToolBee, any>,
 ];
-export class LangChainAgentsBackend extends AgentsBackend<LangchainToolExtraArgs, BaseMessage> {
+export class BeeAgentsBackend extends AgentsBackend<LangchainToolExtraArgs, BaseMessage, BaseMessage> {
   constructor() {
     super();
   }
