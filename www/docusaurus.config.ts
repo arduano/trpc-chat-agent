@@ -147,8 +147,8 @@ const config: Config = {
       'posthog-docusaurus',
       {
         apiKey: 'phc_XatEVv0TY7jk4nsuE7D7ejFk1X4HWunr9kTskFQLGTo',
-        appUrl: 'science.arduano.io/_api/science', // optional, defaults to "https://us.i.posthog.com"
-        enableInDevelopment: false, // optional
+        appUrl: 'https://science.arduano.io/_api/science',
+        enableInDevelopment: false,
       },
     ],
   ],
