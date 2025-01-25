@@ -123,4 +123,27 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
 
   // ...
 }
+```
 
+## Anthropic Prompt Caching
+
+Anthropic models require custom input parameters to enable prompt caching. `@trpc-chat-agent/langchain` automatically adds those parameters when the model is detected as a ChatAnthropic instance.
+
+The `cache_control: { type: 'ephemeral' }` parameters are added in the following locations:
+- The last tool
+- The system message
+- The second last message
+- The last message
+
+You can control which of these are included with the `anthropicCacheLevel` option in the agent definition.
+
+For example:
+
+```ts
+const agent = ai.agent({
+  // ...
+  llm: new ChatAnthropic({ model: 'claude-3-5-sonnet-20241022' }),
+  anthropicCacheLevel: AnthropicCacheLevels.UpToSystemMessage, // Only cache tools and system message
+  // ...
+});
+```

@@ -1,6 +1,6 @@
 import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
 import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
-import type { RunnableConfig } from '@langchain/core/runnables';
+import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
 import type {
   AgentTools,
@@ -31,6 +31,12 @@ import {
 } from '@trpc-chat-agent/core';
 import { z } from 'zod';
 import { StructuredChatToolLangChain } from './tool';
+import {
+  AnthropicCacheLevel,
+  AnthropicCacheLevels,
+  bindToolsToModel,
+  mapMessagesForModel,
+} from './providerSpecificHelpers';
 
 type CommonExtraArgs = {
   selectedLlm?: string;
@@ -75,14 +81,17 @@ export type CreateChatAgentArgs<
   // LangChain
   llm: SelectedLlms;
   langchainCallbacks?: LangchainCallbacks;
+
+  anthropicCacheLevel?: AnthropicCacheLevel;
 };
 
 export function createChatAgentLangchain<
   const Tools extends readonly AnyStructuredChatTool[],
   const SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>,
 >(args: CreateChatAgentArgs<Tools, SelectedLlms>): ChatAgent<Tools, ExtraArgsFromSelectedLlms<SelectedLlms>> {
-  const { llm, tools, debounceMs: _debounceMs, langchainCallbacks } = args;
+  const { llm, tools, debounceMs: _debounceMs, langchainCallbacks, anthropicCacheLevel: _anthropicCacheLevel } = args;
   const debounceMs = _debounceMs || 100;
+  const anthropicCacheLevel = _anthropicCacheLevel || AnthropicCacheLevels.Everything;
 
   type ExtraArgsSchema = ExtraArgsFromSelectedLlms<SelectedLlms>;
   const extraArgsSchema = (
@@ -104,25 +113,28 @@ export function createChatAgentLangchain<
 
   function mapSelectedLlmAndBindTools<SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>>(
     llm: SelectedLlms
-  ) {
+  ): Record<string, { modelRunnable: Runnable; llm: BaseChatModel }> {
     if (llm instanceof BaseChatModel) {
-      if (!('bindTools' in llm) || typeof llm.bindTools !== 'function') {
-        throw new Error(`llm ${llm} must define bindTools method.`);
-      }
-      const modelWithTools = llm.bindTools(toolsList);
+      const modelWithTools = bindToolsToModel(toolsList, llm, { anthropicCacheLevel });
       const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
       return {
-        default: modelRunnable,
+        default: {
+          modelRunnable,
+          llm,
+        },
       };
     } else {
       return Object.fromEntries(
         Object.entries(llm).map(([key, value]) => {
-          if (!('bindTools' in value) || typeof value.bindTools !== 'function') {
-            throw new Error(`llm ${value} must define bindTools method.`);
-          }
-          const modelWithTools = value.bindTools(toolsList);
+          const modelWithTools = bindToolsToModel(toolsList, value, { anthropicCacheLevel });
           const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
-          return [key, modelRunnable];
+          return [
+            key,
+            {
+              modelRunnable,
+              llm: value,
+            },
+          ];
         })
       );
     }
@@ -220,10 +232,11 @@ export function createChatAgentLangchain<
 
     try {
       const selectedModelName = state.extraArgs.selectedLlm ?? 'default';
-      const modelRunnable = modelRunnables[selectedModelName];
+      const { modelRunnable, llm } = modelRunnables[selectedModelName];
 
+      const transformedMessagesForLlm = mapMessagesForModel(messageList, llm, { anthropicCacheLevel });
       const stream = await modelRunnable.streamEvents(
-        { messages: messageList },
+        { messages: transformedMessagesForLlm },
         {
           ...config,
           version: 'v2',
