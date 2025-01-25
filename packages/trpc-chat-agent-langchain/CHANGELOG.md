@@ -1,5 +1,11 @@
 # @trpc-chat-agent/langchain
 
+## 0.3.3
+
+### Patch Changes
+
+- 6e51713: Added Anthropic prompt caching
+
 ## 0.3.2
 
 ### Patch Changes
