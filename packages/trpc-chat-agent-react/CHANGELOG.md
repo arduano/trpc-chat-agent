@@ -1,5 +1,13 @@
 # @trpc-chat-agent/react
 
+## 0.3.4
+
+### Patch Changes
+
+- c43b30d: Fixed type definitions for AgentBackend
+- Updated dependencies [c43b30d]
+  - @trpc-chat-agent/core@0.3.4
+
 ## 0.3.2
 
 ### Patch Changes
