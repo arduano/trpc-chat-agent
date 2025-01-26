@@ -2,7 +2,7 @@ import type { AnyToolCallback, CallbackFunctions } from 'src/server';
 import type { z } from 'zod';
 import type { AnyChatAgent } from './agentTypes';
 import type { MessageContent } from './messageContent';
-import type { ServerSideChatConversationHelper } from './types';
+import type { AIMessageData, ChatTreePath, ServerSideChatConversationHelper, UserMessageData } from './types';
 import { Debouncer } from './debounce';
 
 export type ToolRunFn<
@@ -20,9 +20,14 @@ export type ToolRunFn<
     callbacks: CallbackFunctions<Callbacks>;
     sendProgress: ToolProgressCallback<ToolProgressData>;
     conversationId: string;
+    signal: AbortSignal;
 
     // We cannot infer this type as it would be circular. We have to use AnyStructuredChatTool instead.
     conversation: ServerSideChatConversationHelper<AnyChatAgent>;
+    pastMessages: (UserMessageData | AIMessageData<any[]>)[];
+
+    conversationPath: ChatTreePath;
+    lastUserMessage: UserMessageData;
   },
   ...extraArgs: ExtraArgs
 ) => Promise<ToolCallOutput<Return, ResultForClient>>;
@@ -41,7 +46,11 @@ export type ToolCallInput<Args extends z.AnyZodObject, Context, ToolProgressData
   ctx: Context;
   callbackInvoker: ToolCallbackInvoker;
   progressCallback: ToolProgressCallback<ToolProgressData>;
+  signal: AbortSignal;
   conversation: ServerSideChatConversationHelper<AnyChatAgent>;
+  conversationPath: ChatTreePath;
+  lastUserMessage: UserMessageData;
+  pastMessages: (UserMessageData | AIMessageData<any[]>)[];
 };
 
 export type ToolCallOutput<Return, ResultForClient> = {
@@ -152,7 +161,11 @@ export class StructuredChatTool<
         callbacks: allCallbacks as CallbackFunctions<Callbacks>,
         sendProgress: args.progressCallback as any, // `any` required because we can't assign to a conditional type
         conversationId: args.conversation.data.id,
+        signal: args.signal,
         conversation: args.conversation,
+        conversationPath: args.conversationPath,
+        lastUserMessage: args.lastUserMessage,
+        pastMessages: args.pastMessages,
       },
       ...extraArgs
     );

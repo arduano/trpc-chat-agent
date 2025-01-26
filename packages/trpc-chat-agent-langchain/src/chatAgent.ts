@@ -45,6 +45,7 @@ function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Con
     ctx: Annotation<Context>,
     callbackInvoker: Annotation<ToolCallbackInvoker>,
     extraArgs: Annotation<CommonExtraArgs>,
+    signal: Annotation<AbortSignal>,
   });
 }
 
@@ -431,6 +432,10 @@ export function createChatAgentLangchain<
               progressDebouncer.debounce(data);
             },
             conversation: stateConvo,
+            conversationPath: state.chatPath,
+            signal: state.signal,
+            pastMessages: stateConvo.asMessagesArray(state.chatPath),
+            lastUserMessage: stateConvo.getUserMessageAt(state.chatPath)!,
           });
 
           progressDebouncer.flush();
@@ -503,6 +508,7 @@ export function createChatAgentLangchain<
           ctx: args.ctx,
           callbackInvoker: args.callbackInvoker,
           extraArgs: args.extraArgs,
+          signal: args.signal,
         },
         {
           version: 'v2',

@@ -1,17 +1,31 @@
 /**
- * A Debouncer class that ensures:
- *  - Events are delivered at most once every `delayInMs` milliseconds.
- *  - If a new event arrives within the delay, the new event replaces the old event.
- *  - If no new event arrives within the delay, the current event is delivered exactly after `delayInMs`.
- *  - A `flush()` method to immediately deliver the pending event (if any) without duplication or re-sending.
+ * A container type that safely wraps potentially nullable events while
+ * maintaining type safety and avoiding ambiguous null checks.
+ */
+type EventContainer<T> = { hasEvent: true; event: T } | { hasEvent: false };
+
+/**
+ * Debounces events of type T, ensuring they are delivered at most once every
+ * `delayInMs` milliseconds. If events arrive more frequently, only the most
+ * recent event within each time window is delivered.
+ *
+ * Features:
+ * - Events are delivered at most once every `delayInMs` milliseconds
+ * - New events during the delay replace previous ones
+ * - Handles all values of T including null/undefined as valid events
+ * - Provides flush() method for immediate delivery
+ *
+ * @template T - The type of event being debounced
  */
 export class Debouncer<T> {
   private timer: ReturnType<typeof setTimeout> | null = null;
-  private currentEvent: T | null = null;
+  private pendingEvent: EventContainer<T> = { hasEvent: false };
 
   /**
-   * @param delayInMs  The debounce delay in milliseconds
-   * @param onSend     Callback function to send the event
+   * Creates a new Debouncer instance.
+   *
+   * @param delayInMs - Minimum time (in milliseconds) between event deliveries
+   * @param onSend - Callback function that receives the debounced events
    */
   constructor(
     private readonly delayInMs: number,
@@ -19,50 +33,52 @@ export class Debouncer<T> {
   ) {}
 
   /**
-   * Receives an event and schedules it for sending after the debounce delay.
-   * If another event is received during the waiting time, it replaces the old event.
+   * Queues an event for debounced delivery. If the delay timer isn't running,
+   * starts it. Otherwise, updates the pending event without resetting the timer.
+   *
+   * @param event - The event to deliver after the delay (can be any value of T)
    */
   public debounce(event: T): void {
-    this.currentEvent = event;
+    this.pendingEvent = { hasEvent: true, event };
 
-    this.clearTimer();
-
-    // Schedule a new send
-    this.timer = setTimeout(() => {
-      this.sendEvent();
-    }, this.delayInMs);
+    if (!this.timer) {
+      this.timer = setTimeout(() => {
+        this.sendEvent();
+      }, this.delayInMs);
+    }
   }
 
   /**
-   * Immediately sends the current pending event (if any), and clears the timer.
-   * After flushing, the event won't be resent automatically.
+   * Immediately delivers any pending event and clears the timer.
+   * Useful when you need to ensure delivery before the delay expires.
    */
   public flush(): void {
     this.clearTimer();
-
-    // Only send if there is an event queued
-    if (this.currentEvent != null) {
+    if (this.pendingEvent.hasEvent) {
       this.sendEvent();
     }
   }
 
   /**
-   * Helper method to send the event if available.
+   * Internal method to deliver the event and reset internal state.
+   * Handles error catching and state cleanup.
    */
   private sendEvent(): void {
-    if (this.currentEvent != null) {
-      try {
-        this.onSend(this.currentEvent);
-      } catch (error) {
-        console.error(error);
-      }
-      this.currentEvent = null;
-    }
+    const container = this.pendingEvent;
+    this.pendingEvent = { hasEvent: false };
     this.clearTimer();
+
+    if (container.hasEvent) {
+      try {
+        this.onSend(container.event);
+      } catch (error) {
+        console.error('Error in debounced callback:', error);
+      }
+    }
   }
 
   /**
-   * Clears the current timer.
+   * Clears any active timer and resets timer state.
    */
   private clearTimer(): void {
     if (this.timer) {
