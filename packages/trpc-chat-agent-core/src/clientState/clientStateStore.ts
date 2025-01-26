@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import type {
   AgentExtraArgs,
   AgentTools,
+  AIMessageData,
   AIMessageDataClientSide,
   AIMessageDataPartClientSide,
   AnyChatAgent,
@@ -296,7 +297,6 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
   const router = typedRouter as RouterTypeFromAgent<Agent>; // There are cases where this is better, due to generic typing
 
   const branchState = signal(ConversationBranchState.default());
-  const placeholderPath = signal<ChatTreePath>([]);
 
   // Cache every 500ms to indexdb (but only when there's new updates)
   const cacheConversationDebouncer = new Debouncer<void>(500, () => {
@@ -388,13 +388,6 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
 
   const placeholderConversation = signal(ClientSideChatConversationHelper.makePlaceholderConversation<Agent>());
 
-  const isUsingPlaceholder = computed(() => {
-    if (conversationId.value && store.getConversation<Agent>(conversationId.value)) {
-      return false;
-    }
-    return true;
-  });
-
   const callbacks = computed(() => {
     if (conversationId.value) {
       return store.getCallbacks(conversationId.value) ?? {};
@@ -482,7 +475,7 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
   };
 
   const mappedMessages = computed(() => {
-    const selectedPath = isUsingPlaceholder.value ? placeholderPath.value : branchState.value.selectedPath;
+    const selectedPath = branchState.value.selectedPath;
     const rawMessages = conversation.value.asMessagesArray(selectedPath);
 
     callbackCache.resetUsage();
@@ -538,25 +531,38 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
       invokeArgs: args.invokeArgs,
     });
 
-    // Set the placeholder conversation, in case the conversation doesn't exist yet
-    const newPlaceholderConversation = ClientSideChatConversationHelper.makePlaceholderConversation<Agent>();
-    const newPath = newPlaceholderConversation.pushUserAiMessagePair(
-      [],
-      {
-        content: args.userMessage,
-        id: '-user-placeholder-',
-        kind: 'user',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: '-ai-placeholder-',
-        kind: 'ai',
-        parts: [],
-        createdAt: new Date().toISOString(),
-      }
-    );
-    placeholderConversation.value = newPlaceholderConversation;
-    placeholderPath.value = newPath;
+    let isUsingPlaceholder = false;
+    let conversation =
+      conversationId.peek() &&
+      (store.getConversation(conversationId.peek()!) as ClientSideChatConversationHelper<Agent> | undefined);
+
+    if (!conversation) {
+      conversation = placeholderConversation.value;
+      isUsingPlaceholder = true;
+    }
+
+    const dummyUserMessage: UserMessageData = {
+      content: args.userMessage,
+      id: '-user-placeholder-',
+      kind: 'user',
+      createdAt: new Date().toISOString(),
+    };
+    const dummyAIMessage: AIMessageData<AgentTools<Agent>> = {
+      id: '-ai-placeholder-',
+      kind: 'ai',
+      parts: [],
+      createdAt: new Date().toISOString(),
+    };
+
+    const currentPath = branchState.value.selectedPath;
+    const newPath = conversation.pushUserAiMessagePair(currentPath, dummyUserMessage, dummyAIMessage);
+    branchState.value = branchState.value.withConversationData(conversation.data).withBranchSelected(newPath);
+
+    if (isUsingPlaceholder) {
+      placeholderConversation.value = new ClientSideChatConversationHelper(conversation.data);
+    } else {
+      store.setConversationData(conversation.data.id, conversation.data);
+    }
   };
 
   const editMessage = (userMessageId: string, args: { message: string; invokeArgs: AgentExtraArgs<Agent> }) => {
@@ -639,40 +645,39 @@ function makeConversationStreamerState<Agent extends AnyChatAgent>(
 
     const abort = new AbortController();
 
-    const subscription = router.promptChat.subscribe(
-      {
-        conversationId: args.conversationId,
-        branch: args.branch,
-        userMessageContent: args.userMessage,
-        invokeArgs: args.invokeArgs,
-      },
-      {
-        onData: (updateEvent) => {
-          if (updateEvent === null) {
-            // Currently, trpc seems to be struggling to trigger "conversation complete".
-            // Yielding null to signal the conversation is complete (manually handled client-side)
-            subscription.unsubscribe();
-            cancelCurrentStream.value = undefined;
-            onComplete();
-          } else {
-            onUpdate(updateEvent);
+    const promptResponse = router.promptChat.mutate({
+      conversationId: args.conversationId,
+      branch: args.branch,
+      userMessageContent: args.userMessage,
+      invokeArgs: args.invokeArgs,
+    });
+
+    const processEvents = async () => {
+      const response = await promptResponse;
+      const stream = response.stream;
+
+      try {
+        for await (const event of stream) {
+          try {
+            onUpdate(event);
+          } catch (err) {
+            console.error(err);
+            break;
           }
-        },
-        onComplete: () => {
-          cancelCurrentStream.value = undefined;
-          onComplete();
-        },
-        onError: (err) => {
-          conversationError.value = err;
-          cancelStream();
-        },
-        signal: abort.signal,
+        }
+      } catch (err) {
+        conversationError.value = err as Error;
+        cancelStream();
+      } finally {
+        cancelCurrentStream.value = undefined;
+        onComplete();
       }
-    );
+    };
+
+    void processEvents();
 
     cancelCurrentStream.value = () => {
       abort.abort();
-      subscription.unsubscribe();
     };
   };
 

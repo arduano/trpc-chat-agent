@@ -59,11 +59,19 @@ export class ConversationBranchState {
     // Set defaults: pick the last child if none chosen
     for (const [id, children] of Object.entries(conversation.aiMessageChildIds)) {
       if (!newChoice[id] && children.length > 0) {
+        // If the choice is missing, set the default one
+        newChoice[id] = children[children.length - 1];
+      } else if (!conversation.aiMessageChildIds[newChoice[id]]) {
+        // If the choice exists but is invalid, set the default one
         newChoice[id] = children[children.length - 1];
       }
     }
     for (const [id, children] of Object.entries(conversation.userMessageChildIds)) {
       if (!newChoice[id] && children.length > 0) {
+        // If the choice is missing, set the default one
+        newChoice[id] = children[children.length - 1];
+      } else if (!conversation.userMessageChildIds[newChoice[id]]) {
+        // If the choice exists but is invalid, set the default one
         newChoice[id] = children[children.length - 1];
       }
     }
@@ -132,6 +140,7 @@ export class ConversationBranchState {
       if (!aiChildren) {
         break;
       }
+
       const aiIndex = aiChildren.indexOf(chosenAiChild);
       if (aiIndex === -1) {
         throw new Error('Invalid AI choice');
