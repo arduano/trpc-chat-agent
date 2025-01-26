@@ -1,5 +1,13 @@
 # @trpc-chat-agent/core
 
+## 0.3.6
+
+### Patch Changes
+
+- e712763: Improved debouncing behavior on progress/args updates
+- e712763: Added extra chat message data to tool args
+- e712763: Added abort signal to tool args
+
 ## 0.3.5
 
 ### Patch Changes

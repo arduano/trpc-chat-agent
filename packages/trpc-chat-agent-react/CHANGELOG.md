@@ -1,5 +1,14 @@
 # @trpc-chat-agent/react
 
+## 0.3.6
+
+### Patch Changes
+
+- Updated dependencies [e712763]
+- Updated dependencies [e712763]
+- Updated dependencies [e712763]
+  - @trpc-chat-agent/core@0.3.6
+
 ## 0.3.5
 
 ### Patch Changes
