@@ -1,5 +1,12 @@
 # @trpc-chat-agent/core
 
+## 0.3.5
+
+### Patch Changes
+
+- 5901152: Bumped tRPC to 11.0.0-rc.718
+- 5901152: Made the router use an iterable mutation instead of a subscription
+
 ## 0.3.4
 
 ### Patch Changes
