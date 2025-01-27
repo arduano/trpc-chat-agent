@@ -5,6 +5,7 @@ import type {
   AnyChatAgent,
   AnyStructuredChatTool,
   ChatAgent,
+  ChatTreePath,
   ClientSideConversationUpdate,
   MessageContent,
   ServerSideConversationUpdate,
@@ -48,7 +49,8 @@ export class MockAgentBackend extends AgentsBackend<[], any, MessageContent> {
           conversationId,
           agentArgs.tools,
           conversation,
-          chatArgs.callbackInvoker
+          chatArgs.callbackInvoker,
+          chatPath
         );
         const promise = agentArgs.generateResponseUpdates({
           messages,
@@ -117,7 +119,8 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[]> {
     readonly conversationId: string,
     readonly tools: Tools,
     readonly conversation: ServerSideChatConversationHelper<AnyChatAgent>,
-    readonly callbackInvoker: ToolCallbackInvoker
+    readonly callbackInvoker: ToolCallbackInvoker,
+    readonly chatPath: ChatTreePath
   ) {}
 
   emitter: EventStreamer<ResponseUpdate> = new EventStreamer();
@@ -296,6 +299,10 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[]> {
               0
             );
           },
+          conversationPath: this.chatPath,
+          pastMessages: this.conversation.asMessagesArray(this.chatPath),
+          lastUserMessage: this.conversation.getUserMessageAt(this.chatPath)!,
+          signal: new AbortController().signal,
         });
 
         await this.emitter.emit(

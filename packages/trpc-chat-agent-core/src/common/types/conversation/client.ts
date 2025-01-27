@@ -34,6 +34,8 @@ export class ClientSideChatConversationHelper<Agent extends ChatAgentOrTools> ex
       aiMessages: {},
       id: '',
       messageIdCounter: 0,
+      createdAt: new Date().toISOString(),
+      lastModifiedAt: new Date().toISOString(),
     });
   }
 

@@ -35,6 +35,8 @@ export class ServerSideChatConversationHelper<Agent extends AnyChatAgent> extend
       userMessages: {},
       aiMessageChildIds: {},
       userMessageChildIds: {},
+      createdAt: new Date().toISOString(),
+      lastModifiedAt: new Date().toISOString(),
     };
   }
 

@@ -14,6 +14,9 @@ export type ConversationData<AIMessage> = {
 
   aiMessageChildIds: Record<string, string[]>;
   userMessageChildIds: Record<string, string[]>;
+
+  createdAt: string;
+  lastModifiedAt: string;
 };
 
 export class ChatConversationHelper<AIMessage extends { id: string }> {
@@ -26,7 +29,10 @@ export class ChatConversationHelper<AIMessage extends { id: string }> {
   static readonly aiMessageRootId = '_root_';
 
   protected produceData(fn: (data: WritableDraft<ConversationData<AIMessage>>) => void) {
-    this.data = produce(this.data, fn);
+    this.data = produce(this.data, (data) => {
+      fn(data);
+      data.lastModifiedAt = new Date().toISOString();
+    });
   }
 
   protected produceAiMessage(messageId: string, fn: (data: Draft<AIMessage>) => void) {
@@ -36,6 +42,8 @@ export class ChatConversationHelper<AIMessage extends { id: string }> {
         throw new Error('Invalid messageId');
       }
       fn(aiMessage);
+
+      data.lastModifiedAt = new Date().toISOString();
     });
   }
 
