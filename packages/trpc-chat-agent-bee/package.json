@@ -1,6 +1,6 @@
 {
   "name": "@trpc-chat-agent/bee",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "private": true,
   "description": "The Bee Agent Framework backend adapter for trpc-chat-agent",
   "author": "arduano",
