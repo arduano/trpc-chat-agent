@@ -1,5 +1,12 @@
 # @trpc-chat-agent/core
 
+## 0.3.8
+
+### Patch Changes
+
+- 0aa30a4: Fixed ctx data in createConversation callback
+- 0aa30a4: Call saveConversation on important conversation events such as beginning/ending tool calls
+
 ## 0.3.7
 
 ### Patch Changes
