@@ -76,7 +76,9 @@ export function makeChatRouterForAgent<Agent extends AnyChatAgent, Context exten
             throw new TRPCError({ code: 'NOT_FOUND', message: 'Conversation not found' });
           }
         } else {
-          conversationData = await createConversation(ctx as any);
+          conversationData = await createConversation({
+            ctx: ctx as any,
+          });
         }
 
         const conversation = new ServerSideChatConversationHelper(conversationData);
@@ -89,21 +91,21 @@ export function makeChatRouterForAgent<Agent extends AnyChatAgent, Context exten
         );
         chatPath = newPath;
 
+        const saveCurrentConversation = async () => {
+          await saveConversation({
+            id: conversation.data.id,
+            conversation: conversation.data,
+            ctx: ctx as any,
+          });
+        };
+
         // Save the conversation with the new messages added
-        await saveConversation({
-          id: conversation.data.id,
-          conversation: conversation.data,
-          ctx: ctx as any,
-        });
+        await saveCurrentConversation();
 
         let saveInterval: NodeJS.Timeout | undefined;
         if (typeof saveIntervalMs === 'number') {
           saveInterval = setInterval(() => {
-            saveConversation({
-              id: conversation.data.id,
-              conversation: conversation.data,
-              ctx: ctx as any,
-            });
+            void saveCurrentConversation();
           }, saveIntervalMs);
 
           signal?.addEventListener('abort', () => {
@@ -180,6 +182,13 @@ export function makeChatRouterForAgent<Agent extends AnyChatAgent, Context exten
                   passEvent(eventData);
                 }
                 if (event.side === 'server') {
+                  const beginsNewMessagePart = event.update.kind === 'begin-new-ai-message-part';
+                  const completesToolCall = event.update.kind === 'update-tool-call' && !!event.update.newResult;
+                  const beginsToolCall = event.update.kind === 'begin-tool-call';
+                  if (beginsNewMessagePart || completesToolCall || beginsToolCall) {
+                    void saveCurrentConversation();
+                  }
+
                   const eventData = event.update;
                   conversation.processMessageUpdate(eventData);
                 }
