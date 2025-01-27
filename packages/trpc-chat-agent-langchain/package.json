@@ -1,6 +1,6 @@
 {
   "name": "@trpc-chat-agent/langchain",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "The LangChain backend adapter for trpc-chat-agent",
   "author": "arduano",
   "license": "MIT",

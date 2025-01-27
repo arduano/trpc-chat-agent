@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 0.3.9
+
+### Patch Changes
+
+- 4137114: Include created/updated time in conversation structure
+
 ## 0.3.8
 
 ### Patch Changes
