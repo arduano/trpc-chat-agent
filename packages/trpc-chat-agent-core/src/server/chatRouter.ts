@@ -111,7 +111,30 @@ export function makeChatRouterForAgent<Agent extends AnyChatAgent, Context exten
           });
         }
 
+        const cleanup = () => {
+          clearInterval(saveInterval);
+          conversation.abortAllPendingToolCalls();
+          saveConversation({
+            id: conversation.data.id,
+            conversation: conversation.data,
+            ctx: ctx as any,
+          });
+        };
+
+        let invokedCleanup = false;
+
+        const invokeCleanup = () => {
+          if (!invokedCleanup) {
+            invokedCleanup = true;
+            cleanup();
+          }
+        };
+
         const streamIterable = async function* (): AsyncGenerator<ClientSideUpdate> {
+          controller.signal.addEventListener('abort', () => {
+            invokeCleanup();
+          });
+
           try {
             const events = await agent.invoke({
               conversationData: conversation.data,
@@ -185,13 +208,7 @@ export function makeChatRouterForAgent<Agent extends AnyChatAgent, Context exten
               path: chatPath,
             };
           } finally {
-            clearInterval(saveInterval);
-            conversation.abortAllPendingToolCalls();
-            saveConversation({
-              id: conversation.data.id,
-              conversation: conversation.data,
-              ctx: ctx as any,
-            });
+            invokeCleanup();
           }
         };
 
