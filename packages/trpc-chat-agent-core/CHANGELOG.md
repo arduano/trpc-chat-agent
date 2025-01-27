@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 0.3.7
+
+### Patch Changes
+
+- ec3b9fc: Improve stream cancellation cleanup
+
 ## 0.3.6
 
 ### Patch Changes
