@@ -16,24 +16,25 @@ export abstract class AgentsBackend<
   // Field to stop typescript from complaining about unused types.
   // It is never actually used.
   $types = undefined as any as {
-    ExtraArgs: ExtraBackendArgs;
+    ExtraBackendArgs: ExtraBackendArgs;
     BaseMessageType: BaseMessageType;
     ToolReturn: ToolReturn;
     ExtraExternalArgs: ExtraExternalArgs;
   };
+
+  abstract extraArgsSchema: ExtraExternalArgs;
 
   abstract createAgent: (...args: any[]) => AnyChatAgent;
 }
 
 type AnyAgentsBackend = AgentsBackend<readonly any[], any, any, any>;
 
-type BackendExtraArgs<T extends AnyAgentsBackend> =
-  T extends AgentsBackend<infer ExtraArgs, any, any, any> ? ExtraArgs : never;
-
-export class NoBackend extends AgentsBackend<[], never, never, z.ZodObject<{}>> {
+export class NoBackend extends AgentsBackend<[], never, never, z.ZodNever> {
   createAgent = () => {
     throw new Error('No backend provided');
   };
+
+  extraArgsSchema = z.never();
 
   constructor() {
     super();
@@ -62,21 +63,17 @@ export class InitAgents<Context, ExtraArgs extends z.AnyZodObject, Backend exten
   }
 
   private createImpl() {
-    return new AgentBuilder<Context, ExtraArgs, Backend>(this.chosenBackend, this.extraArgsSchema);
+    return new AgentBuilder<Context, Backend>(this.chosenBackend);
   }
 
   // Only expose create if we have a backend
-  create: Backend extends NoBackend ? never : () => AgentBuilder<Context, ExtraArgs, Backend> = (() =>
-    this.createImpl()) as any;
+  create: Backend extends NoBackend ? never : () => AgentBuilder<Context, Backend> = (() => this.createImpl()) as any;
 }
 
 export const initAgents = new InitAgents(new NoBackend(), z.object({}));
 
-class AgentBuilder<Context, ExtraArgs extends z.AnyZodObject, Backend extends AnyAgentsBackend> {
-  constructor(
-    readonly backend: Backend,
-    readonly extraArgsSchema: ExtraArgs
-  ) {}
+class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
+  constructor(readonly backend: Backend) {}
 
   public tool<
     const Name extends string,
@@ -98,8 +95,8 @@ class AgentBuilder<Context, ExtraArgs extends z.AnyZodObject, Backend extends An
       ToolProgressData,
       Backend['$types']['ToolReturn'],
       ResultForClient,
-      ExtraArgs,
-      BackendExtraArgs<Backend>
+      Backend['$types']['ExtraExternalArgs'],
+      Backend['$types']['ExtraBackendArgs']
     >;
     mapErrorForAI?: (error: unknown) => MessageContent;
     mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
@@ -113,8 +110,8 @@ class AgentBuilder<Context, ExtraArgs extends z.AnyZodObject, Backend extends An
       ResultForClient,
       Context,
       Callbacks,
-      BackendExtraArgs<Backend>,
-      ExtraArgs
+      Backend['$types']['ExtraBackendArgs'],
+      Backend['$types']['ExtraExternalArgs']
     >(args);
   }
 

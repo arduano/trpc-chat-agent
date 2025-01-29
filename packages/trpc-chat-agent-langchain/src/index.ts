@@ -18,6 +18,10 @@ class LangChainAgentsBackend<ExtraExternalArgs extends z.ZodTypeAny> extends Age
     super();
   }
 
+  extraArgs<NewExtraExternalArgs extends z.AnyZodObject>(schema: NewExtraExternalArgs) {
+    return new LangChainAgentsBackend<NewExtraExternalArgs>(schema);
+  }
+
   public createAgent = <Tools extends readonly AnyStructuredChatTool[]>(
     args: CreateChatAgentArgs<Tools, ExtraExternalArgs>
   ) => {

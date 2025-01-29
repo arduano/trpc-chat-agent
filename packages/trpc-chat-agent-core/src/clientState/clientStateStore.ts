@@ -271,10 +271,10 @@ export function createSystemStateStore() {
 export type SystemStateStore = ReturnType<typeof createSystemStateStore>;
 
 export type ExtraArgsFields<FieldName extends string, Agent extends AnyChatAgent> =
-  z.infer<AgentExtraArgs<Agent>> extends never
+  AgentExtraArgs<Agent> extends never
     ? { [key in FieldName]?: undefined }
     : {
-        [key in FieldName]: z.infer<AgentExtraArgs<Agent>>;
+        [key in FieldName]: AgentExtraArgs<Agent>;
       };
 
 type CreateSystemStateStoreSubscriberArgs<Agent extends AnyChatAgent> = {
@@ -336,6 +336,7 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
         initialConversationId,
         router.getChat.query({
           conversationId: initialConversationId,
+          extraArgs: extraArgs.peek(),
         }) as Promise<ClientSideConversation<any[]>>,
         useIndexdbCache
       );
