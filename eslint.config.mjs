@@ -51,6 +51,7 @@ export default antfu(
       'style/quotes': 'off',
       'unicorn/prefer-node-protocol': 'off',
       'jsdoc/check-alignment': 'off',
+      'ts/no-empty-object-type': 'off',
     },
   },
   {

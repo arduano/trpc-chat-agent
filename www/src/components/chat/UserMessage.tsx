@@ -8,13 +8,13 @@ import { Textarea } from '../ui/textarea';
 import { MessageVariants } from './MessageVariants';
 import { StyledMarkdown } from './StyledMarkdown';
 
-export function UserMessage({ message }: { message: ChatUserMessage<any> }) {
+export function UserMessage({ message }: { message: ChatUserMessage }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(message.content as string);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    message.edit({ content: editedContent, invokeArgs: {} });
+    message.edit({ content: editedContent });
     setIsEditing(false);
   };
 

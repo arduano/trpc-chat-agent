@@ -1,47 +1,65 @@
 import type { MessageContent } from '@langchain/core/messages';
 import type { DeepPartial } from '@trpc/server';
-import type { z, ZodType } from 'zod';
+import type { ZodType } from 'zod';
 import type { AnyChatAgent } from '../common';
 import type { ToolRunFn } from '../common/structuredTool';
 import type { AnyToolCallback, ToolCallback } from './callback';
+import { z } from 'zod';
 import { StructuredChatTool } from '../common/structuredTool';
 
-export abstract class AgentsBackend<ExtraArgs extends readonly any[], BaseMessageType, ToolReturn> {
+export abstract class AgentsBackend<
+  ExtraBackendArgs extends readonly any[],
+  BaseMessageType,
+  ToolReturn,
+  ExtraExternalArgs extends z.ZodTypeAny,
+> {
   // Field to stop typescript from complaining about unused types.
   // It is never actually used.
   $types = undefined as any as {
-    ExtraArgs: ExtraArgs;
+    ExtraBackendArgs: ExtraBackendArgs;
     BaseMessageType: BaseMessageType;
     ToolReturn: ToolReturn;
+    ExtraExternalArgs: ExtraExternalArgs;
   };
+
+  abstract extraArgsSchema: ExtraExternalArgs;
 
   abstract createAgent: (...args: any[]) => AnyChatAgent;
 }
 
-type AnyAgentsBackend = AgentsBackend<readonly any[], any, any>;
+type AnyAgentsBackend = AgentsBackend<readonly any[], any, any, any>;
 
-type BackendExtraArgs<T extends AnyAgentsBackend> =
-  T extends AgentsBackend<infer ExtraArgs, any, any> ? ExtraArgs : never;
-
-export class NoBackend extends AgentsBackend<[], never, never> {
+export class NoBackend extends AgentsBackend<[], never, never, z.ZodNever> {
   createAgent = () => {
     throw new Error('No backend provided');
   };
+
+  extraArgsSchema = z.never();
 
   constructor() {
     super();
   }
 }
 
-export class InitAgents<Context, Backend extends AnyAgentsBackend> {
-  constructor(readonly chosenBackend: Backend) {}
+export class InitAgents<Context, ExtraArgs extends z.AnyZodObject, Backend extends AnyAgentsBackend> {
+  constructor(
+    readonly chosenBackend: Backend,
+    readonly extraArgsSchema: ExtraArgs
+  ) {}
 
-  public context<NewCtx>(): InitAgents<NewCtx extends () => any ? Awaited<ReturnType<NewCtx>> : NewCtx, Backend> {
-    return new InitAgents<NewCtx extends () => any ? Awaited<ReturnType<NewCtx>> : NewCtx, Backend>(this.chosenBackend);
+  public context<NewCtx>(): InitAgents<
+    NewCtx extends () => any ? Awaited<ReturnType<NewCtx>> : NewCtx,
+    ExtraArgs,
+    Backend
+  > {
+    return new InitAgents<NewCtx extends () => any ? Awaited<ReturnType<NewCtx>> : NewCtx, ExtraArgs, Backend>(
+      this.chosenBackend,
+      this.extraArgsSchema
+    );
   }
 
-  public backend<NewBackend extends AnyAgentsBackend>(backend: NewBackend): InitAgents<Context, NewBackend> {
-    return new InitAgents<Context, NewBackend>(backend);
+  public backend<NewBackend extends AnyAgentsBackend>(backend: NewBackend): InitAgents<Context, ExtraArgs, NewBackend> {
+    return new InitAgents<Context, ExtraArgs, NewBackend>(backend, this.extraArgsSchema);
   }
 
   private createImpl() {
@@ -52,7 +70,7 @@ export class InitAgents<Context, Backend extends AnyAgentsBackend> {
   create: Backend extends NoBackend ? never : () => AgentBuilder<Context, Backend> = (() => this.createImpl()) as any;
 }
 
-export const initAgents = new InitAgents(new NoBackend());
+export const initAgents = new InitAgents(new NoBackend(), z.object({}));
 
 class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
   constructor(readonly backend: Backend) {}
@@ -77,7 +95,8 @@ class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
       ToolProgressData,
       Backend['$types']['ToolReturn'],
       ResultForClient,
-      BackendExtraArgs<Backend>
+      Backend['$types']['ExtraExternalArgs'],
+      Backend['$types']['ExtraBackendArgs']
     >;
     mapErrorForAI?: (error: unknown) => MessageContent;
     mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
@@ -91,7 +110,8 @@ class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
       ResultForClient,
       Context,
       Callbacks,
-      BackendExtraArgs<Backend>
+      Backend['$types']['ExtraBackendArgs'],
+      Backend['$types']['ExtraExternalArgs']
     >(args);
   }
 

@@ -11,13 +11,13 @@ import PackageInstall from '@site/src/components/PackageInstall';
 Setting up LangChain is fairly straightforward
 
 ```ts
-import { LangChainAgentsBackend, asLangChainMessagesArray } from '@trpc-chat-agent/langchain';
+import { langchainBackend, asLangChainMessagesArray } from '@trpc-chat-agent/langchain';
 import { initAgents } from '@trpc-chat-agent/core';
 import { ChatOpenAI } from 'langchain/chatmodels/openai';
 
 export const ai = initAgents
   .context<typeof createContext>()
-  .backend(new LangChainAgentsBackend()) // LangChain adapter
+  .backend(langchainBackend) // LangChain adapter
   .create();
 
 // Now initialize your agent with these parameters:
@@ -28,14 +28,11 @@ const agent = ai.agent({
   // LLM, from LangChain. Must extend BaseChatModel
   // Can either be:
   // - a single model
-  // - a map of named models. See section below for more info
+  // - a function to select what model to use based on extra args
   // Here's a single model:
   llm: new ChatOpenAI({ model: 'gpt-4o' }),
   // Here's a map of named models:
-  llm: {
-    chatgpt: new ChatOpenAI({ model: 'gpt-4o' }),
-    claude: new ChatOpenAI({ model: 'claude-3-5-sonnet' }),
-  },
+  llm: ({ extraArgs }) => new ChatOpenAI({ model: extraArgs.myChosenModelName }),
 
 
   // (optional) The maximum update rate for client args and progress indicators
@@ -93,38 +90,6 @@ const myTool = ai.tool({
 });
 ```
 
-## Model selection
-
-When multiple models are provided to the `llm` field, a new field called `selectedLlm` is added to invocation args. The field would enforce selection of a model.
-
-For example:
-
-```ts
-function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
-  const [input, setInput] = useState('');
-
-  const { messages, beginMessage } = useConversation({
-    initialConversationId: id,
-    onUpdateConversationId: onUpdateConversationId,
-    router: trpcClient.chat,
-  });
-
-  const handleSubmit = (message: string) => {
-    if (message.trim()) {
-      beginMessage({
-        userMessage: message,
-        // highlight-start
-        invokeArgs: { selectedLlm: 'chatgpt' },
-        // highlight-end
-      });
-      setInput('');
-    }
-  };
-
-  // ...
-}
-```
-
 ## Anthropic Prompt Caching
 
 Anthropic models require custom input parameters to enable prompt caching. `@trpc-chat-agent/langchain` automatically adds those parameters when the model is detected as a ChatAnthropic instance.
@@ -146,4 +111,3 @@ const agent = ai.agent({
   anthropicCacheLevel: AnthropicCacheLevels.UpToSystemMessage, // Only cache tools and system message
   // ...
 });
-```

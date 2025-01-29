@@ -1,6 +1,6 @@
 'use client';
 
-import type { AgentTools, AnyChatAgent } from '@trpc-chat-agent/core';
+import type { AgentTools, AnyChatAgent, ExtraArgsFields } from '@trpc-chat-agent/core';
 import type { RenderMessagesProps, UseConversationArgs } from '@trpc-chat-agent/react';
 import { Card } from '@site/src/components/ui/card';
 import { buildMockTrpcChatRouter } from '@site/src/lib/mockChatRouterForAgent';
@@ -20,13 +20,14 @@ export type MockChatComponentProps<Agent extends AnyChatAgent> = Omit<
     agent?: Agent;
     seedPrompt?: string;
     shouldBegin: boolean;
-  };
+  } & ExtraArgsFields<'extraArgs', Agent>;
 
 export function MockChat<Agent extends AnyChatAgent>({
   id,
   renderToolCall,
   agent,
   shouldBegin,
+  extraArgs,
   ...converationArgs
 }: MockChatComponentProps<Agent>) {
   const mockRouter = useMemo(() => {
@@ -38,11 +39,12 @@ export function MockChat<Agent extends AnyChatAgent>({
     onUpdateConversationId: converationArgs.onUpdateConversationId,
     router: mockRouter as any,
     useIndexdbCache: false,
+    extraArgs,
   });
 
   useEffect(() => {
     if (!isLoadingConversation && shouldBegin) {
-      beginMessage({ userMessage: converationArgs.seedPrompt || 'hello', invokeArgs: {} });
+      beginMessage({ userMessage: converationArgs.seedPrompt || 'hello' });
     }
   }, [isLoadingConversation, shouldBegin]);
 

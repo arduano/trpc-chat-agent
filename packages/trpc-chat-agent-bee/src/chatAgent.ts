@@ -9,7 +9,6 @@ export type CreateChatAgentArgs<Tools extends readonly AnyStructuredChatTool[]> 
 
 export function createChatAgentLangchain<const Tools extends readonly AnyStructuredChatTool[]>(
   _args: CreateChatAgentArgs<Tools>
-  // eslint-disable-next-line ts/no-empty-object-type
 ): ChatAgent<Tools, z.ZodObject<{}>> {
   throw new Error('Not implemented');
 }

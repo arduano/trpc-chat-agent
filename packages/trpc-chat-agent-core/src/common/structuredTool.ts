@@ -12,7 +12,8 @@ export type ToolRunFn<
   ToolProgressData extends z.ZodTypeAny | undefined,
   Return,
   ResultForClient,
-  ExtraArgs extends readonly any[] = [],
+  ExtraExternalArgs extends z.AnyZodObject,
+  ExtraBackendArgs extends readonly any[] = [],
 > = (
   args: {
     input: z.infer<Args>;
@@ -21,6 +22,7 @@ export type ToolRunFn<
     sendProgress: ToolProgressCallback<ToolProgressData>;
     conversationId: string;
     signal: AbortSignal;
+    extraArgs: z.infer<ExtraExternalArgs>;
 
     // We cannot infer this type as it would be circular. We have to use AnyStructuredChatTool instead.
     conversation: ServerSideChatConversationHelper<AnyChatAgent>;
@@ -29,7 +31,7 @@ export type ToolRunFn<
     conversationPath: ChatTreePath;
     lastUserMessage: UserMessageData;
   },
-  ...extraArgs: ExtraArgs
+  ...extraArgs: ExtraBackendArgs
 ) => Promise<ToolCallOutput<Return, ResultForClient>>;
 
 export type ToolCallbackInvoker = (args: {
@@ -40,7 +42,12 @@ export type ToolCallbackInvoker = (args: {
   callbackName: string;
 }) => Promise<any>;
 
-export type ToolCallInput<Args extends z.AnyZodObject, Context, ToolProgressData extends z.ZodTypeAny | undefined> = {
+export type ToolCallInput<
+  Args extends z.AnyZodObject,
+  ExtraExternalArgs extends z.AnyZodObject,
+  Context,
+  ToolProgressData extends z.ZodTypeAny | undefined,
+> = {
   toolCallId: string;
   input: z.infer<Args>;
   ctx: Context;
@@ -51,6 +58,7 @@ export type ToolCallInput<Args extends z.AnyZodObject, Context, ToolProgressData
   conversationPath: ChatTreePath;
   lastUserMessage: UserMessageData;
   pastMessages: (UserMessageData | AIMessageData<any[]>)[];
+  extraArgs: z.infer<ExtraExternalArgs>;
 };
 
 export type ToolCallOutput<Return, ResultForClient> = {
@@ -77,7 +85,8 @@ export class StructuredChatTool<
   ResultForClient = undefined,
   Context = any,
   Callbacks extends Record<string, AnyToolCallback> = Record<string, never>, // This default type is the only one that seems to work, {} breaks things
-  ExtraArgs extends readonly any[] = readonly any[],
+  ExtraBackendArgs extends readonly any[] = readonly any[],
+  ExtraExternalArgs extends z.AnyZodObject = any,
 > {
   // Helpers for type inference. These don't actually exist as values.
   TypeInfo: {
@@ -104,7 +113,16 @@ export class StructuredChatTool<
       toolProgressSchema?: ToolProgressData;
       description: string;
       callbacks?: Callbacks;
-      run: ToolRunFn<Args, Context, Callbacks, ToolProgressData, Return, ResultForClient, ExtraArgs>;
+      run: ToolRunFn<
+        Args,
+        Context,
+        Callbacks,
+        ToolProgressData,
+        Return,
+        ResultForClient,
+        ExtraExternalArgs,
+        ExtraBackendArgs
+      >;
       mapErrorForAI?: (error: unknown) => MessageContent;
       mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
     }
@@ -135,8 +153,8 @@ export class StructuredChatTool<
   }
 
   async invoke(
-    args: ToolCallInput<Args, Context, ToolProgressData>,
-    ...extraArgs: ExtraArgs
+    args: ToolCallInput<Args, ExtraExternalArgs, Context, ToolProgressData>,
+    ...extraRunArgs: ExtraBackendArgs
   ): Promise<ToolCallOutput<Return, ResultForClient>> {
     const allCallbacks = Object.fromEntries(
       Object.entries(this.toolArgs.callbacks ?? {}).map(([name, callback]) => {
@@ -166,8 +184,9 @@ export class StructuredChatTool<
         conversationPath: args.conversationPath,
         lastUserMessage: args.lastUserMessage,
         pastMessages: args.pastMessages,
+        extraArgs: args.extraArgs,
       },
-      ...extraArgs
+      ...extraRunArgs
     );
     return result;
   }

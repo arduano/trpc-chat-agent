@@ -1,6 +1,6 @@
 import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
 import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
-import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import type { MessagesAnnotation } from '@langchain/langgraph';
 import type {
   AgentTools,
@@ -16,6 +16,7 @@ import type {
   ServerSideUpdate,
   ToolCallbackInvoker,
 } from '@trpc-chat-agent/core';
+import type { z } from 'zod';
 import type { AnthropicCacheLevel } from './providerSpecificHelpers';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
@@ -30,38 +31,27 @@ import {
   processMessageContentForClient,
   ServerSideChatConversationHelper,
 } from '@trpc-chat-agent/core';
-import { z } from 'zod';
 import { AnthropicCacheLevels, bindToolsToModel, mapMessagesForModel } from './providerSpecificHelpers';
 import { StructuredChatToolLangChain } from './tool';
 
-type CommonExtraArgs = {
-  selectedLlm?: string;
-};
-
-function makeStateAnnotation<Tools extends readonly AnyStructuredChatTool[], Context>() {
+function makeStateAnnotation<
+  Tools extends readonly AnyStructuredChatTool[],
+  Context,
+  ExtraExternalArgs extends z.ZodTypeAny,
+>() {
   return Annotation.Root({
     conversationData: Annotation<ServerSideConversation<Tools>>,
     chatPath: Annotation<ChatTreePath>,
     ctx: Annotation<Context>,
     callbackInvoker: Annotation<ToolCallbackInvoker>,
-    extraArgs: Annotation<CommonExtraArgs>,
+    extraArgs: Annotation<z.infer<ExtraExternalArgs>>,
     signal: Annotation<AbortSignal>,
   });
 }
 
-type ExtraArgsFromSelectedLlms<SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>> =
-  SelectedLlms extends BaseChatModel
-    ? // eslint-disable-next-line ts/no-empty-object-type
-      z.ZodObject<{}>
-    : SelectedLlms extends Record<string, BaseChatModel>
-      ? z.ZodObject<{
-          selectedLlm: z.ZodType<keyof SelectedLlms>;
-        }>
-      : never;
-
 export type CreateChatAgentArgs<
   Tools extends readonly AnyStructuredChatTool[],
-  SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>,
+  ExtraExternalArgs extends z.ZodTypeAny,
 > = {
   // Common
   tools: Tools;
@@ -70,74 +60,48 @@ export type CreateChatAgentArgs<
   // Transformation
   systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);
   transformMessages?: (args: {
-    conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraArgsFromSelectedLlms<SelectedLlms>>>>;
+    conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraExternalArgs>>>;
     path: ChatTreePath;
     ctx: Tools[number]['TypeInfo']['Context'];
   }) => BaseMessage[] | Promise<BaseMessage[]>;
 
   // LangChain
-  llm: SelectedLlms;
+  llm: BaseChatModel | ((args: { extraArgs: z.infer<ExtraExternalArgs> }) => BaseChatModel | Promise<BaseChatModel>);
   langchainCallbacks?: LangchainCallbacks;
 
   anthropicCacheLevel?: AnthropicCacheLevel;
 };
 
+type ChatAgentArgsWithExtraArgs<
+  Tools extends readonly AnyStructuredChatTool[],
+  ExtraExternalArgs extends z.ZodTypeAny,
+> = CreateChatAgentArgs<Tools, ExtraExternalArgs> & {
+  extraExternalArgsSchema: ExtraExternalArgs;
+};
+
 export function createChatAgentLangchain<
   const Tools extends readonly AnyStructuredChatTool[],
-  const SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>,
->(args: CreateChatAgentArgs<Tools, SelectedLlms>): ChatAgent<Tools, ExtraArgsFromSelectedLlms<SelectedLlms>> {
-  const { llm, tools, debounceMs: _debounceMs, langchainCallbacks, anthropicCacheLevel: _anthropicCacheLevel } = args;
+  const ExtraExternalArgs extends z.ZodTypeAny,
+>(args: ChatAgentArgsWithExtraArgs<Tools, ExtraExternalArgs>): ChatAgent<Tools, ExtraExternalArgs> {
+  const {
+    llm,
+    tools,
+    debounceMs: _debounceMs,
+    langchainCallbacks,
+    anthropicCacheLevel: _anthropicCacheLevel,
+    extraExternalArgsSchema,
+  } = args;
   const debounceMs = _debounceMs || 100;
   const anthropicCacheLevel = _anthropicCacheLevel || AnthropicCacheLevels.Everything;
 
-  type ExtraArgsSchema = ExtraArgsFromSelectedLlms<SelectedLlms>;
-  const extraArgsSchema = (
-    args.llm instanceof BaseChatModel
-      ? z.object({})
-      : z.object({
-          selectedLlm: z.string(),
-        })
-  ) as ExtraArgsSchema;
-
   const toolsList = tools.map((t) => new StructuredChatToolLangChain(t));
 
-  const StateAnnotation = makeStateAnnotation();
+  const StateAnnotation = makeStateAnnotation<Tools, Tools[number]['TypeInfo']['Context'], ExtraExternalArgs>();
   type AgentState = typeof StateAnnotation.State;
 
   const stateModifierRunnable = RunnableLambda.from(
     (state: typeof MessagesAnnotation.State) => state.messages
   ).withConfig({ runName: 'state_modifier' });
-
-  function mapSelectedLlmAndBindTools<SelectedLlms extends BaseChatModel | Record<string, BaseChatModel>>(
-    llm: SelectedLlms
-  ): Record<string, { modelRunnable: Runnable; llm: BaseChatModel }> {
-    if (llm instanceof BaseChatModel) {
-      const modelWithTools = bindToolsToModel(toolsList, llm, { anthropicCacheLevel });
-      const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
-      return {
-        default: {
-          modelRunnable,
-          llm,
-        },
-      };
-    } else {
-      return Object.fromEntries(
-        Object.entries(llm).map(([key, value]) => {
-          const modelWithTools = bindToolsToModel(toolsList, value, { anthropicCacheLevel });
-          const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
-          return [
-            key,
-            {
-              modelRunnable,
-              llm: value,
-            },
-          ];
-        })
-      );
-    }
-  }
-
-  const modelRunnables = mapSelectedLlmAndBindTools(llm);
 
   const sendClientSideUpdateToConfig = (update: ClientSideUpdate, config: RunnableConfig) => {
     dispatchCustomEvent('on_conversation_client_update', update, config);
@@ -157,7 +121,7 @@ export function createChatAgentLangchain<
   };
 
   const transformMessages = async (
-    conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraArgsSchema>>>,
+    conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraExternalArgs>>>,
     path: ChatTreePath,
     ctx: Tools[number]['TypeInfo']['Context']
   ) => {
@@ -228,10 +192,11 @@ export function createChatAgentLangchain<
     };
 
     try {
-      const selectedModelName = state.extraArgs.selectedLlm ?? 'default';
-      const { modelRunnable, llm } = modelRunnables[selectedModelName];
+      const selectedLlm = llm instanceof BaseChatModel ? llm : await llm({ extraArgs: state.extraArgs });
+      const modelWithTools = bindToolsToModel(toolsList, selectedLlm, { anthropicCacheLevel });
+      const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
 
-      const transformedMessagesForLlm = mapMessagesForModel(messageList, llm, { anthropicCacheLevel });
+      const transformedMessagesForLlm = mapMessagesForModel(messageList, selectedLlm, { anthropicCacheLevel });
       const stream = await modelRunnable.streamEvents(
         { messages: transformedMessagesForLlm },
         {
@@ -436,6 +401,7 @@ export function createChatAgentLangchain<
             signal: state.signal,
             pastMessages: stateConvo.asMessagesArray(state.chatPath),
             lastUserMessage: stateConvo.getUserMessageAt(state.chatPath)!,
+            extraArgs: state.extraArgs,
           });
 
           progressDebouncer.flush();
@@ -499,8 +465,8 @@ export function createChatAgentLangchain<
   const compiled = workflow.compile({});
 
   return {
-    extraArgsSchema,
-    async *invoke(args: ChatAgentInvokeArgs<Tools, ExtraArgsSchema>) {
+    extraArgsSchema: extraExternalArgsSchema,
+    async *invoke(args: ChatAgentInvokeArgs<Tools, ExtraExternalArgs>) {
       const iter = compiled.streamEvents(
         {
           conversationData: args.conversationData,
