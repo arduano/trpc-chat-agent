@@ -86,7 +86,7 @@ export class StructuredChatTool<
   Context = any,
   Callbacks extends Record<string, AnyToolCallback> = Record<string, never>, // This default type is the only one that seems to work, {} breaks things
   ExtraBackendArgs extends readonly any[] = readonly any[],
-  ExtraExternalArgs extends z.AnyZodObject = z.AnyZodObject,
+  ExtraExternalArgs extends z.AnyZodObject = any,
 > {
   // Helpers for type inference. These don't actually exist as values.
   TypeInfo: {
