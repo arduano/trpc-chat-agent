@@ -11,13 +11,13 @@ import PackageInstall from '@site/src/components/PackageInstall';
 Setting up LangChain is fairly straightforward
 
 ```ts
-import { LangChainAgentsBackend, asLangChainMessagesArray } from '@trpc-chat-agent/langchain';
+import { langchainBackend, asLangChainMessagesArray } from '@trpc-chat-agent/langchain';
 import { initAgents } from '@trpc-chat-agent/core';
 import { ChatOpenAI } from 'langchain/chatmodels/openai';
 
 export const ai = initAgents
   .context<typeof createContext>()
-  .backend(new LangChainAgentsBackend()) // LangChain adapter
+  .backend(langchainBackend) // LangChain adapter
   .create();
 
 // Now initialize your agent with these parameters:
@@ -146,4 +146,3 @@ const agent = ai.agent({
   anthropicCacheLevel: AnthropicCacheLevels.UpToSystemMessage, // Only cache tools and system message
   // ...
 });
-```

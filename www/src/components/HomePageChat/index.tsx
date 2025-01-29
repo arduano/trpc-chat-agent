@@ -1,7 +1,7 @@
 import type { ChatAIMessageToolCall, GetToolByName } from '@trpc-chat-agent/core';
 import Link from '@docusaurus/Link';
 import { cn } from '@site/src/lib/utils';
-import { initAgents, MockAgentBackend } from '@trpc-chat-agent/core';
+import { initAgents, mockBackend } from '@trpc-chat-agent/core';
 import { useEffect, useState } from 'react';
 import { HiCheck, HiOutlineCode, HiOutlineDocument } from 'react-icons/hi';
 import { LuBrainCircuit } from 'react-icons/lu';
@@ -118,7 +118,7 @@ const responseMessageNonDefault = `
 Notice how the user message now has a counter above it? The library supports branching conversations so you can switch to previous branches. This is all handled automatically for you!
 `.trim();
 
-const ai = initAgents.backend(new MockAgentBackend()).create();
+const ai = initAgents.backend(mockBackend).create();
 const agent = ai.agent({
   tools: [
     ai.tool({

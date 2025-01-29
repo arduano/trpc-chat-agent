@@ -649,7 +649,7 @@ function makeConversationStreamerState<Agent extends AnyChatAgent>(
       conversationId: args.conversationId,
       branch: args.branch,
       userMessageContent: args.userMessage,
-      invokeArgs: args.invokeArgs,
+      extraArgs: args.invokeArgs,
     });
 
     const processEvents = async () => {

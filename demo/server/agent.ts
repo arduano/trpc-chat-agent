@@ -1,6 +1,10 @@
+import type { createContext } from './context';
 import { ChatOpenAI } from '@langchain/openai';
+import { initAgents } from '@trpc-chat-agent/core';
+import { langchainBackend } from '@trpc-chat-agent/langchain';
 import { z } from 'zod';
-import { ai } from './context';
+
+export const ai = initAgents.context<typeof createContext>().backend(langchainBackend).create();
 
 const calculatorTool = ai.tool({
   name: 'calculator',

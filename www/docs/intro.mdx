@@ -41,7 +41,7 @@ export const t = initTRPC
 // Defining your tRPC Chat Agent environment is near-identical
 export const ai = initAgents
   .context<typeof createContext>()
-  .backend(new LangChainAgentsBackend())
+  .backend(langchainBackend)
   .create();
 
 const myTool = ai.tool({

@@ -1,7 +1,4 @@
 import { kvsLocalStorage } from '@kvs/node-localstorage';
-import { initAgents } from '@trpc-chat-agent/core';
-import { LangChainAgentsBackend } from '@trpc-chat-agent/langchain';
-import { initTRPC } from '@trpc/server';
 import AsyncLock from 'async-lock';
 
 export async function createContext() {
@@ -25,6 +22,3 @@ export async function createContext() {
     todosLock,
   };
 }
-
-export const t = initTRPC.context<typeof createContext>().create();
-export const ai = initAgents.context<typeof createContext>().backend(new LangChainAgentsBackend()).create();

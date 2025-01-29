@@ -11,7 +11,8 @@ export class StructuredChatToolLangChain<
   Return = undefined,
   ResultForClient = undefined,
   Context = any,
-> extends BaseLangChain<ToolCallInput<Args, Context, any>, ToolCallOutput<Return, ResultForClient>> {
+  ExtraArgs extends z.AnyZodObject = z.AnyZodObject,
+> extends BaseLangChain<ToolCallInput<Args, ExtraArgs, Context, any>, ToolCallOutput<Return, ResultForClient>> {
   name: string;
   description: string;
   schema: Args;
@@ -26,7 +27,8 @@ export class StructuredChatToolLangChain<
       ResultForClient,
       Context,
       any,
-      LangchainToolExtraArgs
+      LangchainToolExtraArgs,
+      ExtraArgs
     >
   ) {
     super({});
@@ -55,7 +57,7 @@ export class StructuredChatToolLangChain<
   }
 
   async invoke(
-    args: ToolCallInput<Args, Context, any>,
+    args: ToolCallInput<Args, ExtraArgs, Context, any>,
     config?: RunnableConfig
   ): Promise<ToolCallOutput<Return, ResultForClient>> {
     let parsed;

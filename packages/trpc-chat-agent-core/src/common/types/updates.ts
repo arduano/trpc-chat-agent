@@ -50,7 +50,6 @@ export type ClientRequestCallbackResponse = {
   callbackId: string;
   toolName: string;
   callbackName: string;
-  // eslint-disable-next-line ts/no-empty-object-type
   requestArgs: {}; // Can't use "any" because of trpc issues
 };
 
