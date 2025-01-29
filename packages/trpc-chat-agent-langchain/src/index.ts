@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { createChatAgentLangchain } from './chatAgent';
 
 export type LangchainToolExtraArgs = readonly [CallbackManagerForToolRun | undefined, RunnableConfig];
-class LangChainAgentsBackend<ExtraExternalArgs extends z.AnyZodObject> extends AgentsBackend<
+class LangChainAgentsBackend<ExtraExternalArgs extends z.ZodTypeAny> extends AgentsBackend<
   LangchainToolExtraArgs,
   BaseMessage,
   MessageContent,
@@ -28,4 +28,4 @@ class LangChainAgentsBackend<ExtraExternalArgs extends z.AnyZodObject> extends A
   };
 }
 
-export const langchainBackend = new LangChainAgentsBackend(z.object({}));
+export const langchainBackend = new LangChainAgentsBackend(z.never());

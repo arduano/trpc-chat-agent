@@ -74,14 +74,14 @@ export type CreateChatAgentArgs<
 
 type ChatAgentArgsWithExtraArgs<
   Tools extends readonly AnyStructuredChatTool[],
-  ExtraExternalArgs extends z.AnyZodObject,
+  ExtraExternalArgs extends z.ZodTypeAny,
 > = CreateChatAgentArgs<Tools, ExtraExternalArgs> & {
   extraExternalArgsSchema: ExtraExternalArgs;
 };
 
 export function createChatAgentLangchain<
   const Tools extends readonly AnyStructuredChatTool[],
-  const ExtraExternalArgs extends z.AnyZodObject,
+  const ExtraExternalArgs extends z.ZodTypeAny,
 >(args: ChatAgentArgsWithExtraArgs<Tools, ExtraExternalArgs>): ChatAgent<Tools, ExtraExternalArgs> {
   const {
     llm,

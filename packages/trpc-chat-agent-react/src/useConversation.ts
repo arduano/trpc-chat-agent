@@ -1,5 +1,5 @@
 import type { ReadonlySignal } from '@preact/signals-core';
-import type { AnyChatAgent, RouterTypeFromAgent } from '@trpc-chat-agent/core';
+import type { AnyChatAgent, ExtraArgsFields, RouterTypeFromAgent } from '@trpc-chat-agent/core';
 import { createSystemStateStore, createSystemStateStoreSubscriber } from '@trpc-chat-agent/core';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -8,7 +8,7 @@ export type UseConversationArgs<Agent extends AnyChatAgent> = {
   router: RouterTypeFromAgent<Agent>;
   onUpdateConversationId?: (conversationId: string) => void;
   useIndexdbCache?: boolean;
-};
+} & ExtraArgsFields<'extraArgs', Agent>;
 
 const store = createSystemStateStore();
 
@@ -20,6 +20,7 @@ export function useConversation<Agent extends AnyChatAgent>(args: UseConversatio
       router: args.router,
       onUpdateConversationId: args.onUpdateConversationId,
       useIndexdbCache: args.useIndexdbCache,
+      initialExtraArgs: args.extraArgs,
     });
   }, []);
 
@@ -29,6 +30,10 @@ export function useConversation<Agent extends AnyChatAgent>(args: UseConversatio
       subscriber.cancelStream();
     };
   }, []);
+
+  useEffect(() => {
+    subscriber.extraArgs.value = args.extraArgs;
+  }, [args.extraArgs]);
 
   return {
     beginMessage: subscriber.beginMessage,

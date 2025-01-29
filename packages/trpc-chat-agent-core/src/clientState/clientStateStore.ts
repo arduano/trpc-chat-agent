@@ -270,6 +270,13 @@ export function createSystemStateStore() {
 
 export type SystemStateStore = ReturnType<typeof createSystemStateStore>;
 
+export type ExtraArgsFields<FieldName extends string, Agent extends AnyChatAgent> =
+  z.infer<AgentExtraArgs<Agent>> extends never
+    ? { [key in FieldName]?: undefined }
+    : {
+        [key in FieldName]: z.infer<AgentExtraArgs<Agent>>;
+      };
+
 type CreateSystemStateStoreSubscriberArgs<Agent extends AnyChatAgent> = {
   store: SystemStateStore;
   router: RouterTypeFromAgent<Agent>;
@@ -277,7 +284,7 @@ type CreateSystemStateStoreSubscriberArgs<Agent extends AnyChatAgent> = {
   initialPath?: ChatTreePath;
   onUpdateConversationId?: (conversationId: string) => void;
   useIndexdbCache?: boolean;
-};
+} & ExtraArgsFields<'initialExtraArgs', Agent>;
 
 export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
   args: CreateSystemStateStoreSubscriberArgs<Agent>
@@ -291,12 +298,15 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     initialPath,
     onUpdateConversationId,
     useIndexdbCache: useIndexdbCacheOptional,
+    initialExtraArgs,
   } = args;
   const useIndexdbCache = useIndexdbCacheOptional ?? true;
 
   const router = typedRouter as RouterTypeFromAgent<Agent>; // There are cases where this is better, due to generic typing
 
   const branchState = signal(ConversationBranchState.default());
+
+  const extraArgs = signal<AgentExtraArgs<Tools>>(initialExtraArgs);
 
   // Cache every 500ms to indexdb (but only when there's new updates)
   const cacheConversationDebouncer = new Debouncer<void>(500, () => {
@@ -396,8 +406,8 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
   });
 
   const callbackCache = makeItemCache<AnyActiveCallbackWithResponse>();
-  const editMsgClosureCache = makeItemCache<(args: { content: string; invokeArgs: AgentExtraArgs<Agent> }) => void>();
-  const regenerateMsgClosureCache = makeItemCache<(args: { invokeArgs: AgentExtraArgs<Agent> }) => void>();
+  const editMsgClosureCache = makeItemCache<(args: { content: string }) => void>();
+  const regenerateMsgClosureCache = makeItemCache<() => void>();
   const switchPathMsgClosureCache = makeItemCache<(index: number) => void>();
 
   const CallbacksMapped = computed(() => {
@@ -443,8 +453,10 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
           callbacks.filter((c) => c.messageId === message.id)
         )
       ),
-      regenerate: regenerateMsgClosureCache.get(message.id, () => (args) => {
-        regenerateMessage(message.id, args);
+      regenerate: regenerateMsgClosureCache.get(message.id, () => () => {
+        regenerateMessage(message.id, {
+          extraArgs: extraArgs.peek(),
+        });
       }),
       path: {
         ...path,
@@ -455,14 +467,14 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     };
   };
 
-  const mapUserMessageAddCallbacks = (message: UserMessageData): ChatUserMessage<Agent> => {
+  const mapUserMessageAddCallbacks = (message: UserMessageData): ChatUserMessage => {
     const path = conversation.value.getPathInfoForMessageId(message.id);
     return {
       ...message,
       edit: editMsgClosureCache.get(message.id, () => (args) => {
         editMessage(message.id, {
           message: args.content,
-          invokeArgs: args.invokeArgs,
+          extraArgs: extraArgs.peek(),
         });
       }),
       path: {
@@ -522,13 +534,13 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     }
   };
 
-  const beginMessage = (args: { userMessage: string; invokeArgs: AgentExtraArgs<Agent> }) => {
+  const beginMessage = (args: { userMessage: string }) => {
     assertCanBeginStream();
     beginStream({
       branch: branchState.peek().selectedPath,
       conversationId: conversationId.peek(),
       userMessage: args.userMessage,
-      invokeArgs: args.invokeArgs,
+      extraArgs: extraArgs.peek(),
     });
 
     let isUsingPlaceholder = false;
@@ -565,7 +577,7 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     }
   };
 
-  const editMessage = (userMessageId: string, args: { message: string; invokeArgs: AgentExtraArgs<Agent> }) => {
+  const editMessage = (userMessageId: string, args: { message: string; extraArgs: AgentExtraArgs<Agent> }) => {
     assertCanBeginStream();
 
     const path = branchState.peek().getPathToUserMessage(userMessageId);
@@ -573,18 +585,18 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
       branch: path,
       conversationId: conversationId.peek(),
       userMessage: args.message,
-      invokeArgs: args.invokeArgs,
+      extraArgs: args.extraArgs,
     });
   };
 
-  const regenerateMessage = (aiMessageId: string, args: { invokeArgs: AgentExtraArgs<Agent> }) => {
+  const regenerateMessage = (aiMessageId: string, args: { extraArgs: AgentExtraArgs<Agent> }) => {
     assertCanBeginStream();
 
     const path = branchState.peek().getPathToAiMessage(aiMessageId);
     beginStream({
       branch: path,
       conversationId: conversationId.peek(),
-      invokeArgs: args.invokeArgs,
+      extraArgs: args.extraArgs,
       userMessage: null,
     });
   };
@@ -597,6 +609,7 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     cancelStream,
     conversationId,
     conversationError,
+    extraArgs,
     isLoadingConversation: computed(() => {
       const id = conversationId.peek();
       if (!id) {
@@ -637,7 +650,7 @@ function makeConversationStreamerState<Agent extends AnyChatAgent>(
     conversationId: string | undefined;
     userMessage: string | null;
     branch: ChatTreePath;
-    invokeArgs: AgentExtraArgs<Agent>;
+    extraArgs: AgentExtraArgs<Agent>;
   }) => {
     conversationError.value = undefined;
 
@@ -649,7 +662,7 @@ function makeConversationStreamerState<Agent extends AnyChatAgent>(
       conversationId: args.conversationId,
       branch: args.branch,
       userMessageContent: args.userMessage,
-      extraArgs: args.invokeArgs,
+      extraArgs: args.extraArgs,
     });
 
     const processEvents = async () => {
@@ -798,12 +811,12 @@ export type ChatAIMessage<Agent extends AnyChatAgent> = {
   id: string;
   parts: ChatAIMessagePart<Agent>[];
   path: ChatPathStateWithSwitch;
-  regenerate: (args: { invokeArgs: AgentExtraArgs<Agent> }) => void;
+  regenerate: () => void;
 };
 
-export type ChatUserMessage<Agent extends AnyChatAgent> = UserMessageData & {
+export type ChatUserMessage = UserMessageData & {
   path: ChatPathStateWithSwitch;
-  edit: (args: { content: string; invokeArgs: AgentExtraArgs<Agent> }) => void;
+  edit: (args: { content: string }) => void;
 };
 
 type GetToolByNameFromList<

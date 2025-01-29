@@ -1,14 +1,12 @@
 'use client';
 
 import type { AgentType } from '@/server/agent';
-import type { AgentExtraArgs } from '@trpc-chat-agent/core';
 import type { UseConversationArgs } from '@trpc-chat-agent/react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { trpcClient } from '@/utils/trpc';
 
-import { useSignal } from '@preact/signals-react';
 import { RenderMessages, useConversation } from '@trpc-chat-agent/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { AIMessageShell } from '../../components/chat/AIMessage';
@@ -56,13 +54,11 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
     scrollToBottom();
   }, [messages]);
 
-  const invokeArgs = useSignal<AgentExtraArgs<AgentType>>({});
-
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    beginMessage({ userMessage: input, invokeArgs: invokeArgs.peek() });
+    beginMessage({ userMessage: input });
     setInput('');
   };
 
@@ -76,11 +72,9 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
             ) : (
               <RenderMessages
                 messages={messages}
-                renderAiMessageShell={(message, children) => (
-                  <AIMessageShell message={message} children={children} invokeArgs={invokeArgs} />
-                )}
+                renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
                 renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
-                renderUserMessage={(message) => <UserMessage message={message} invokeArgs={invokeArgs} />}
+                renderUserMessage={(message) => <UserMessage message={message} />}
                 renderToolCall={(tool) => <RenderTool tool={tool} />}
               />
             )}

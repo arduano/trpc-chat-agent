@@ -17,7 +17,7 @@ function RenderMemoed<T extends readonly any[]>({ data, render }: { data: T; ren
 }
 
 export type RenderMessagesProps<Agent extends AnyChatAgent> = {
-  messages: (ChatAIMessage<Agent> | ChatUserMessage<Agent>)[];
+  messages: (ChatAIMessage<Agent> | ChatUserMessage)[];
   renderAiMessageShell?: (message: ChatAIMessage<Agent>, children: JSX.Element) => JSX.Element;
   renderAiMessagePartContent: (content: MessageContent) => JSX.Element;
   renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Agent>, children: JSX.Element) => JSX.Element;
@@ -28,7 +28,7 @@ export type RenderMessagesProps<Agent extends AnyChatAgent> = {
         ) => JSX.Element;
       }
     | ((toolCall: ChatAIMessageToolCall<Agent>) => JSX.Element);
-  renderUserMessage: (message: ChatUserMessage<Agent>) => JSX.Element;
+  renderUserMessage: (message: ChatUserMessage) => JSX.Element;
 };
 
 export function RenderMessages<Agent extends AnyChatAgent>({
@@ -88,7 +88,7 @@ export function RenderMessages<Agent extends AnyChatAgent>({
     return <RenderMemoed data={[message, parts]} render={renderAiMessageShell} />;
   };
 
-  const renderAllMessages = (messages: (ChatAIMessage<Agent> | ChatUserMessage<Agent>)[]) => {
+  const renderAllMessages = (messages: (ChatAIMessage<Agent> | ChatUserMessage)[]) => {
     return (
       <>
         {messages.map((message) => {

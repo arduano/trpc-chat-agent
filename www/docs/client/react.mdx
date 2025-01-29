@@ -77,6 +77,9 @@ function ChatComponent({ id, onUpdateConversationId }: ChatComponentProps) {
     // The conversation ID. It can change if initialConversationId was undefined.
     conversationId,
 
+    // Any errors that occurred from the conversation
+    conversationError,
+
     // Boolean to indicate if the conversation is loading (when the conversation ID is specified)
     isLoadingConversation,
     // Boolean to indicate if the conversation is missing (when the conversation ID is specified but not found)
