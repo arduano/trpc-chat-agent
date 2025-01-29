@@ -1,5 +1,20 @@
 # @trpc-chat-agent/langchain
 
+## 0.4.0
+
+### Minor Changes
+
+- 3147cd8: Altered the "extra args" API to be more generic, allowing arbitrary args to be passed in
+- 3147cd8: Changed the API for backend adapters to not require instantiating classes, instead the class instances are directly provided
+
+### Patch Changes
+
+- 3147cd8: Backend adapters can now define extra argument schemas themselves, passing that schema type information to the agents and tools they create
+- Updated dependencies [3147cd8]
+- Updated dependencies [3147cd8]
+- Updated dependencies [3147cd8]
+  - @trpc-chat-agent/core@0.4.0
+
 ## 0.3.9
 
 ### Patch Changes

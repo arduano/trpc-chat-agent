@@ -1,5 +1,18 @@
 # @trpc-chat-agent/react
 
+## 0.4.0
+
+### Minor Changes
+
+- 3147cd8: Altered the "extra args" API to be more generic, allowing arbitrary args to be passed in
+
+### Patch Changes
+
+- Updated dependencies [3147cd8]
+- Updated dependencies [3147cd8]
+- Updated dependencies [3147cd8]
+  - @trpc-chat-agent/core@0.4.0
+
 ## 0.3.9
 
 ### Patch Changes
