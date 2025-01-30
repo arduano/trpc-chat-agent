@@ -1,5 +1,12 @@
 # @trpc-chat-agent/langchain
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [39928ba]
+  - @trpc-chat-agent/core@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 0.4.1
+
+### Patch Changes
+
+- 39928ba: Fix type propagation for extraArgs
+
 ## 0.4.0
 
 ### Minor Changes
