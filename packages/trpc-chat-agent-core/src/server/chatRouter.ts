@@ -1,4 +1,4 @@
-import type { AgentTools, AnyChatAgent } from '../common/agentTypes';
+import type { AgentExtraArgs, AgentTools, AnyChatAgent } from '../common/agentTypes';
 import type {
   AIMessageData,
   ChatTreePath,
@@ -11,27 +11,23 @@ import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversationHelper } from '../common/types';
 import { CallbackManager } from './callback';
 
-type MakeChatRouterForAgentArgs<
-  Agent extends AnyChatAgent,
-  Context extends object | ContextCallback,
-  ExtraExternalArgs = {},
-> = {
+type MakeChatRouterForAgentArgs<Agent extends AnyChatAgent, Context extends object | ContextCallback> = {
   agent: Agent;
   t: TrpcWithContext<Context>;
   createConversation: (args: {
     ctx: Context;
-    extraArgs: ExtraExternalArgs;
+    extraArgs: AgentExtraArgs<Agent>;
   }) => Promise<ServerSideConversation<AgentTools<Agent>>>;
   getConversation: (args: {
     id: string;
     ctx: Context;
-    extraArgs: ExtraExternalArgs;
+    extraArgs: AgentExtraArgs<Agent>;
   }) => Promise<ServerSideConversation<AgentTools<Agent>> | null>;
   saveConversation: (args: {
     id: string;
     conversation: ServerSideConversation<AgentTools<Agent>>;
     ctx: Context;
-    extraArgs: ExtraExternalArgs;
+    extraArgs: AgentExtraArgs<Agent>;
   }) => Promise<void>;
   saveIntervalMs?: number;
 };
