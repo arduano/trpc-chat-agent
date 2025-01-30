@@ -1,5 +1,11 @@
 # @trpc-chat-agent/langchain
 
+## 0.4.2
+
+### Patch Changes
+
+- 3584c90: Added extraArgs to system message and transform message functions
+
 ## 0.4.1
 
 ### Patch Changes
