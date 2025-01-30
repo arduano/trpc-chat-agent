@@ -58,11 +58,17 @@ export type CreateChatAgentArgs<
   debounceMs?: number;
 
   // Transformation
-  systemMessage?: string | ((ctx: Tools[number]['TypeInfo']['Context']) => string | Promise<string>);
+  systemMessage?:
+    | string
+    | ((args: {
+        ctx: Tools[number]['TypeInfo']['Context'];
+        extraArgs: z.infer<ExtraExternalArgs>;
+      }) => string | Promise<string>);
   transformMessages?: (args: {
     conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraExternalArgs>>>;
     path: ChatTreePath;
     ctx: Tools[number]['TypeInfo']['Context'];
+    extraArgs: z.infer<ExtraExternalArgs>;
   }) => BaseMessage[] | Promise<BaseMessage[]>;
 
   // LangChain
@@ -111,11 +117,15 @@ export function createChatAgentLangchain<
     dispatchCustomEvent('on_conversation_server_update', update, config);
   };
 
-  const addSystemMessage = async (messages: BaseMessage[], ctx: Tools[number]['TypeInfo']['Context']) => {
+  const addSystemMessage = async (
+    messages: BaseMessage[],
+    ctx: Tools[number]['TypeInfo']['Context'],
+    extraArgs: z.infer<ExtraExternalArgs>
+  ) => {
     if (typeof args.systemMessage === 'string') {
       messages.unshift(new SystemMessage(args.systemMessage));
     } else if (typeof args.systemMessage === 'function') {
-      messages.unshift(new SystemMessage(await args.systemMessage(ctx)));
+      messages.unshift(new SystemMessage(await args.systemMessage({ ctx, extraArgs })));
     }
     return messages;
   };
@@ -123,13 +133,14 @@ export function createChatAgentLangchain<
   const transformMessages = async (
     conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraExternalArgs>>>,
     path: ChatTreePath,
-    ctx: Tools[number]['TypeInfo']['Context']
+    ctx: Tools[number]['TypeInfo']['Context'],
+    extraArgs: z.infer<ExtraExternalArgs>
   ) => {
     if (typeof args.transformMessages === 'function') {
-      return addSystemMessage(await args.transformMessages({ conversation, path, ctx }), ctx);
+      return addSystemMessage(await args.transformMessages({ conversation, path, ctx, extraArgs }), ctx, extraArgs);
     }
 
-    return addSystemMessage(asLangChainMessagesArray(conversation, path), ctx);
+    return addSystemMessage(asLangChainMessagesArray(conversation, path), ctx, extraArgs);
   };
 
   const handleErrors = (fn: (...args: any[]) => any) => {
@@ -172,7 +183,7 @@ export function createChatAgentLangchain<
   const callModel = async (state: AgentState, config: RunnableConfig) => {
     const stateConvo = new ServerSideChatConversationHelper(structuredClone(state.conversationData));
 
-    const messageList = await transformMessages(stateConvo, state.chatPath, state.ctx);
+    const messageList = await transformMessages(stateConvo, state.chatPath, state.ctx, state.extraArgs);
 
     const aiMessage = stateConvo.getAIMessageAt(state.chatPath);
     if (!aiMessage) {
