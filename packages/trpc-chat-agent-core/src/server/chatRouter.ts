@@ -127,12 +127,7 @@ export function makeChatRouterForAgent<Agent extends AnyChatAgent, Context exten
         const cleanup = () => {
           clearInterval(saveInterval);
           conversation.abortAllPendingToolCalls();
-          saveConversation({
-            id: conversation.data.id,
-            conversation: conversation.data,
-            ctx: ctx as any,
-            extraArgs: input.extraArgs,
-          });
+          saveCurrentConversation();
         };
 
         let invokedCleanup = false;
