@@ -173,6 +173,7 @@ const allTools = [calculatorTool, weatherTool, todoTool, timerTool, toolWithCall
 
 export const agent = ai.agent({
   llm: new ChatOpenAI({ model: 'gpt-4o-mini' }),
+  // llm: new ChatOpenAI({ model: 'gpt-o3-mini' }),
   tools: allTools,
 });
 

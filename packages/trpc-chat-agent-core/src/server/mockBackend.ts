@@ -96,7 +96,7 @@ class MockAgentBackend<ExtraExternalArgs extends z.ZodTypeAny> extends AgentsBac
   };
 }
 
-export const mockBackend = new MockAgentBackend(z.never());
+export const mockBackend = new MockAgentBackend(z.undefined().optional());
 
 export type ResponseUpdate = {
   server?: ServerSideConversationUpdate;

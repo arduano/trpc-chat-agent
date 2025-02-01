@@ -32,4 +32,4 @@ class LangChainAgentsBackend<ExtraExternalArgs extends z.ZodTypeAny> extends Age
   };
 }
 
-export const langchainBackend = new LangChainAgentsBackend(z.never());
+export const langchainBackend = new LangChainAgentsBackend(z.undefined().optional());

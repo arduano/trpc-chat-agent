@@ -271,7 +271,7 @@ export function createSystemStateStore() {
 export type SystemStateStore = ReturnType<typeof createSystemStateStore>;
 
 export type ExtraArgsFields<FieldName extends string, Agent extends AnyChatAgent> =
-  AgentExtraArgs<Agent> extends never
+  AgentExtraArgs<Agent> extends never | undefined
     ? { [key in FieldName]?: undefined }
     : {
         [key in FieldName]: AgentExtraArgs<Agent>;
