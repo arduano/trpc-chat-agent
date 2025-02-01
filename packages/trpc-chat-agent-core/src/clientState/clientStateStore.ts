@@ -61,6 +61,11 @@ type PotentialConversationRelatedData =
   | {
       kind: 'missing';
       data: undefined;
+    }
+  | {
+      kind: 'error';
+      data: undefined;
+      error: unknown;
     };
 
 type AllConversations = {
@@ -92,7 +97,7 @@ export function createSystemStateStore() {
   }
 
   function getConversationState(conversationId: string) {
-    return state.value[conversationId]?.kind;
+    return state.value[conversationId];
   }
 
   function setConversationData(
@@ -237,11 +242,12 @@ export function createSystemStateStore() {
           saveConversationToCache(conversationId);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         state.value = produce(state.value, (draft) => {
           draft[conversationId] = {
-            kind: 'missing',
+            kind: 'error',
             data: undefined,
+            error: err,
           };
         });
       });
@@ -526,11 +532,14 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     if (currentId) {
       const conversationState = store.getConversationState(currentId);
 
-      if (conversationState === 'loading') {
+      if (conversationState?.kind === 'loading') {
         throw new Error('Cannot start a new message while the conversation is loading');
       }
-      if (conversationState === 'missing') {
+      if (conversationState?.kind === 'missing') {
         throw new Error('Cannot start a new message while the conversation is missing');
+      }
+      if (conversationState?.kind === 'error') {
+        throw new Error('Cannot start a new message while the conversation is errored');
       }
     }
   };
@@ -609,7 +618,23 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     isStreaming,
     cancelStream,
     conversationId,
-    conversationError,
+    conversationError: computed(() => {
+      if (conversationError.value) {
+        return conversationError.value;
+      }
+
+      const currentConversationId = conversationId.value;
+      if (!currentConversationId) {
+        return undefined;
+      }
+
+      const state = store.getConversationState(currentConversationId);
+      if (state?.kind === 'error') {
+        return state.error;
+      }
+
+      return undefined;
+    }),
     extraArgs,
     conversationPath: computed(() => branchState.value.selectedPath),
     isLoadingConversation: computed(() => {
@@ -617,14 +642,14 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
       if (!id) {
         return false;
       }
-      return store.getConversationState(id) === 'loading';
+      return store.getConversationState(id)?.kind === 'loading';
     }),
     isMissingConversation: computed(() => {
       const id = conversationId.peek();
       if (!id) {
         return false;
       }
-      return store.getConversationState(id) === 'missing';
+      return store.getConversationState(id)?.kind === 'missing';
     }),
   };
 }

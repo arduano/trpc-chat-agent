@@ -119,6 +119,7 @@ export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]
 export type AIMessageDataPartClientSide<Tools extends readonly AnyStructuredChatTool[]> = {
   content: MessageContent;
   toolCalls: ToolCallClientSideFromToolsArray<Tools>[];
+  createdAt: string;
 };
 
 export type AIMessageDataClientSide<Tools extends readonly AnyStructuredChatTool[]> = {

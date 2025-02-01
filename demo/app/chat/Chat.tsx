@@ -43,7 +43,7 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const { messages, beginMessage, isStreaming, isLoadingConversation, isMissingConversation } =
+  const { messages, beginMessage, isStreaming, isLoadingConversation, isMissingConversation, conversationError } =
     useConversation<AgentType>({
       initialConversationId: id,
       onUpdateConversationId: converationArgs.onUpdateConversationId,
@@ -66,6 +66,8 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
     setInput('');
   };
 
+  const conversationErrorString = conversationError && (conversationError as any).message;
+
   return (
     <div className="flex flex-col h-screen max-h-screen">
       <ScrollArea className="flex-1 h-full">
@@ -73,6 +75,8 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
           <div className="flex flex-col gap-4 p-4 max-w-4xl mx-auto">
             {isMissingConversation ? (
               <div className="text-center p-4 text-destructive">This conversation could not be found.</div>
+            ) : conversationErrorString ? (
+              <div className="text-center p-4 text-destructive">Error: {conversationErrorString}</div>
             ) : (
               <div className="flex flex-col gap-2 pb-4">
                 <RenderMessages
