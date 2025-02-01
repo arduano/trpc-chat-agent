@@ -172,7 +172,6 @@ const toolWithCallback = ai.tool({
 const allTools = [calculatorTool, weatherTool, todoTool, timerTool, toolWithCallback] as const;
 
 export const agent = ai.agent({
-  // llm: new ChatOpenAI({ model: 'gpt-4o-mini' }),
   llm: new ChatOpenAI({ model: 'o3-mini' }),
   tools: allTools,
   systemMessage: 'Formatting re-enabled',

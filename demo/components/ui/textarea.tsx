@@ -6,7 +6,7 @@ const Textarea = ({
   ref,
   className,
   ...props
-}: React.ComponentProps<'textarea'> & { ref?: React.RefObject<HTMLTextAreaElement> }) => {
+}: React.ComponentProps<'textarea'> & { ref?: React.Ref<HTMLTextAreaElement> }) => {
   return (
     <textarea
       className={cn(
