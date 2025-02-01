@@ -70,15 +70,19 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
             {isMissingConversation ? (
               <div className="text-center p-4 text-destructive">This conversation could not be found.</div>
             ) : (
-              <RenderMessages
-                messages={messages}
-                renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
-                renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
-                renderUserMessage={(message) => <UserMessage message={message} />}
-                renderToolCall={(tool) => <RenderTool tool={tool} />}
-              />
+              <div className="flex flex-col gap-2 pb-4">
+                <RenderMessages
+                  messages={messages}
+                  isStreaming={isStreaming}
+                  renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
+                  renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
+                  renderUserMessage={(message) => <UserMessage message={message} />}
+                  renderToolCall={(tool) => <RenderTool tool={tool} />}
+                  renderThinkingIndicator={() => <ThinkingIndicator />}
+                />
+                <div ref={messagesEndRef} />
+              </div>
             )}
-            <div ref={messagesEndRef} />
           </div>
         </Card>
       </ScrollArea>
@@ -114,3 +118,23 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
     </div>
   );
 }
+
+const ThinkingIndicator = () => (
+  <div className="flex items-center gap-1 text-muted-foreground animate-pulse">
+    <div>Thinking</div>
+    <div className="flex gap-1">
+      <div
+        className="w-1 h-1 rounded-full bg-current animate-[bounce_1.4s_infinite]"
+        style={{ animationDelay: '0s' }}
+      />
+      <div
+        className="w-1 h-1 rounded-full bg-current animate-[bounce_1.4s_infinite]"
+        style={{ animationDelay: '0.2s' }}
+      />
+      <div
+        className="w-1 h-1 rounded-full bg-current animate-[bounce_1.4s_infinite]"
+        style={{ animationDelay: '0.4s' }}
+      />
+    </div>
+  </div>
+);

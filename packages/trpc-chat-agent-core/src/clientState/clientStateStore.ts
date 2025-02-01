@@ -611,6 +611,7 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     conversationId,
     conversationError,
     extraArgs,
+    conversationPath: computed(() => branchState.value.selectedPath),
     isLoadingConversation: computed(() => {
       const id = conversationId.peek();
       if (!id) {

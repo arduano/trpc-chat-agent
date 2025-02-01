@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@preact/signals-core';
+import { computed, type ReadonlySignal } from '@preact/signals-core';
 import type { AnyChatAgent, ExtraArgsFields, RouterTypeFromAgent } from '@trpc-chat-agent/core';
 import { createSystemStateStore, createSystemStateStoreSubscriber } from '@trpc-chat-agent/core';
 import { useEffect, useMemo, useState } from 'react';
@@ -47,6 +47,10 @@ export function useConversation<Agent extends AnyChatAgent>(args: UseConversatio
     conversationId: useSignalValue(subscriber.conversationId),
     isLoadingConversation: useSignalValue(subscriber.isLoadingConversation),
     isMissingConversation: useSignalValue(subscriber.isMissingConversation),
+    conversationPath: useSignalValue(subscriber.conversationPath),
+    lastAiMessage: useSignalValue(
+      computed(() => subscriber.conversation.value.getAIMessageAt(subscriber.conversationPath.value))
+    ),
   };
 }
 
