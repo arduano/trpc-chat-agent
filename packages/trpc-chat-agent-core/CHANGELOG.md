@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 0.4.5
+
+### Patch Changes
+
+- 3fa1180: Improved stream cancellation behavior
+
 ## 0.4.4
 
 ### Patch Changes
