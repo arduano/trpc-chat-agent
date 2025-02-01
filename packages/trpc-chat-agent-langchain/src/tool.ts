@@ -7,7 +7,7 @@ import { BaseLangChain } from '@langchain/core/language_models/base';
 import { ToolInputParsingException } from '@langchain/core/tools';
 
 export class StructuredChatToolLangChain<
-  Args extends z.AnyZodObject,
+  Args extends z.AnyZodObject = z.AnyZodObject,
   Return = undefined,
   ResultForClient = undefined,
   Context = any,

@@ -1,9 +1,11 @@
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import type { BaseMessage, MessageContent } from '@langchain/core/messages';
-import type { StructuredChatToolLangChain } from './tool';
+import type { MessageContent } from '@langchain/core/messages';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { _convertMessagesToOpenAIParams, ChatOpenAI } from '@langchain/openai';
+import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import zodToJsonSchema from 'zod-to-json-schema';
+import { StructuredChatToolLangChain } from './tool';
+import { ModelInvokeArgs } from './chatAgent';
 
 export const AnthropicCacheLevels = {
   Nothing: 'nothing',
@@ -74,6 +76,26 @@ export function bindToolsToModel(
   }
 }
 
+export function assertAllMessagesAreBaseMessage(messages: unknown[]): messages is BaseMessage[] {
+  for (const message of messages) {
+    if (!(message instanceof BaseMessage)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function assertAllToolsLangchainTool(tools: unknown[]): tools is StructuredChatToolLangChain[] {
+  for (const tool of tools) {
+    if (!(tool instanceof StructuredChatToolLangChain)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function mapMessageContentForAntropicCache(content: MessageContent): MessageContent {
   if (typeof content === 'string') {
     return [
@@ -133,7 +155,7 @@ export function mapMessagesForModel(
   messages: BaseMessage[],
   llm: BaseChatModel,
   options: { anthropicCacheLevel: AnthropicCacheLevel }
-) {
+): unknown[] {
   if (llm instanceof ChatAnthropic) {
     const shouldCacheSystemMessage = shouldUseAnthropicCacheLevel(
       AnthropicCacheLevels.UpToSystemMessage,
@@ -167,3 +189,86 @@ export function mapMessagesForModel(
     return messages;
   }
 }
+
+/**
+ * Transforms model invocation arguments to be compatible with Anthropic's caching system.
+ * This function modifies the messages and tools to ensure they work properly with Anthropic's
+ * caching mechanism based on the specified cache level.
+ *
+ * @param options - Optional configuration for the transformation
+ * @param options.anthropicCacheLevel - Determines what elements should be cached (defaults to Everything)
+ * @param options.evenWhenNotAnthropic - If true, applies transformations even when not using Anthropic model
+ *
+ * @throws {TypeError} When tools are not all StructuredChatToolLangChain instances (if caching tools)
+ * @throws {TypeError} When messages are not all BaseMessage instances (if caching messages)
+ *
+ * @returns The transformed arguments with cached messages and tools.
+ *
+ * # Note
+ *
+ * This function transforms the tools to no longer be an array of StructuredChatToolLangChain instances.
+ */
+function addAnthropicMessageCache(
+  args: ModelInvokeArgs,
+  options?: { anthropicCacheLevel?: AnthropicCacheLevel; evenWhenNotAnthropic?: boolean }
+) {
+  if (!(args.llm instanceof ChatAnthropic) && !options?.evenWhenNotAnthropic) {
+    return args;
+  }
+
+  const level = options?.anthropicCacheLevel ?? AnthropicCacheLevels.Everything;
+
+  let tools = args.tools;
+  if (shouldUseAnthropicCacheLevel(AnthropicCacheLevels.ToolsOnly, level)) {
+    if (!assertAllToolsLangchainTool(args.tools)) {
+      throw new TypeError('tools must be an array of StructuredChatToolLangChain when applying Anthropic cache');
+    }
+    tools = mapToolsForAnthropicCache(args.tools);
+  }
+
+  if (!assertAllMessagesAreBaseMessage(args.messages)) {
+    throw new TypeError('messages must be an array of BaseMessage when applying Anthropic cache');
+  }
+
+  const messages = mapMessagesForModel(args.messages, args.llm, {
+    anthropicCacheLevel: level,
+  });
+
+  return {
+    ...args,
+    tools,
+    messages,
+  };
+}
+
+const blacklistedOSeriesModelsForDeveloperMessage = ['o1-mini'];
+
+function transformSystemToDeveloperMessage(args: ModelInvokeArgs, options?: { onlyForValidModels?: boolean }) {
+  // Hacky way of detecting o-series models. Technically would break for o1-mini and some others
+  const isValidModel =
+    args.llm instanceof ChatOpenAI &&
+    args.llm.model.startsWith('o') &&
+    !blacklistedOSeriesModelsForDeveloperMessage.includes(args.llm.model);
+
+  if (options?.onlyForValidModels && !isValidModel) {
+    return args;
+  }
+
+  // First message has to be a base system message
+  const firstMessage = args.messages[0];
+  if (!(firstMessage instanceof SystemMessage)) {
+    return args;
+  }
+
+  args.messages[0] = {
+    role: 'developer',
+    content: firstMessage.content,
+  };
+
+  return args;
+}
+
+export const transforms = {
+  addAnthropicMessageCache,
+  transformSystemToDeveloperMessage,
+};

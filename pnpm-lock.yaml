@@ -266,6 +266,9 @@ importers:
       '@langchain/langgraph':
         specifier: ^0.2.36
         version: 0.2.36(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
+      '@langchain/openai':
+        specifier: ^0.3.16
+        version: 0.3.16(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
       '@trpc-chat-agent/core':
         specifier: workspace:*
         version: link:../trpc-chat-agent-core

@@ -1,7 +1,8 @@
 import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
-import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
-import type { RunnableConfig } from '@langchain/core/runnables';
-import type { MessagesAnnotation } from '@langchain/langgraph';
+import type { BaseLanguageModelInput } from '@langchain/core/language_models/base';
+import type { BaseChatModelCallOptions, BindToolsInput } from '@langchain/core/language_models/chat_models';
+import type { AIMessageChunk, BaseMessage, BaseMessageLike } from '@langchain/core/messages';
+import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import type {
   AgentTools,
   AnyChatAgent,
@@ -17,12 +18,10 @@ import type {
   ToolCallbackInvoker,
 } from '@trpc-chat-agent/core';
 import type { z } from 'zod';
-import type { AnthropicCacheLevel } from './providerSpecificHelpers';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
-import { RunnableLambda } from '@langchain/core/runnables';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
 import {
   ChatAIMessageWrapper,
@@ -31,7 +30,7 @@ import {
   processMessageContentForClient,
   ServerSideChatConversationHelper,
 } from '@trpc-chat-agent/core';
-import { AnthropicCacheLevels, bindToolsToModel, mapMessagesForModel } from './providerSpecificHelpers';
+import { bindToolsToModel } from './transforms';
 import { StructuredChatToolLangChain } from './tool';
 
 function makeStateAnnotation<
@@ -64,6 +63,7 @@ export type CreateChatAgentArgs<
         ctx: Tools[number]['TypeInfo']['Context'];
         extraArgs: z.infer<ExtraExternalArgs>;
       }) => string | Promise<string>);
+
   transformMessages?: (args: {
     conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraExternalArgs>>>;
     path: ChatTreePath;
@@ -71,11 +71,26 @@ export type CreateChatAgentArgs<
     extraArgs: z.infer<ExtraExternalArgs>;
   }) => BaseMessage[] | Promise<BaseMessage[]>;
 
+  transformInvocation?: (
+    args: ModelInvokeArgs,
+    context: {
+      ctx: Tools[number]['TypeInfo']['Context'];
+      extraArgs: z.infer<ExtraExternalArgs>;
+      conversation: Readonly<ServerSideChatConversationHelper<ChatAgent<Tools, ExtraExternalArgs>>>;
+      path: ChatTreePath;
+    }
+  ) => ModelInvokeArgs | Promise<ModelInvokeArgs>;
+
   // LangChain
   llm: BaseChatModel | ((args: { extraArgs: z.infer<ExtraExternalArgs> }) => BaseChatModel | Promise<BaseChatModel>);
   langchainCallbacks?: LangchainCallbacks;
+};
 
-  anthropicCacheLevel?: AnthropicCacheLevel;
+export type ModelInvokeArgs = {
+  llm: BaseChatModel;
+  bind: Record<string, any>;
+  tools: (StructuredChatToolLangChain | unknown)[];
+  messages: (BaseChatModel | unknown)[];
 };
 
 type ChatAgentArgsWithExtraArgs<
@@ -89,25 +104,13 @@ export function createChatAgentLangchain<
   const Tools extends readonly AnyStructuredChatTool[],
   const ExtraExternalArgs extends z.ZodTypeAny,
 >(args: ChatAgentArgsWithExtraArgs<Tools, ExtraExternalArgs>): ChatAgent<Tools, ExtraExternalArgs> {
-  const {
-    llm,
-    tools,
-    debounceMs: _debounceMs,
-    langchainCallbacks,
-    anthropicCacheLevel: _anthropicCacheLevel,
-    extraExternalArgsSchema,
-  } = args;
+  const { llm, tools, debounceMs: _debounceMs, langchainCallbacks, extraExternalArgsSchema } = args;
   const debounceMs = _debounceMs || 100;
-  const anthropicCacheLevel = _anthropicCacheLevel || AnthropicCacheLevels.Everything;
 
   const toolsList = tools.map((t) => new StructuredChatToolLangChain(t));
 
   const StateAnnotation = makeStateAnnotation<Tools, Tools[number]['TypeInfo']['Context'], ExtraExternalArgs>();
   type AgentState = typeof StateAnnotation.State;
-
-  const stateModifierRunnable = RunnableLambda.from(
-    (state: typeof MessagesAnnotation.State) => state.messages
-  ).withConfig({ runName: 'state_modifier' });
 
   const sendClientSideUpdateToConfig = (update: ClientSideUpdate, config: RunnableConfig) => {
     dispatchCustomEvent('on_conversation_client_update', update, config);
@@ -204,17 +207,43 @@ export function createChatAgentLangchain<
 
     try {
       const selectedLlm = llm instanceof BaseChatModel ? llm : await llm({ extraArgs: state.extraArgs });
-      const modelWithTools = bindToolsToModel(toolsList, selectedLlm, { anthropicCacheLevel });
-      const modelRunnable = stateModifierRunnable.pipe(modelWithTools);
 
-      const transformedMessagesForLlm = mapMessagesForModel(messageList, selectedLlm, { anthropicCacheLevel });
-      const stream = await modelRunnable.streamEvents(
-        { messages: transformedMessagesForLlm },
-        {
-          ...config,
-          version: 'v2',
+      const modelParams: ModelInvokeArgs = {
+        llm: selectedLlm,
+        bind: bindToolsToModel,
+        tools: toolsList,
+        messages: messageList,
+      };
+
+      const mappedModelParams = args.transformInvocation
+        ? await args.transformInvocation(modelParams, {
+            ctx: state.ctx,
+            extraArgs: state.extraArgs,
+            conversation: stateConvo,
+            path: state.chatPath,
+          })
+        : modelParams;
+
+      const finalSelectedLlm = mappedModelParams.llm;
+      const finalTools = mappedModelParams.tools;
+      const finalMessageList = mappedModelParams.messages;
+      const finalModelBindArgs = mappedModelParams.bind;
+
+      let modelRunnable: Runnable<BaseLanguageModelInput, AIMessageChunk, BaseChatModelCallOptions>;
+
+      if (finalTools.length > 0) {
+        if (!('bindTools' in finalSelectedLlm) || typeof finalSelectedLlm.bindTools !== 'function') {
+          throw new Error(`llm ${finalSelectedLlm} must define bindTools method.`);
         }
-      );
+        modelRunnable = finalSelectedLlm.bindTools(finalTools as BindToolsInput[]).bind(finalModelBindArgs);
+      } else {
+        modelRunnable = finalSelectedLlm.bind(finalModelBindArgs);
+      }
+
+      const stream = await modelRunnable.streamEvents(finalMessageList as BaseMessageLike[], {
+        ...config,
+        version: 'v2',
+      });
 
       let aggregateChunk: AIMessageChunk | undefined;
       let currentToolId: string | undefined;

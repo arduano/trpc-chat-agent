@@ -1,7 +1,7 @@
 import type { createContext } from './context';
 import { ChatOpenAI } from '@langchain/openai';
 import { initAgents } from '@trpc-chat-agent/core';
-import { langchainBackend } from '@trpc-chat-agent/langchain';
+import { langchainBackend, transforms } from '@trpc-chat-agent/langchain';
 import { z } from 'zod';
 
 export const ai = initAgents.context<typeof createContext>().backend(langchainBackend).create();
@@ -172,9 +172,14 @@ const toolWithCallback = ai.tool({
 const allTools = [calculatorTool, weatherTool, todoTool, timerTool, toolWithCallback] as const;
 
 export const agent = ai.agent({
-  llm: new ChatOpenAI({ model: 'gpt-4o-mini' }),
-  // llm: new ChatOpenAI({ model: 'gpt-o3-mini' }),
+  // llm: new ChatOpenAI({ model: 'gpt-4o-mini' }),
+  llm: new ChatOpenAI({ model: 'o3-mini' }),
   tools: allTools,
+  systemMessage: 'Formatting re-enabled',
+  transformInvocation: (args) => {
+    args = transforms.addAnthropicMessageCache(args);
+    return args;
+  },
 });
 
 export type AgentType = typeof agent;

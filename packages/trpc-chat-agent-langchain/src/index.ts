@@ -7,6 +7,9 @@ import { AgentsBackend } from '@trpc-chat-agent/core';
 import { z } from 'zod';
 import { createChatAgentLangchain } from './chatAgent';
 
+export { transforms } from './transforms';
+export * from './chatAgent';
+
 export type LangchainToolExtraArgs = readonly [CallbackManagerForToolRun | undefined, RunnableConfig];
 class LangChainAgentsBackend<ExtraExternalArgs extends z.ZodTypeAny> extends AgentsBackend<
   LangchainToolExtraArgs,
