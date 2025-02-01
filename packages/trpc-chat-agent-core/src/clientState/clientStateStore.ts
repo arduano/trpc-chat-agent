@@ -665,11 +665,16 @@ function makeConversationStreamerState<Agent extends AnyChatAgent>(
 
   const { onUpdate, onComplete } = callbacks;
 
+  const completeStream = () => {
+    cancelCurrentStream.value = undefined;
+    onComplete();
+  };
+
   const cancelStream = () => {
     const cancel = cancelCurrentStream.peek();
     if (cancel) {
       cancel();
-      cancelCurrentStream.value = undefined;
+      completeStream();
     }
   };
 
@@ -685,12 +690,17 @@ function makeConversationStreamerState<Agent extends AnyChatAgent>(
 
     const abort = new AbortController();
 
-    const promptResponse = router.promptChat.mutate({
-      conversationId: args.conversationId,
-      branch: args.branch,
-      userMessageContent: args.userMessage,
-      extraArgs: args.extraArgs,
-    });
+    const promptResponse = router.promptChat.mutate(
+      {
+        conversationId: args.conversationId,
+        branch: args.branch,
+        userMessageContent: args.userMessage,
+        extraArgs: args.extraArgs,
+      },
+      {
+        signal: abort.signal,
+      }
+    );
 
     const processEvents = async () => {
       const response = await promptResponse;
@@ -706,11 +716,12 @@ function makeConversationStreamerState<Agent extends AnyChatAgent>(
           }
         }
       } catch (err) {
-        conversationError.value = err as Error;
-        cancelStream();
+        if (!abort.signal.aborted) {
+          conversationError.value = err as Error;
+        }
+        completeStream();
       } finally {
-        cancelCurrentStream.value = undefined;
-        onComplete();
+        completeStream();
       }
     };
 
