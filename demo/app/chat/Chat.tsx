@@ -2,21 +2,20 @@
 
 import type { AgentType } from '@/server/agent';
 import type { UseConversationArgs } from '@trpc-chat-agent/react';
+import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { trpcClient } from '@/utils/trpc';
-import { Button } from '@/components/ui/button';
-import { RiStopCircleFill } from 'react-icons/ri';
 
 import { RenderMessages, useConversation } from '@trpc-chat-agent/react';
 import React, { useEffect, useRef, useState } from 'react';
+import { FaStop } from 'react-icons/fa';
 import { AIMessageShell } from '../../components/chat/AIMessage';
 import { StyledMarkdown } from '../../components/chat/StyledMarkdown';
 import { UserMessage } from '../../components/chat/UserMessage';
 import { RenderTool } from './RenderTool';
-import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator';
-import { FaStop } from 'react-icons/fa';
 
 export type ChatComponentProps = Omit<UseConversationArgs<AgentType>, 'initialConversationId' | 'router'> & {
   id?: string;

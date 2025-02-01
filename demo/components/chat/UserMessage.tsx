@@ -1,5 +1,4 @@
-import type { ReadonlySignal } from '@preact/signals-core';
-import type { AgentExtraArgs, AnyChatAgent, ChatUserMessage } from '@trpc-chat-agent/core';
+import type { ChatUserMessage } from '@trpc-chat-agent/core';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState } from 'react';
 import { RiPencilFill } from 'react-icons/ri';
