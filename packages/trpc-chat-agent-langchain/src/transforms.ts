@@ -1,11 +1,11 @@
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { MessageContent } from '@langchain/core/messages';
+import type { ModelInvokeArgs } from './chatAgent';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { _convertMessagesToOpenAIParams, ChatOpenAI } from '@langchain/openai';
 import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { ChatOpenAI } from '@langchain/openai';
 import zodToJsonSchema from 'zod-to-json-schema';
 import { StructuredChatToolLangChain } from './tool';
-import { ModelInvokeArgs } from './chatAgent';
 
 export const AnthropicCacheLevels = {
   Nothing: 'nothing',
@@ -195,6 +195,7 @@ export function mapMessagesForModel(
  * This function modifies the messages and tools to ensure they work properly with Anthropic's
  * caching mechanism based on the specified cache level.
  *
+ * @param args - The original model invocation arguments
  * @param options - Optional configuration for the transformation
  * @param options.anthropicCacheLevel - Determines what elements should be cached (defaults to Everything)
  * @param options.evenWhenNotAnthropic - If true, applies transformations even when not using Anthropic model

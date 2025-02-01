@@ -30,8 +30,8 @@ import {
   processMessageContentForClient,
   ServerSideChatConversationHelper,
 } from '@trpc-chat-agent/core';
-import { bindToolsToModel } from './transforms';
 import { StructuredChatToolLangChain } from './tool';
+import { bindToolsToModel } from './transforms';
 
 function makeStateAnnotation<
   Tools extends readonly AnyStructuredChatTool[],
