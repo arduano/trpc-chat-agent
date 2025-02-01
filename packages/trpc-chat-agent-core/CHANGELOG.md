@@ -1,5 +1,12 @@
 # @trpc-chat-agent/core
 
+## 0.4.3
+
+### Patch Changes
+
+- 73f440b: Fixes around extra args not being required
+- 65f99de: Added conversation path to the conversation store status values
+
 ## 0.4.1
 
 ### Patch Changes

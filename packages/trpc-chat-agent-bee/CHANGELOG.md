@@ -1,5 +1,13 @@
 # @trpc-chat-agent/bee
 
+## 0.4.3
+
+### Patch Changes
+
+- Updated dependencies [73f440b]
+- Updated dependencies [65f99de]
+  - @trpc-chat-agent/core@0.4.3
+
 ## 0.4.1
 
 ### Patch Changes

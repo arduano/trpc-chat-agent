@@ -1,5 +1,15 @@
 # @trpc-chat-agent/react
 
+## 0.4.3
+
+### Patch Changes
+
+- 65f99de: Added thinking indicator helpers to RenderMessages
+- 65f99de: Added conversation path to the conversation store status values
+- Updated dependencies [73f440b]
+- Updated dependencies [65f99de]
+  - @trpc-chat-agent/core@0.4.3
+
 ## 0.4.1
 
 ### Patch Changes
