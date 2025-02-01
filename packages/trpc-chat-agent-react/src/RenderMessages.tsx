@@ -19,8 +19,12 @@ function RenderMemoed<T extends readonly any[]>({ data, render }: { data: T; ren
 export type RenderMessagesProps<Agent extends AnyChatAgent> = {
   messages: (ChatAIMessage<Agent> | ChatUserMessage)[];
   isStreaming?: boolean;
-  renderAiMessageShell?: (message: ChatAIMessage<Agent>, children: JSX.Element) => JSX.Element;
-  renderAiMessagePartContent: (content: MessageContent) => JSX.Element;
+  renderAiMessageShell?: (
+    message: ChatAIMessage<Agent>,
+    children: JSX.Element,
+    options: { isLastMessage: boolean }
+  ) => JSX.Element;
+  renderAiMessagePartContent: (content: MessageContent, options: { isLastMessagePart: boolean }) => JSX.Element;
   renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Agent>, children: JSX.Element) => JSX.Element;
   renderToolCall:
     | {
@@ -69,12 +73,10 @@ export function RenderMessages<Agent extends AnyChatAgent>({
     );
   };
 
-  const renderAiMessagePart = (
-    message: ChatAIMessagePart<Agent>,
-    isLastMessagePart?: boolean,
-    isStreaming?: boolean
-  ) => {
-    const content = <RenderMemoed data={[message.content]} render={renderAiMessagePartContent} />;
+  const renderAiMessagePart = (message: ChatAIMessagePart<Agent>, isLastMessagePart: boolean, isStreaming: boolean) => {
+    const content = (
+      <RenderMemoed data={[message.content, { isLastMessagePart }]} render={renderAiMessagePartContent} />
+    );
     const toolCalls = <RenderMemoed data={[message.toolCalls]} render={renderAllToolCalls} />;
 
     const isContentEmpty = !message.content.length && !message.toolCalls.length;
@@ -88,7 +90,7 @@ export function RenderMessages<Agent extends AnyChatAgent>({
     );
   };
 
-  const renderAiMessage = (message: ChatAIMessage<Agent>, isLastMessage?: boolean, isStreaming?: boolean) => {
+  const renderAiMessage = (message: ChatAIMessage<Agent>, isLastMessage: boolean, isStreaming: boolean) => {
     const parts = (
       <>
         {message.parts.map((part, i) => (
@@ -101,7 +103,7 @@ export function RenderMessages<Agent extends AnyChatAgent>({
       </>
     );
 
-    return <RenderMemoed data={[message, parts]} render={renderAiMessageShell} />;
+    return <RenderMemoed data={[message, parts, { isLastMessage }]} render={renderAiMessageShell} />;
   };
 
   const renderAllMessages = (messages: (ChatAIMessage<Agent> | ChatUserMessage)[]) => {
@@ -113,7 +115,11 @@ export function RenderMessages<Agent extends AnyChatAgent>({
           } else {
             const isLastMessage = i === messages.length - 1;
             return (
-              <RenderMemoed key={message.id} data={[message, isLastMessage, isStreaming]} render={renderAiMessage} />
+              <RenderMemoed
+                key={message.id}
+                data={[message, isLastMessage, isStreaming ?? false]}
+                render={renderAiMessage}
+              />
             );
           }
         })}

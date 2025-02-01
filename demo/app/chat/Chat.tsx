@@ -51,8 +51,12 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
     });
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isStreaming) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 0);
+    }
+  }, [isStreaming]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -74,7 +78,9 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
                 <RenderMessages
                   messages={messages}
                   isStreaming={isStreaming}
-                  renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
+                  renderAiMessageShell={(message, children, { isLastMessage }) => (
+                    <AIMessageShell message={message} children={children} isLastMessage={isLastMessage} />
+                  )}
                   renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
                   renderUserMessage={(message) => <UserMessage message={message} />}
                   renderToolCall={(tool) => <RenderTool tool={tool} />}
