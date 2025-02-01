@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 0.4.4
+
+### Patch Changes
+
+- 8e6d8a5: Exposed conversation fetching error messages
+
 ## 0.4.3
 
 ### Patch Changes
