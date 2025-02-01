@@ -107,6 +107,7 @@ export class ClientSideChatConversationHelper<Agent extends ChatAgentOrTools> ex
       message.parts.push({
         content: '',
         toolCalls: [],
+        createdAt: new Date().toISOString(),
       });
     });
   }
