@@ -10,7 +10,7 @@ export function AIMessageShell<Agent extends AnyChatAgent>({
   isLastMessage,
 }: {
   message: ChatAIMessage<Agent>;
-  children: JSX.Element;
+  children: React.ReactNode;
   isLastMessage: boolean;
 }) {
   return (

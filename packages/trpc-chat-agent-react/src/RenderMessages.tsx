@@ -11,7 +11,13 @@ import type {
 
 import { useCallback, useMemo } from 'react';
 
-function RenderMemoed<T extends readonly any[]>({ data, render }: { data: T; render: (...args: T) => JSX.Element }) {
+function RenderMemoed<T extends readonly any[]>({
+  data,
+  render,
+}: {
+  data: T;
+  render: (...args: T) => React.ReactNode;
+}) {
   const jsx = useMemo(() => (!render ? 'Error: render function was missing' : render(...data)), data);
   return jsx;
 }
@@ -21,20 +27,20 @@ export type RenderMessagesProps<Agent extends AnyChatAgent> = {
   isStreaming?: boolean;
   renderAiMessageShell?: (
     message: ChatAIMessage<Agent>,
-    children: JSX.Element,
+    children: React.ReactNode,
     options: { isLastMessage: boolean }
-  ) => JSX.Element;
-  renderAiMessagePartContent: (content: MessageContent, options: { isLastMessagePart: boolean }) => JSX.Element;
-  renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Agent>, children: JSX.Element) => JSX.Element;
+  ) => React.ReactNode;
+  renderAiMessagePartContent: (content: MessageContent, options: { isLastMessagePart: boolean }) => React.ReactNode;
+  renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Agent>, children: React.ReactNode) => React.ReactNode;
   renderToolCall:
     | {
         [K in AgentTools<Agent>[number]['TypeInfo']['Name']]: (
           toolCall: ChatAIMessageToolCall<GetToolByName<K, Agent>>
-        ) => JSX.Element;
+        ) => React.ReactNode;
       }
-    | ((toolCall: ChatAIMessageToolCall<Agent>) => JSX.Element);
-  renderUserMessage: (message: ChatUserMessage) => JSX.Element;
-  renderThinkingIndicator?: () => JSX.Element;
+    | ((toolCall: ChatAIMessageToolCall<Agent>) => React.ReactNode);
+  renderUserMessage: (message: ChatUserMessage) => React.ReactNode;
+  renderThinkingIndicator?: () => React.ReactNode;
 };
 
 export function RenderMessages<Agent extends AnyChatAgent>({
@@ -47,7 +53,7 @@ export function RenderMessages<Agent extends AnyChatAgent>({
   renderToolCallShell,
   renderThinkingIndicator,
 }: RenderMessagesProps<Agent>) {
-  const defaultShellRender = useCallback((_data: any, children: JSX.Element) => <>{children}</>, []);
+  const defaultShellRender = useCallback((_data: any, children: React.ReactNode) => <>{children}</>, []);
 
   renderAiMessageShell ??= defaultShellRender;
   renderToolCallShell ??= defaultShellRender;
