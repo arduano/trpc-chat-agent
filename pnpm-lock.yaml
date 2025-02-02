@@ -269,9 +269,6 @@ importers:
       '@langchain/openai':
         specifier: ^0.3.16
         version: 0.3.16(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
-      '@trpc-chat-agent/core':
-        specifier: workspace:*
-        version: link:../trpc-chat-agent-core
       zod:
         specifier: ^3.24.1
         version: 3.24.1
@@ -279,6 +276,9 @@ importers:
         specifier: ^3.24.1
         version: 3.24.1(zod@3.24.1)
     devDependencies:
+      '@trpc-chat-agent/core':
+        specifier: workspace:*
+        version: link:../trpc-chat-agent-core
       rollup:
         specifier: ^4.29.1
         version: 4.29.1
@@ -294,25 +294,22 @@ importers:
       '@preact/signals-react':
         specifier: ^3.0.0
         version: 3.0.0(react@19.0.0)
-      '@trpc-chat-agent/core':
-        specifier: workspace:*
-        version: link:../trpc-chat-agent-core
       immer:
         specifier: ^10.1.1
         version: 10.1.1
-      react:
-        specifier: ^19.0.0
-        version: 19.0.0
       zod:
         specifier: ^3.24.1
         version: 3.24.1
-      zustand:
-        specifier: ^5.0.2
-        version: 5.0.2(@types/react@19.0.8)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
     devDependencies:
+      '@trpc-chat-agent/core':
+        specifier: workspace:*
+        version: link:../trpc-chat-agent-core
       '@types/react':
         specifier: ^19.0.8
         version: 19.0.8
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
       rollup:
         specifier: ^4.29.1
         version: 4.29.1
@@ -18455,12 +18452,5 @@ snapshots:
       immer: 10.1.1
       react: 18.2.0
       use-sync-external-store: 1.4.0(react@18.2.0)
-
-  zustand@5.0.2(@types/react@19.0.8)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0)):
-    optionalDependencies:
-      '@types/react': 19.0.8
-      immer: 10.1.1
-      react: 19.0.0
-      use-sync-external-store: 1.4.0(react@19.0.0)
 
   zwitch@2.0.4: {}
