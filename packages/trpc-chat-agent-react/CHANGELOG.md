@@ -1,5 +1,11 @@
 # @trpc-chat-agent/react
 
+## 0.4.6
+
+### Patch Changes
+
+- 8a6427e: Bump to React 19
+
 ## 0.4.5
 
 ### Patch Changes
