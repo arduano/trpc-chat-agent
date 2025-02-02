@@ -35,17 +35,20 @@
     "build": "rollup --config rollup.config.ts --configPlugin rollup-plugin-swc3",
     "dev": "pnpm build --watch"
   },
+  "peerDependencies": {
+    "@trpc-chat-agent/core": "workspace:*",
+    "react": ">=18.2.0"
+  },
   "dependencies": {
     "@preact/signals-core": "^1.8.0",
     "@preact/signals-react": "^3.0.0",
-    "@trpc-chat-agent/core": "workspace:*",
     "immer": "^10.1.1",
-    "react": "^19.0.0",
-    "zod": "^3.24.1",
-    "zustand": "^5.0.2"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@trpc-chat-agent/core": "workspace:*",
     "@types/react": "^19.0.8",
+    "react": "^19.0.0",
     "rollup": "^4.29.1",
     "typescript": "^5.0.0"
   }

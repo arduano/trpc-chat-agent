@@ -35,16 +35,19 @@
     "build": "rollup --config rollup.config.ts --configPlugin rollup-plugin-swc3",
     "dev": "pnpm build --watch"
   },
+  "peerDependencies": {
+    "@trpc-chat-agent/core": "workspace:*"
+  },
   "dependencies": {
     "@langchain/anthropic": "^0.3.12",
     "@langchain/core": "^0.3.26",
     "@langchain/langgraph": "^0.2.36",
     "@langchain/openai": "^0.3.16",
-    "@trpc-chat-agent/core": "workspace:*",
     "zod": "^3.24.1",
     "zod-to-json-schema": "^3.24.1"
   },
   "devDependencies": {
+    "@trpc-chat-agent/core": "workspace:*",
     "rollup": "^4.29.1",
     "typescript": "^5.0.0"
   }
