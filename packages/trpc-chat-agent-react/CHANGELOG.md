@@ -1,5 +1,11 @@
 # @trpc-chat-agent/react
 
+## 0.4.7
+
+### Patch Changes
+
+- 1873809: Peer dependency fixes
+
 ## 0.4.6
 
 ### Patch Changes

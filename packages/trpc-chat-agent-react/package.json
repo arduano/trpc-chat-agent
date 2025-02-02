@@ -1,6 +1,6 @@
 {
   "name": "@trpc-chat-agent/react",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "The React client adapter for trpc-chat-agent",
   "author": "arduano",
   "license": "MIT",
