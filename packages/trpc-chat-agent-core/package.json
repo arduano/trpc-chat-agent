@@ -42,13 +42,9 @@
     "@trpc/client": "11.0.0-rc.718",
     "@trpc/server": "11.0.0-rc.718",
     "@types/node": "^20.12.14",
-    "immer": "^10.1.1",
-    "react": "18.2.0",
-    "zod": "^3.24.1",
-    "zustand": "^5.0.2"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/react": "18.2.43",
     "rollup": "^4.29.1",
     "typescript": "^5.0.0"
   }

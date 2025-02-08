@@ -35,6 +35,8 @@ export function useConversation<Agent extends AnyChatAgent>(args: UseConversatio
     subscriber.extraArgs.value = args.extraArgs;
   }, [args.extraArgs]);
 
+  const lastAiMessage = computed(() => subscriber.conversation.value.getAIMessageAt(subscriber.conversationPath.value));
+
   return {
     beginMessage: subscriber.beginMessage,
     cancelStream: subscriber.cancelStream,
@@ -48,9 +50,7 @@ export function useConversation<Agent extends AnyChatAgent>(args: UseConversatio
     isLoadingConversation: useSignalValue(subscriber.isLoadingConversation),
     isMissingConversation: useSignalValue(subscriber.isMissingConversation),
     conversationPath: useSignalValue(subscriber.conversationPath),
-    lastAiMessage: useSignalValue(
-      computed(() => subscriber.conversation.value.getAIMessageAt(subscriber.conversationPath.value))
-    ),
+    lastAiMessage: useSignalValue(lastAiMessage),
   };
 }
 
