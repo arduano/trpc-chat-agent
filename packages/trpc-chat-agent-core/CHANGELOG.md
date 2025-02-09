@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 0.4.9
+
+### Patch Changes
+
+- d2dbba3: Improved client-side placeholder conversation handling
+
 ## 0.4.8
 
 ### Patch Changes

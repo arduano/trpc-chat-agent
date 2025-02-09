@@ -1,5 +1,13 @@
 # @trpc-chat-agent/langchain
 
+## 0.4.9
+
+### Patch Changes
+
+- d2dbba3: Improved abort handling
+- Updated dependencies [d2dbba3]
+  - @trpc-chat-agent/core@0.4.9
+
 ## 0.4.8
 
 ### Patch Changes
