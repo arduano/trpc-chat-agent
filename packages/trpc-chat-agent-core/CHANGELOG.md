@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 0.4.8
+
+### Patch Changes
+
+- 3c5a81c: Fallback behavior for invalid paths
+
 ## 0.4.5
 
 ### Patch Changes
