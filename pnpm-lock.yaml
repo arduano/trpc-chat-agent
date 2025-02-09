@@ -232,22 +232,10 @@ importers:
       '@types/node':
         specifier: ^20.12.14
         version: 20.12.14
-      immer:
-        specifier: ^10.1.1
-        version: 10.1.1
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
       zod:
         specifier: ^3.24.1
         version: 3.24.1
-      zustand:
-        specifier: ^5.0.2
-        version: 5.0.2(@types/react@18.2.43)(immer@10.1.1)(react@18.2.0)(use-sync-external-store@1.4.0(react@18.2.0))
     devDependencies:
-      '@types/react':
-        specifier: 18.2.43
-        version: 18.2.43
       rollup:
         specifier: ^4.29.1
         version: 4.29.1
@@ -2740,9 +2728,6 @@ packages:
   '@types/prismjs@1.26.5':
     resolution: {integrity: sha512-AUZTa7hQ2KY5L7AmtSiqxlhWxb4ina0yd8hNbl4TWuqnv/pFP0nDMb3YrfSBf4hJVGLh2YEIBfKaBW/9UEl6IQ==}
 
-  '@types/prop-types@15.7.14':
-    resolution: {integrity: sha512-gNMvNH49DJ7OJYv+KAKn0Xp45p8PLl6zo2YnvDIbTd4J6MER2BmWN49TG7n9LvkyihINxeKW8+3bfS2yDC9dzQ==}
-
   '@types/qs@6.9.17':
     resolution: {integrity: sha512-rX4/bPcfmvxHDv0XjfJELTTr+iB+tn032nPILqHm5wbthUUUuVtNGGqzhya9XUxjTP8Fpr0qYgSZZKxGY++svQ==}
 
@@ -2766,9 +2751,6 @@ packages:
   '@types/react-syntax-highlighter@15.5.13':
     resolution: {integrity: sha512-uLGJ87j6Sz8UaBAooU0T6lWJ0dBmjZgN1PZTrj05TNql2/XpC6+4HhMT5syIdFUUt+FASfCeLLv4kBygNU+8qA==}
 
-  '@types/react@18.2.43':
-    resolution: {integrity: sha512-nvOV01ZdBdd/KW6FahSbcNplt2jCJfyWdTos61RYHV+FVv5L/g9AOX1bmbVcWcLFL8+KHQfh1zVIQrud6ihyQA==}
-
   '@types/react@19.0.2':
     resolution: {integrity: sha512-USU8ZI/xyKJwFTpjSVIrSeHBVAGagkHQKPNbxeWwql/vDmnTIBgx+TJnhFnj1NXgz8XfprU0egV2dROLGpsBEg==}
 
@@ -2783,9 +2765,6 @@ packages:
 
   '@types/sax@1.2.7':
     resolution: {integrity: sha512-rO73L89PJxeYM3s3pPPjiPgVVcymqU490g0YO5n5By0k2Erzj6tay/4lr1CHAAU4JyOWd1rpQ8bCf6cZfHU96A==}
-
-  '@types/scheduler@0.23.0':
-    resolution: {integrity: sha512-YIoDCTH3Af6XM5VuwGG/QL/CJqga1Zm3NkU3HZ4ZHK2fRMPYP1VczsTUqtsf43PH/iJNVlPHAo2oWX7BSdB2Hw==}
 
   '@types/send@0.17.4':
     resolution: {integrity: sha512-x2EM6TJOybec7c52BX0ZspPodMsQUd5L6PRwOunVyVUhXiBSKf3AezDL8Dgvgt5o0UfKNfuA0eMLr2wLT4AiBA==}
@@ -7040,10 +7019,6 @@ packages:
     peerDependencies:
       react: '>= 0.14.0'
 
-  react@18.2.0:
-    resolution: {integrity: sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==}
-    engines: {node: '>=0.10.0'}
-
   react@19.0.0:
     resolution: {integrity: sha512-V8AVnmPIICiWpGfm6GLzCR/W5FXLchHop40W4nXBmdlEceh16rCN8O8LNWm5bh5XUX91fh7KpA+W0TgMKmgTpQ==}
     engines: {node: '>=0.10.0'}
@@ -8382,24 +8357,6 @@ packages:
 
   zod@3.24.1:
     resolution: {integrity: sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A==}
-
-  zustand@5.0.2:
-    resolution: {integrity: sha512-8qNdnJVJlHlrKXi50LDqqUNmUbuBjoKLrYQBnoChIbVph7vni+sY+YpvdjXG9YLd/Bxr6scMcR+rm5H3aSqPaw==}
-    engines: {node: '>=12.20.0'}
-    peerDependencies:
-      '@types/react': '>=18.0.0'
-      immer: '>=9.0.6'
-      react: '>=18.0.0'
-      use-sync-external-store: '>=1.2.0'
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-      immer:
-        optional: true
-      react:
-        optional: true
-      use-sync-external-store:
-        optional: true
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -9791,7 +9748,7 @@ snapshots:
       '@babel/preset-env': 7.26.0(@babel/core@7.26.0)
       '@babel/preset-react': 7.26.3(@babel/core@7.26.0)
       '@babel/preset-typescript': 7.26.0(@babel/core@7.26.0)
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       '@babel/runtime-corejs3': 7.26.0
       '@babel/traverse': 7.26.4
       '@docusaurus/logger': 3.7.0
@@ -10961,14 +10918,14 @@ snapshots:
 
   '@manypkg/find-root@1.1.0':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       '@types/node': 12.20.55
       find-up: 4.1.0
       fs-extra: 8.1.0
 
   '@manypkg/get-packages@1.1.3':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       '@changesets/types': 4.1.0
       '@manypkg/find-root': 1.1.0
       fs-extra: 8.1.0
@@ -11672,8 +11629,6 @@ snapshots:
 
   '@types/prismjs@1.26.5': {}
 
-  '@types/prop-types@15.7.14': {}
-
   '@types/qs@6.9.17': {}
 
   '@types/range-parser@1.2.7': {}
@@ -11703,12 +11658,6 @@ snapshots:
     dependencies:
       '@types/react': 19.0.2
 
-  '@types/react@18.2.43':
-    dependencies:
-      '@types/prop-types': 15.7.14
-      '@types/scheduler': 0.23.0
-      csstype: 3.1.3
-
   '@types/react@19.0.2':
     dependencies:
       csstype: 3.1.3
@@ -11724,8 +11673,6 @@ snapshots:
   '@types/sax@1.2.7':
     dependencies:
       '@types/node': 22.10.5
-
-  '@types/scheduler@0.23.0': {}
 
   '@types/send@0.17.4':
     dependencies:
@@ -14419,7 +14366,7 @@ snapshots:
 
   history@4.10.1:
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       loose-envify: 1.4.0
       resolve-pathname: 3.0.0
       tiny-invariant: 1.3.3
@@ -15093,7 +15040,7 @@ snapshots:
 
   mathjs@14.0.1:
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       complex.js: 2.4.2
       decimal.js: 10.4.3
       escape-latex: 1.2.0
@@ -16769,7 +16716,7 @@ snapshots:
 
   react-loadable-ssr-addon-v5-slorber@1.0.1(@docusaurus/react-loadable@6.0.0(react@19.0.0))(webpack@5.97.1(@swc/core@1.10.4(@swc/helpers@0.5.15))):
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       react-loadable: '@docusaurus/react-loadable@6.0.0(react@19.0.0)'
       webpack: 5.97.1(@swc/core@1.10.4(@swc/helpers@0.5.15))
 
@@ -16792,13 +16739,13 @@ snapshots:
 
   react-router-config@5.1.1(react-router@5.3.4(react@19.0.0))(react@19.0.0):
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       react: 19.0.0
       react-router: 5.3.4(react@19.0.0)
 
   react-router-dom@5.3.4(react@19.0.0):
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       history: 4.10.1
       loose-envify: 1.4.0
       prop-types: 15.8.1
@@ -16809,7 +16756,7 @@ snapshots:
 
   react-router@5.3.4(react@19.0.0):
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.26.7
       history: 4.10.1
       hoist-non-react-statics: 3.3.2
       loose-envify: 1.4.0
@@ -16829,10 +16776,6 @@ snapshots:
       prismjs: 1.29.0
       react: 19.0.0
       refractor: 3.6.0
-
-  react@18.2.0:
-    dependencies:
-      loose-envify: 1.4.0
 
   react@19.0.0: {}
 
@@ -18089,11 +18032,6 @@ snapshots:
     optionalDependencies:
       file-loader: 6.2.0(webpack@5.97.1(@swc/core@1.10.4(@swc/helpers@0.5.15)))
 
-  use-sync-external-store@1.4.0(react@18.2.0):
-    dependencies:
-      react: 18.2.0
-    optional: true
-
   use-sync-external-store@1.4.0(react@19.0.0):
     dependencies:
       react: 19.0.0
@@ -18445,12 +18383,5 @@ snapshots:
       zod: 3.24.1
 
   zod@3.24.1: {}
-
-  zustand@5.0.2(@types/react@18.2.43)(immer@10.1.1)(react@18.2.0)(use-sync-external-store@1.4.0(react@18.2.0)):
-    optionalDependencies:
-      '@types/react': 18.2.43
-      immer: 10.1.1
-      react: 18.2.0
-      use-sync-external-store: 1.4.0(react@18.2.0)
 
   zwitch@2.0.4: {}
