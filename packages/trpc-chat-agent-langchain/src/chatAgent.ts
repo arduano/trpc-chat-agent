@@ -161,6 +161,10 @@ export function createChatAgentLangchain<
   };
 
   const shouldContinue = (state: AgentState) => {
+    if (state.signal.aborted) {
+      return 'end';
+    }
+
     const stateConvo = new ServerSideChatConversationHelper(state.conversationData);
     const lastMessage = stateConvo.getAIMessageAt(state.chatPath);
 
@@ -243,6 +247,7 @@ export function createChatAgentLangchain<
       const stream = await modelRunnable.streamEvents(finalMessageList as BaseMessageLike[], {
         ...config,
         version: 'v2',
+        signal: state.signal,
       });
 
       let aggregateChunk: AIMessageChunk | undefined;
@@ -382,7 +387,9 @@ export function createChatAgentLangchain<
         conversationData: stateConvo.data,
       };
     } catch (e) {
-      console.error(e);
+      if (!state.signal?.aborted) {
+        console.error(e);
+      }
       throw e;
     }
   };
@@ -518,27 +525,34 @@ export function createChatAgentLangchain<
         },
         {
           version: 'v2',
-          signal: args.signal,
           callbacks: langchainCallbacks,
         }
       );
-      for await (const event of iter) {
-        try {
-          if (event.name === 'on_conversation_client_update') {
-            const eventData = event.data as ClientSideUpdate;
-            yield {
-              side: 'client',
-              update: eventData,
-            };
+      try {
+        for await (const event of iter) {
+          try {
+            if (event.name === 'on_conversation_client_update') {
+              const eventData = event.data as ClientSideUpdate;
+              yield {
+                side: 'client',
+                update: eventData,
+              };
+            }
+            if (event.name === 'on_conversation_server_update') {
+              const eventData = event.data as ServerSideUpdate;
+              yield {
+                side: 'server',
+                update: eventData,
+              };
+            }
+          } catch (e) {
+            if (!args.signal?.aborted) {
+              console.error(e);
+            }
           }
-          if (event.name === 'on_conversation_server_update') {
-            const eventData = event.data as ServerSideUpdate;
-            yield {
-              side: 'server',
-              update: eventData,
-            };
-          }
-        } catch (e) {
+        }
+      } catch (e) {
+        if (!args.signal?.aborted) {
           console.error(e);
         }
       }

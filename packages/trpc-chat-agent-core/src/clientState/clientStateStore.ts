@@ -501,6 +501,11 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
   };
 
   const mappedMessages = computed(() => {
+    // Edge case for placeholder conversations, to avoid weird behavior
+    if (conversation.value.data.id === '') {
+      return [];
+    }
+
     const selectedPath = branchState.value.selectedPath;
     const rawMessages = conversation.value.asMessagesArray(selectedPath);
 
