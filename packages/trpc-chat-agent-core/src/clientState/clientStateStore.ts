@@ -327,6 +327,13 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     if (path) {
       updatedBranch = updatedBranch.withBranchSelected(path);
     }
+
+    // Sanity check if the path is still broken
+    const newPath = updatedBranch.selectedPath;
+    if (!new ClientSideChatConversationHelper(conversation).isPathValid(newPath)) {
+      updatedBranch = ConversationBranchState.fromConversation(conversation);
+    }
+
     branchState.value = updatedBranch;
   }
 

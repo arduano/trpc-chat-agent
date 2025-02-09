@@ -272,6 +272,26 @@ export class ChatConversationHelper<AIMessage extends { id: string }> {
     return messages;
   }
 
+  public isPathValid(path: ChatTreePath): boolean {
+    let userId = '';
+    let aiId = ChatConversationHelper.aiMessageRootId;
+
+    for (const selection of path) {
+      const nextUserId = this.data.aiMessageChildIds[aiId]?.[selection.aiMessageChildIndex];
+      if (!nextUserId) {
+        return false;
+      }
+      userId = nextUserId;
+      const nextAiId = this.data.userMessageChildIds[userId]?.[selection.userMessageChildIndex];
+      if (!nextAiId) {
+        return false;
+      }
+      aiId = nextAiId;
+    }
+
+    return true;
+  }
+
   public getPathInfoForMessageId(messageId: string): ChatBranchState {
     const getVariantsForMessageId = (ids: Record<string, string[]>) => {
       return Object.values(ids).find((array) => array.includes(messageId));
