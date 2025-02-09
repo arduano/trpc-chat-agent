@@ -232,6 +232,9 @@ importers:
       '@types/node':
         specifier: ^20.12.14
         version: 20.12.14
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
       zod:
         specifier: ^3.24.1
         version: 3.24.1
