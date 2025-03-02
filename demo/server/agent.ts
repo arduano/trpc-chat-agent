@@ -1,7 +1,6 @@
 import type { createContext } from './context';
-import { ChatOpenAI } from '@langchain/openai';
 import { initAgents } from '@trpc-chat-agent/core';
-import { langchainBackend, transforms } from '@trpc-chat-agent/langchain';
+import { langchainBackend, models } from '@trpc-chat-agent/langchain';
 import { z } from 'zod';
 
 export const ai = initAgents.context<typeof createContext>().backend(langchainBackend).create();
@@ -172,11 +171,16 @@ const toolWithCallback = ai.tool({
 const allTools = [calculatorTool, weatherTool, todoTool, timerTool, toolWithCallback] as const;
 
 export const agent = ai.agent({
-  llm: new ChatOpenAI({ model: 'o3-mini' }),
+  // llm: new ChatOpenAI({ model: 'o3-mini' }),
+  // llm: models.openai({ model: 'o3-mini' }),
+  // llm: models.openai({ model: 'gpt-4o' }),
+  llm: models.anthropic({
+    model: 'claude-3-7-sonnet-20250219',
+    thinking: { type: 'enabled', budget_tokens: 4000 },
+    maxTokens: 8000,
+  }),
   tools: allTools,
-  systemMessage: 'Formatting re-enabled',
   transformInvocation: (args) => {
-    args = transforms.addAnthropicMessageCache(args);
     return args;
   },
 });

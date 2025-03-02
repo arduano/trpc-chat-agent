@@ -131,9 +131,6 @@ importers:
       eventsource-parser:
         specifier: ^3.0.0
         version: 3.0.0
-      langfuse-langchain:
-        specifier: ^3.35.3
-        version: 3.35.3(langchain@0.3.19(@langchain/anthropic@0.3.15(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1))))(@langchain/aws@0.1.6(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1))))(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))(axios@1.7.9)(openai@4.77.0(zod@3.24.1)))
       lucide-react:
         specifier: ^0.469.0
         version: 0.469.0(react@19.0.0)
@@ -2091,12 +2088,6 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@langchain/core': '>=0.2.26 <0.4.0'
-
-  '@langchain/textsplitters@0.1.0':
-    resolution: {integrity: sha512-djI4uw9rlkAb5iMhtLED+xJebDdAG935AdP4eRTB02R7OB/act55Bj9wsskhZsvuyQRpO4O1wQOp85s6T6GWmw==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@langchain/core': '>=0.2.21 <0.4.0'
 
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
@@ -5813,10 +5804,6 @@ packages:
   jsonfile@6.1.0:
     resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
 
-  jsonpointer@5.0.1:
-    resolution: {integrity: sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ==}
-    engines: {node: '>=0.10.0'}
-
   jsonrepair@3.11.2:
     resolution: {integrity: sha512-ejydGcTq0qKk1r0NUBwjtvswbPFhs19+QEfwSeGwB8KJZ59W7/AOFmQh04c68mkJ+2hGk+OkOmkr2bKG4tGlLQ==}
     hasBin: true
@@ -5835,78 +5822,6 @@ packages:
   kleur@3.0.3:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
     engines: {node: '>=6'}
-
-  langchain@0.3.19:
-    resolution: {integrity: sha512-aGhoTvTBS5ulatA67RHbJ4bcV5zcYRYdm5IH+hpX99RYSFXG24XF3ghSjhYi6sxW+SUnEQ99fJhA5kroVpKNhw==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@langchain/anthropic': '*'
-      '@langchain/aws': '*'
-      '@langchain/cerebras': '*'
-      '@langchain/cohere': '*'
-      '@langchain/core': '>=0.2.21 <0.4.0'
-      '@langchain/deepseek': '*'
-      '@langchain/google-genai': '*'
-      '@langchain/google-vertexai': '*'
-      '@langchain/google-vertexai-web': '*'
-      '@langchain/groq': '*'
-      '@langchain/mistralai': '*'
-      '@langchain/ollama': '*'
-      '@langchain/xai': '*'
-      axios: '*'
-      cheerio: '*'
-      handlebars: ^4.7.8
-      peggy: ^3.0.2
-      typeorm: '*'
-    peerDependenciesMeta:
-      '@langchain/anthropic':
-        optional: true
-      '@langchain/aws':
-        optional: true
-      '@langchain/cerebras':
-        optional: true
-      '@langchain/cohere':
-        optional: true
-      '@langchain/deepseek':
-        optional: true
-      '@langchain/google-genai':
-        optional: true
-      '@langchain/google-vertexai':
-        optional: true
-      '@langchain/google-vertexai-web':
-        optional: true
-      '@langchain/groq':
-        optional: true
-      '@langchain/mistralai':
-        optional: true
-      '@langchain/ollama':
-        optional: true
-      '@langchain/xai':
-        optional: true
-      axios:
-        optional: true
-      cheerio:
-        optional: true
-      handlebars:
-        optional: true
-      peggy:
-        optional: true
-      typeorm:
-        optional: true
-
-  langfuse-core@3.35.3:
-    resolution: {integrity: sha512-Nvq8Q1FpyA0/Dr7nV9cni0jQDDKDa2AQsiYfUrax0y6paDans5kDjaKi4kbtySreTV83i+VfJcAmRUsgthAH6g==}
-    engines: {node: '>=18'}
-
-  langfuse-langchain@3.35.3:
-    resolution: {integrity: sha512-izJIjMn175tNrJMazuec8NfW8dw2Hmo3PNnXobszT6GZGIBXf9xPqS/OBQmVyZNUmoBFAgQsOZ+sUMrHbm3KiA==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      langchain: '>=0.0.157 <0.4.0'
-
-  langfuse@3.35.3:
-    resolution: {integrity: sha512-/jCuraBLSdSymACohqN1OVBtsTpx0881/YLv6PxDJzGG2oGRvcYi9gDYFFWU0vLeW9z0RAxhyNw4+f4cS0BkpQ==}
-    engines: {node: '>=18'}
 
   langsmith@0.2.14:
     resolution: {integrity: sha512-ClAuAgSf3m9miMYotLEaZKQyKdaWlfjhebCuYco8bc6g72dU2VwTg31Bv4YINBq7EH2i1cMwbOiJxbOXPqjGig==}
@@ -6544,9 +6459,6 @@ packages:
     peerDependenciesMeta:
       zod:
         optional: true
-
-  openapi-types@12.1.3:
-    resolution: {integrity: sha512-N4YtSYJqghVu4iek2ZUvcN/0aqH1kRDuNqzcycDxhOUpg7GdvLa2F3DgS6yBNhInhv2r/6I0Flkn7CqL8+nIcw==}
 
   opener@1.5.2:
     resolution: {integrity: sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==}
@@ -11786,11 +11698,6 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  '@langchain/textsplitters@0.1.0(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))':
-    dependencies:
-      '@langchain/core': 0.3.26(openai@4.77.0(zod@3.24.1))
-      js-tiktoken: 1.0.16
-
   '@leichtgewicht/ip-codec@2.0.5': {}
 
   '@manypkg/find-root@1.1.0':
@@ -14345,7 +14252,7 @@ snapshots:
       '@typescript-eslint/parser': 8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2)
       eslint: 9.17.0(jiti@1.21.7)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.7.0(eslint-plugin-import-x@4.6.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-plugin-import@2.31.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint@9.17.0(jiti@1.21.7)))(eslint@9.17.0(jiti@1.21.7))
+      eslint-import-resolver-typescript: 3.7.0(eslint-plugin-import-x@4.6.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-plugin-import@2.31.0)(eslint@9.17.0(jiti@1.21.7))
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-import-resolver-typescript@3.7.0)(eslint@9.17.0(jiti@1.21.7))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.17.0(jiti@1.21.7))
       eslint-plugin-react: 7.37.3(eslint@9.17.0(jiti@1.21.7))
@@ -14378,7 +14285,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.7.0(eslint-plugin-import-x@4.6.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-plugin-import@2.31.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint@9.17.0(jiti@1.21.7)))(eslint@9.17.0(jiti@1.21.7)):
+  eslint-import-resolver-typescript@3.7.0(eslint-plugin-import-x@4.6.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-plugin-import@2.31.0)(eslint@9.17.0(jiti@1.21.7)):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.0
@@ -14405,14 +14312,14 @@ snapshots:
     dependencies:
       eslint: 9.17.0(jiti@1.21.7)
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0(eslint-plugin-import-x@4.6.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-plugin-import@2.31.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint@9.17.0(jiti@1.21.7)))(eslint@9.17.0(jiti@1.21.7)))(eslint@9.17.0(jiti@1.21.7)):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0)(eslint@9.17.0(jiti@1.21.7)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       '@typescript-eslint/parser': 8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2)
       eslint: 9.17.0(jiti@1.21.7)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.7.0(eslint-plugin-import-x@4.6.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-plugin-import@2.31.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint@9.17.0(jiti@1.21.7)))(eslint@9.17.0(jiti@1.21.7))
+      eslint-import-resolver-typescript: 3.7.0(eslint-plugin-import-x@4.6.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-plugin-import@2.31.0)(eslint@9.17.0(jiti@1.21.7))
     transitivePeerDependencies:
       - supports-color
 
@@ -14477,7 +14384,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.17.0(jiti@1.21.7)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0(eslint-plugin-import-x@4.6.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-plugin-import@2.31.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint@9.17.0(jiti@1.21.7)))(eslint@9.17.0(jiti@1.21.7)))(eslint@9.17.0(jiti@1.21.7))
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0)(eslint@9.17.0(jiti@1.21.7))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -16082,8 +15989,6 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  jsonpointer@5.0.1: {}
-
   jsonrepair@3.11.2: {}
 
   jsx-ast-utils@3.3.5:
@@ -16100,43 +16005,6 @@ snapshots:
   kind-of@6.0.3: {}
 
   kleur@3.0.3: {}
-
-  langchain@0.3.19(@langchain/anthropic@0.3.15(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1))))(@langchain/aws@0.1.6(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1))))(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))(axios@1.7.9)(openai@4.77.0(zod@3.24.1)):
-    dependencies:
-      '@langchain/core': 0.3.26(openai@4.77.0(zod@3.24.1))
-      '@langchain/openai': 0.3.16(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
-      '@langchain/textsplitters': 0.1.0(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
-      js-tiktoken: 1.0.16
-      js-yaml: 4.1.0
-      jsonpointer: 5.0.1
-      langsmith: 0.2.14(openai@4.77.0(zod@3.24.1))
-      openapi-types: 12.1.3
-      p-retry: 4.6.2
-      uuid: 10.0.0
-      yaml: 2.6.1
-      zod: 3.24.1
-      zod-to-json-schema: 3.24.1(zod@3.24.1)
-    optionalDependencies:
-      '@langchain/anthropic': 0.3.15(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
-      '@langchain/aws': 0.1.6(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))
-      axios: 1.7.9
-    transitivePeerDependencies:
-      - encoding
-      - openai
-
-  langfuse-core@3.35.3:
-    dependencies:
-      mustache: 4.2.0
-
-  langfuse-langchain@3.35.3(langchain@0.3.19(@langchain/anthropic@0.3.15(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1))))(@langchain/aws@0.1.6(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1))))(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))(axios@1.7.9)(openai@4.77.0(zod@3.24.1))):
-    dependencies:
-      langchain: 0.3.19(@langchain/anthropic@0.3.15(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1))))(@langchain/aws@0.1.6(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1))))(@langchain/core@0.3.26(openai@4.77.0(zod@3.24.1)))(axios@1.7.9)(openai@4.77.0(zod@3.24.1))
-      langfuse: 3.35.3
-      langfuse-core: 3.35.3
-
-  langfuse@3.35.3:
-    dependencies:
-      langfuse-core: 3.35.3
 
   langsmith@0.2.14(openai@4.77.0(zod@3.24.1)):
     dependencies:
@@ -17043,8 +16911,6 @@ snapshots:
       zod: 3.24.1
     transitivePeerDependencies:
       - encoding
-
-  openapi-types@12.1.3: {}
 
   opener@1.5.2: {}
 
