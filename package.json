@@ -13,13 +13,13 @@
   },
   "scripts": {
     "demo": "cd demo && pnpm",
-    "lint:fix": "eslint . --fix",
     "check-types": "pnpm -r exec tsc --noEmit",
     "release": "pnpm build && changeset publish",
     "version-packages": "changeset version",
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^3.12.0",
