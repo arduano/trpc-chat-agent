@@ -11,7 +11,7 @@ import PackageInstall from '@site/src/components/PackageInstall';
 Setting up LangChain is fairly straightforward
 
 ```ts
-import { langchainBackend, asLangChainMessagesArray } from '@trpc-chat-agent/langchain';
+import { langchainBackend, asLangChainMessagesArray, models } from '@trpc-chat-agent/langchain';
 import { initAgents } from '@trpc-chat-agent/core';
 import { ChatOpenAI } from 'langchain/chatmodels/openai';
 
@@ -30,10 +30,9 @@ const agent = ai.agent({
   // - a single model
   // - a function to select what model to use based on extra args
   // Here's a single model:
-  llm: new ChatOpenAI({ model: 'gpt-4o' }),
+  llm: models.openai({ model: 'gpt-4o' }),
   // Here's a map of named models:
-  llm: ({ extraArgs }) => new ChatOpenAI({ model: extraArgs.myChosenModelName }),
-
+  llm: ({ extraArgs }) => models.openai({ model: extraArgs.myChosenModelName }),
 
   // (optional) The maximum update rate for client args and progress indicators
   // defaults to 100ms
@@ -89,25 +88,3 @@ const myTool = ai.tool({
   },
 });
 ```
-
-## Anthropic Prompt Caching
-
-Anthropic models require custom input parameters to enable prompt caching. `@trpc-chat-agent/langchain` automatically adds those parameters when the model is detected as a ChatAnthropic instance.
-
-The `cache_control: { type: 'ephemeral' }` parameters are added in the following locations:
-- The last tool
-- The system message
-- The second last message
-- The last message
-
-You can control which of these are included with the `anthropicCacheLevel` option in the agent definition.
-
-For example:
-
-```ts
-const agent = ai.agent({
-  // ...
-  llm: new ChatAnthropic({ model: 'claude-3-5-sonnet-20241022' }),
-  anthropicCacheLevel: AnthropicCacheLevels.UpToSystemMessage, // Only cache tools and system message
-  // ...
-});
