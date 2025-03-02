@@ -1,16 +1,13 @@
-import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
-import type { ToolCall } from '@langchain/core/messages/tool';
 import type { MessageContent, MessageContentText } from '../../messageContent';
 import type { AnyStructuredChatTool } from '../../structuredTool';
 import type { ToolCallClientSideFromToolsArray, ToolCallFromToolsArray } from '../tools';
-import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import { processMessageContentForClient } from '../../messageContent';
 
 export type AIMessagePartData<Tools extends readonly AnyStructuredChatTool[]> = {
   content: MessageContent;
   toolCalls: ToolCallFromToolsArray<Tools>[];
   responseMetadata?: Record<string, any>;
-  usageMetadata?: UsageMetadata;
+  usageMetadata?: Record<string, any>;
   createdAt: string;
 };
 
@@ -62,38 +59,6 @@ export class ChatAIMessageWrapper<Tools extends readonly AnyStructuredChatTool[]
     } else {
       lastPart.toolCalls[index] = toolCall;
     }
-  }
-
-  public asLangChainMessages(): BaseMessage[] {
-    function partHasContentOrToolCalls(part: AIMessagePartData<Tools>): boolean {
-      return part.content.length > 0 || part.toolCalls.length > 0;
-    }
-
-    function partAsLangchainMessages(part: AIMessagePartData<Tools>): BaseMessage[] {
-      const aiMessage = new AIMessage({
-        content: part.content,
-        tool_calls: part.toolCalls.map<ToolCall>((tc) => ({
-          name: tc.name,
-          args: tc.args,
-          id: tc.id,
-          type: 'tool_call',
-        })),
-        response_metadata: part.responseMetadata,
-        usage_metadata: part.usageMetadata,
-      });
-
-      const toolResponseMessages = part.toolCalls.map<ToolMessage>(
-        (tc) =>
-          new ToolMessage({
-            content: tc.result ?? 'Tool execution cancelled before completion.',
-            tool_call_id: tc.id,
-          })
-      );
-
-      return [aiMessage, ...toolResponseMessages];
-    }
-
-    return this.data.parts.filter(partHasContentOrToolCalls).flatMap(partAsLangchainMessages);
   }
 
   public asClientSideMessageData(): AIMessageDataClientSide<Tools> {

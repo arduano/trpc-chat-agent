@@ -1,6 +1,4 @@
-import type { BaseMessage } from '@langchain/core/messages';
 import type { MessageContent } from '../../messageContent';
-import { HumanMessage } from '@langchain/core/messages';
 
 export type UserMessageData = {
   kind: 'user';
@@ -38,11 +36,5 @@ export class ChatUserMessageWrapper {
         return '\n\n';
       })
       .join('');
-  }
-
-  public asLangChainMessage(): BaseMessage {
-    return new HumanMessage({
-      content: this.content,
-    });
   }
 }

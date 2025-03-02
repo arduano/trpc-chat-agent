@@ -33,13 +33,16 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "rollup --config rollup.config.ts --configPlugin rollup-plugin-swc3",
-    "dev": "pnpm build --watch"
+    "dev": "pnpm build --watch",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix --max-warnings=0"
   },
   "peerDependencies": {
     "@trpc-chat-agent/core": "workspace:*"
   },
   "dependencies": {
-    "@langchain/anthropic": "^0.3.12",
+    "@langchain/anthropic": "^0.3.15",
+    "@langchain/aws": "^0.1.6",
     "@langchain/core": "^0.3.26",
     "@langchain/langgraph": "^0.2.36",
     "@langchain/openai": "^0.3.16",
@@ -48,6 +51,7 @@
   },
   "devDependencies": {
     "@trpc-chat-agent/core": "workspace:*",
+    "@types/node": "^22.13.8",
     "rollup": "^4.29.1",
     "typescript": "^5.0.0"
   }

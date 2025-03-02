@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { createChatAgentLangchain } from './chatAgent';
 
 export * from './chatAgent';
-export { transforms } from './transforms';
+export * from './chatModelInvoker';
 
 export type LangchainToolExtraArgs = readonly [CallbackManagerForToolRun | undefined, RunnableConfig];
 class LangChainAgentsBackend<ExtraExternalArgs extends z.ZodTypeAny> extends AgentsBackend<

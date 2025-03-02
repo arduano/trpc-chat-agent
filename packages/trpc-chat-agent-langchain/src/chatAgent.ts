@@ -1,10 +1,10 @@
 import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
-import type { BaseLanguageModelInput } from '@langchain/core/language_models/base';
-import type { BaseChatModelCallOptions, BindToolsInput } from '@langchain/core/language_models/chat_models';
-import type { AIMessageChunk, BaseMessage, BaseMessageLike } from '@langchain/core/messages';
-import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
+import type { AIMessageChunk, BaseMessage, UsageMetadata } from '@langchain/core/messages';
+import type { ToolCall as LangChainToolCall } from '@langchain/core/messages/tool';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import type {
-  AgentTools,
+  AIMessageData,
+  AIMessagePartData,
   AnyChatAgent,
   AnyStructuredChatTool,
   ChatAgent,
@@ -16,22 +16,18 @@ import type {
   ServerSideConversationUpdate,
   ServerSideUpdate,
   ToolCallbackInvoker,
+  UserMessageData,
 } from '@trpc-chat-agent/core';
 import type { z } from 'zod';
+import type { ChatModelOrInvoker } from './chatModelInvoker';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { isAIMessageChunk, SystemMessage } from '@langchain/core/messages';
+import { AIMessage, HumanMessage, isAIMessageChunk, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
-import {
-  ChatAIMessageWrapper,
-  ChatUserMessageWrapper,
-  Debouncer,
-  processMessageContentForClient,
-  ServerSideChatConversationHelper,
-} from '@trpc-chat-agent/core';
+import { Debouncer, processMessageContentForClient, ServerSideChatConversationHelper } from '@trpc-chat-agent/core';
+import { ChatModelInvoker, chatModelToInvoker } from './chatModelInvoker';
 import { StructuredChatToolLangChain } from './tool';
-import { bindToolsToModel } from './transforms';
 
 function makeStateAnnotation<
   Tools extends readonly AnyStructuredChatTool[],
@@ -82,15 +78,16 @@ export type CreateChatAgentArgs<
   ) => ModelInvokeArgs | Promise<ModelInvokeArgs>;
 
   // LangChain
-  llm: BaseChatModel | ((args: { extraArgs: z.infer<ExtraExternalArgs> }) => BaseChatModel | Promise<BaseChatModel>);
+  llm:
+    | ChatModelOrInvoker
+    | ((args: { extraArgs: z.infer<ExtraExternalArgs> }) => ChatModelOrInvoker | Promise<ChatModelOrInvoker>);
   langchainCallbacks?: LangchainCallbacks;
 };
 
 export type ModelInvokeArgs = {
-  llm: BaseChatModel;
-  bind: Record<string, any>;
-  tools: (StructuredChatToolLangChain | unknown)[];
-  messages: (BaseChatModel | unknown)[];
+  llm: ChatModelOrInvoker;
+  tools: StructuredChatToolLangChain[];
+  messages: BaseMessage[];
 };
 
 type ChatAgentArgsWithExtraArgs<
@@ -210,11 +207,13 @@ export function createChatAgentLangchain<
     };
 
     try {
-      const selectedLlm = llm instanceof BaseChatModel ? llm : await llm({ extraArgs: state.extraArgs });
+      const selectedLlm =
+        llm instanceof BaseChatModel || llm instanceof ChatModelInvoker
+          ? llm
+          : await llm({ extraArgs: state.extraArgs });
 
       const modelParams: ModelInvokeArgs = {
         llm: selectedLlm,
-        bind: bindToolsToModel,
         tools: toolsList,
         messages: messageList,
       };
@@ -231,23 +230,14 @@ export function createChatAgentLangchain<
       const finalSelectedLlm = mappedModelParams.llm;
       const finalTools = mappedModelParams.tools;
       const finalMessageList = mappedModelParams.messages;
-      const finalModelBindArgs = mappedModelParams.bind;
 
-      let modelRunnable: Runnable<BaseLanguageModelInput, AIMessageChunk, BaseChatModelCallOptions>;
+      const finalSelectedLlmInvoker = chatModelToInvoker(finalSelectedLlm);
 
-      if (finalTools.length > 0) {
-        if (!('bindTools' in finalSelectedLlm) || typeof finalSelectedLlm.bindTools !== 'function') {
-          throw new Error(`llm ${finalSelectedLlm} must define bindTools method.`);
-        }
-        modelRunnable = finalSelectedLlm.bindTools(finalTools as BindToolsInput[]).bind(finalModelBindArgs);
-      } else {
-        modelRunnable = finalSelectedLlm.bind(finalModelBindArgs);
-      }
-
-      const stream = await modelRunnable.streamEvents(finalMessageList as BaseMessageLike[], {
-        ...config,
-        version: 'v2',
+      const stream = await finalSelectedLlmInvoker.invoke({
+        config,
+        messages: finalMessageList,
         signal: state.signal,
+        tools: finalTools,
       });
 
       let aggregateChunk: AIMessageChunk | undefined;
@@ -268,6 +258,7 @@ export function createChatAgentLangchain<
       });
 
       for await (const chunk of stream) {
+        // console.log(chunk);
         if (chunk.event === 'on_chat_model_stream') {
           const data = chunk.data.chunk;
           if (isAIMessageChunk(data)) {
@@ -560,6 +551,48 @@ export function createChatAgentLangchain<
   };
 }
 
+function aiMessageAsLangChainMessages<Tools extends readonly AnyStructuredChatTool[]>(
+  message: AIMessageData<Tools>
+): BaseMessage[] {
+  function partHasContentOrToolCalls(part: AIMessagePartData<Tools>): boolean {
+    return part.content.length > 0 || part.toolCalls.length > 0;
+  }
+
+  function partAsLangchainMessages(part: AIMessagePartData<Tools>): BaseMessage[] {
+    const aiMessage = new AIMessage({
+      content: processMessageContentForClient(part.content),
+      tool_calls: part.toolCalls.map<LangChainToolCall>((tc) => ({
+        name: tc.name,
+        args: tc.args,
+        id: tc.id,
+        type: 'tool_call',
+      })),
+      response_metadata: part.responseMetadata,
+      usage_metadata: part.usageMetadata as UsageMetadata,
+    });
+
+    const toolResponseMessages = part.toolCalls.map<ToolMessage>(
+      (tc) =>
+        new ToolMessage({
+          content: tc.result ?? 'Tool execution cancelled before completion.',
+          tool_call_id: tc.id,
+        })
+    );
+
+    return [aiMessage, ...toolResponseMessages];
+  }
+
+  return message.parts.filter(partHasContentOrToolCalls).flatMap(partAsLangchainMessages);
+}
+
+function userMessageAsLangChainMessages(message: UserMessageData): BaseMessage[] {
+  return [
+    new HumanMessage({
+      content: message.content,
+    }),
+  ];
+}
+
 export function asLangChainMessagesArray(
   conversation: Readonly<ServerSideChatConversationHelper<AnyChatAgent>>,
   tree: ChatTreePath
@@ -567,9 +600,9 @@ export function asLangChainMessagesArray(
   return conversation.asMessagesArray(tree).flatMap((message) => {
     switch (message.kind) {
       case 'ai':
-        return new ChatAIMessageWrapper<AgentTools<any>>(message).asLangChainMessages();
+        return aiMessageAsLangChainMessages(message);
       case 'user':
-        return [new ChatUserMessageWrapper(message).asLangChainMessage()];
+        return userMessageAsLangChainMessages(message);
       default:
         throw new UnreachableError(message);
     }

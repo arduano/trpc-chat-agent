@@ -33,7 +33,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "rollup --config rollup.config.ts --configPlugin rollup-plugin-swc3",
-    "dev": "pnpm build --watch"
+    "dev": "pnpm build --watch",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix --max-warnings=0"
   },
   "peerDependencies": {
     "@trpc-chat-agent/core": "workspace:*",
