@@ -1,5 +1,15 @@
 # @trpc-chat-agent/core
 
+## 1.0.0
+
+### Minor Changes
+
+- f983aab: Improved backend LLM management with LLM invokers
+
+### Patch Changes
+
+- f983aab: Properly extracted remaining langchain dependencies
+
 ## 0.4.9
 
 ### Patch Changes

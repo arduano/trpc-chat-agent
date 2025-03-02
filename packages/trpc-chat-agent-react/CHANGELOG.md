@@ -1,5 +1,17 @@
 # @trpc-chat-agent/react
 
+## 1.0.0
+
+### Minor Changes
+
+- f983aab: Improved backend LLM management with LLM invokers
+
+### Patch Changes
+
+- Updated dependencies [f983aab]
+- Updated dependencies [f983aab]
+  - @trpc-chat-agent/core@1.0.0
+
 ## 0.4.9
 
 ### Patch Changes
