@@ -138,6 +138,12 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[], Ext
 
   emitter: EventStreamer<ResponseUpdate> = new EventStreamer();
   messageIndex = 1;
+  callIdCounter = 0;
+
+  getCallId() {
+    this.callIdCounter++;
+    return `${this.messageId}-tool-call-${this.callIdCounter}`;
+  }
 
   async beginMessagePart() {
     this.messageIndex++;
@@ -194,12 +200,6 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[], Ext
     const chosenTools: Tools[number][] = [];
     const chosenToolCallIds: string[] = [];
 
-    let callIdCounter = 0;
-    const getCallId = () => {
-      callIdCounter++;
-      return `${this.messageId}-tool-call-${callIdCounter}`;
-    };
-
     for (const call of calls) {
       const tool = this.tools.find((t) => t.name === call.toolName);
       if (!tool) {
@@ -207,7 +207,7 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[], Ext
       }
       chosenTools.push(tool);
 
-      const callId = getCallId();
+      const callId = this.getCallId();
       chosenToolCallIds.push(callId);
 
       await this.emitter.emit(
