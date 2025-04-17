@@ -41,18 +41,18 @@
     "@trpc-chat-agent/core": "workspace:*"
   },
   "dependencies": {
-    "@langchain/anthropic": "^0.3.15",
-    "@langchain/aws": "^0.1.6",
-    "@langchain/core": "^0.3.26",
-    "@langchain/langgraph": "^0.2.36",
-    "@langchain/openai": "^0.3.16",
-    "zod": "^3.24.1",
-    "zod-to-json-schema": "^3.24.1"
+    "@langchain/anthropic": "^0.3.18",
+    "@langchain/aws": "^0.1.8",
+    "@langchain/core": "^0.3.45",
+    "@langchain/langgraph": "^0.2.64",
+    "@langchain/openai": "^0.3.17",
+    "zod": "^3.24.3",
+    "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
     "@trpc-chat-agent/core": "workspace:*",
-    "@types/node": "^22.13.8",
-    "rollup": "^4.29.1",
-    "typescript": "^5.0.0"
+    "@types/node": "^22.14.1",
+    "rollup": "^4.40.0",
+    "typescript": "^5.8.3"
   }
 }

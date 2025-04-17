@@ -1,6 +1,6 @@
 import type { AnyStructuredChatTool, ChatAgent, ClientSideConversation } from '@trpc-chat-agent/core';
 import type { TRPCLink } from '@trpc/client';
-import type { AnyRouter } from '@trpc/server';
+import type { AnyRouter } from '@trpc/server/unstable-core-do-not-import';
 import type { z } from 'zod';
 import { makeChatRouterForAgent, ServerSideChatConversationHelper } from '@trpc-chat-agent/core';
 import { createTRPCClient } from '@trpc/client';
@@ -35,7 +35,7 @@ export function buildMockTrpcChatRouter<
         return observable((observer) => {
           const handler = async () => {
             const result = await callTRPCProcedure({
-              procedures: appRouter._def.procedures,
+              router: appRouter,
               ctx: {},
               path: op.path,
               input: op.input,
