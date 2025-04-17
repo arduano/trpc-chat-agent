@@ -1,5 +1,11 @@
 # @trpc-chat-agent/core
 
+## 1.0.0
+
+### Minor Changes
+
+- 2a28226: Updated the AI message part data model (breaking change)
+
 ## 0.4.10
 
 ### Patch Changes
