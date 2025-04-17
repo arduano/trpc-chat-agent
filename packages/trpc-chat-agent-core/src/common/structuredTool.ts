@@ -1,7 +1,7 @@
 import type { AnyToolCallback, CallbackFunctions } from 'src/server';
 import type { z } from 'zod';
 import type { AnyChatAgent } from './agentTypes';
-import type { MessageContent } from './messageContent';
+import type { UserMessageContent } from './messageContent';
 import type { AIMessageData, ChatTreePath, ServerSideChatConversationHelper, UserMessageData } from './types';
 import { Debouncer } from './debounce';
 
@@ -10,7 +10,6 @@ export type ToolRunFn<
   Context,
   Callbacks extends Record<string, AnyToolCallback>,
   ToolProgressData extends z.ZodTypeAny | undefined,
-  Return,
   ResultForClient,
   ExtraExternalArgs extends z.AnyZodObject,
   ExtraBackendArgs extends readonly any[] = [],
@@ -32,7 +31,7 @@ export type ToolRunFn<
     lastUserMessage: UserMessageData;
   },
   ...extraArgs: ExtraBackendArgs
-) => Promise<ToolCallOutput<Return, ResultForClient>>;
+) => Promise<ToolCallOutput<ResultForClient>>;
 
 export type ToolCallbackInvoker = (args: {
   callbackArgs: any;
@@ -61,10 +60,13 @@ export type ToolCallInput<
   extraArgs: z.infer<ExtraExternalArgs>;
 };
 
-export type ToolCallOutput<Return, ResultForClient> = {
-  response: Return;
+export type ToolCallOutput<ResultForClient> = {
+  response: string | UserMessageContent[];
   clientResult: ResultForClient;
 };
+
+export const normalizeToolResponse = (content: UserMessageContent[] | string): UserMessageContent[] =>
+  typeof content === 'string' ? [{ type: 'text', text: content }] : content;
 
 export type ToolProgressCallback<ToolProgressData extends z.ZodTypeAny | undefined> = ToolProgressData extends undefined
   ? never
@@ -80,7 +82,6 @@ export class StructuredChatTool<
   Name extends string,
   Args extends z.AnyZodObject,
   ToolProgressData extends z.ZodTypeAny | undefined = undefined,
-  Return = undefined,
   ArgsForClient = undefined,
   ResultForClient = undefined,
   Context = any,
@@ -95,7 +96,6 @@ export class StructuredChatTool<
     Args: z.infer<Args>;
     ToolProgressSchema: ToolProgressData;
     ToolProgress: ToolProgressData extends undefined ? undefined : z.infer<NonNullable<ToolProgressData>>;
-    Return: Return;
     ArgsForClient: ArgsForClient;
     ResultForClient: ResultForClient;
     Context: Context;
@@ -113,17 +113,8 @@ export class StructuredChatTool<
       toolProgressSchema?: ToolProgressData;
       description: string;
       callbacks?: Callbacks;
-      run: ToolRunFn<
-        Args,
-        Context,
-        Callbacks,
-        ToolProgressData,
-        Return,
-        ResultForClient,
-        ExtraExternalArgs,
-        ExtraBackendArgs
-      >;
-      mapErrorForAI?: (error: unknown) => MessageContent;
+      run: ToolRunFn<Args, Context, Callbacks, ToolProgressData, ResultForClient, ExtraExternalArgs, ExtraBackendArgs>;
+      mapErrorForAI?: (error: unknown) => string;
       mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
     }
   ) {
@@ -155,7 +146,7 @@ export class StructuredChatTool<
   async invoke(
     args: ToolCallInput<Args, ExtraExternalArgs, Context, ToolProgressData>,
     ...extraRunArgs: ExtraBackendArgs
-  ): Promise<ToolCallOutput<Return, ResultForClient>> {
+  ): Promise<ToolCallOutput<ResultForClient>> {
     const allCallbacks = Object.fromEntries(
       Object.entries(this.toolArgs.callbacks ?? {}).map(([name, callback]) => {
         return [
@@ -192,6 +183,6 @@ export class StructuredChatTool<
   }
 }
 
-export type AnyStructuredChatTool = StructuredChatTool<string, any, any, any, any, any, any, any, readonly any[]>;
+export type AnyStructuredChatTool = StructuredChatTool<string, any, any, any, any, any, any, readonly any[]>;
 
 export type ToolsContext<Tools extends readonly AnyStructuredChatTool[]> = Tools[number]['TypeInfo']['Context'];

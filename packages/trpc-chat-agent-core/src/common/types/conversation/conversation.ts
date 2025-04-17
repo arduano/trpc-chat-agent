@@ -1,5 +1,4 @@
 import type { Draft, WritableDraft } from 'immer';
-import type { MessageContent } from '../..';
 import type { ChatBranchState, ChatTreePath } from '../branching';
 import type { UserMessageData } from '../message/user';
 import { castDraft, produce } from 'immer';
@@ -311,34 +310,5 @@ export class ChatConversationHelper<AIMessage extends { id: string }> {
       count: variants.length,
       index: variants.indexOf(messageId),
     };
-  }
-}
-
-export function concatMessageContent(messageContent: MessageContent, contentToAppend: MessageContent): MessageContent {
-  // Handle mismatches between string and non-string content
-  if (typeof contentToAppend === 'string') {
-    if (typeof messageContent === 'string') {
-      return messageContent + contentToAppend;
-    } else {
-      return [
-        ...messageContent,
-        {
-          type: 'text',
-          text: contentToAppend,
-        },
-      ];
-    }
-  } else {
-    if (typeof messageContent === 'string') {
-      return [
-        {
-          type: 'text',
-          text: messageContent,
-        },
-        ...contentToAppend,
-      ];
-    } else {
-      return messageContent.concat(contentToAppend);
-    }
   }
 }

@@ -173,12 +173,12 @@ const allTools = [calculatorTool, weatherTool, todoTool, timerTool, toolWithCall
 export const agent = ai.agent({
   // llm: new ChatOpenAI({ model: 'o3-mini' }),
   // llm: models.openai({ model: 'o3-mini' }),
-  // llm: models.openai({ model: 'gpt-4o' }),
-  llm: models.anthropic({
-    model: 'claude-3-7-sonnet-20250219',
-    thinking: { type: 'enabled', budget_tokens: 4000 },
-    maxTokens: 8000,
-  }),
+  llm: models.openai({ model: 'gpt-4.1' }),
+  // llm: models.anthropic({
+  //   model: 'claude-3-7-sonnet-20250219',
+  //   thinking: { type: 'enabled', budget_tokens: 4000 },
+  //   maxTokens: 8000,
+  // }),
   tools: allTools,
   transformInvocation: (args) => {
     return args;

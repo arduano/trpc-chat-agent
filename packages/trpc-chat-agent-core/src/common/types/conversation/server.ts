@@ -3,11 +3,11 @@ import type { AnyStructuredChatTool } from '../../structuredTool';
 import type { AIMessageData } from '../message/ai';
 import type { ToolCallFromToolsArray } from '../tools';
 import type {
-  ServerBeginNewAIMessagePart,
   ServerSideConversationUpdate,
   ServerUpdateBeginToolCall,
-  ServerUpdateMessageContent,
   ServerUpdateMessageToolCall,
+  UpdateMessageContent,
+  UpdateMessageSpecialContent,
 } from '../updates';
 import type { ClientSideConversation } from './client';
 import type { ConversationData } from './conversation';
@@ -44,12 +44,12 @@ export class ServerSideChatConversationHelper<Agent extends AnyChatAgent> extend
     switch (update.kind) {
       case 'update-content':
         return this.updateMessageContent(update);
+      case 'update-special-content':
+        return this.updateMessageSpecialContent(update);
       case 'begin-tool-call':
         return this.updateMessageBeginToolCall(update);
       case 'update-tool-call':
         return this.updateMessageToolCall(update);
-      case 'begin-new-ai-message-part':
-        return this.beginNewAIMessagePart(update);
       default:
         throw new UnreachableError(update, `Invalid update kind "${(update as any).kind}"`);
     }
@@ -59,9 +59,9 @@ export class ServerSideChatConversationHelper<Agent extends AnyChatAgent> extend
     this.produceData((data) => {
       for (const aiMessage of Object.values(data.aiMessages)) {
         for (const part of aiMessage.parts) {
-          for (const toolCall of part.toolCalls) {
-            if (toolCall.state === 'loading') {
-              toolCall.state = 'aborted';
+          if (part.type === 'tool') {
+            if (part.data.state === 'loading') {
+              part.data.state = 'aborted';
             }
           }
         }
@@ -69,17 +69,40 @@ export class ServerSideChatConversationHelper<Agent extends AnyChatAgent> extend
     });
   }
 
-  private updateMessageContent(update: ServerUpdateMessageContent) {
+  private updateMessageContent(update: UpdateMessageContent) {
     this.produceAiMessage(update.messageId, (message) => {
-      const lastPart = message.parts[message.parts.length - 1];
-      lastPart.content = update.totalContent;
+      const partWithId = message.parts.find((part) => part.type === 'text' && part.id === update.partId);
+      if (!partWithId) {
+        message.parts.push({
+          type: 'text',
+          id: update.partId,
+          text: update.contentToAppend,
+        });
+      } else if (partWithId.type === 'text') {
+        partWithId.text += update.contentToAppend;
+      }
+    });
+  }
+
+  private updateMessageSpecialContent(update: UpdateMessageSpecialContent) {
+    this.produceAiMessage(update.messageId, (message) => {
+      const partWithId = message.parts.find((part) => part.type === 'special-text' && part.id === update.partId);
+      if (!partWithId) {
+        message.parts.push({
+          type: 'special-text',
+          id: update.partId,
+          specialType: update.specialType,
+          text: update.contentToAppend,
+        });
+      } else if (partWithId.type === 'special-text') {
+        partWithId.text += update.contentToAppend;
+      }
     });
   }
 
   private updateMessageBeginToolCall(update: ServerUpdateBeginToolCall) {
     this.produceAiMessage(update.messageId, (message) => {
-      const lastPart = message.parts[message.parts.length - 1];
-      const newToolCall = {
+      const newToolCall: ToolCallFromToolsArray<AgentTools<Agent>> = {
         id: update.toolCallId,
         name: update.toolCallName,
         args: update.newArgs,
@@ -87,42 +110,37 @@ export class ServerSideChatConversationHelper<Agent extends AnyChatAgent> extend
         client: {
           args: update.newClientArgs,
         },
-      } as ToolCallFromToolsArray<AgentTools<Agent>>;
+      };
 
-      lastPart.toolCalls.push(castDraft(newToolCall));
+      message.parts.push(
+        castDraft({
+          type: 'tool',
+          id: update.toolCallId,
+          data: newToolCall,
+        })
+      );
     });
   }
 
   private updateMessageToolCall(update: ServerUpdateMessageToolCall) {
     this.produceAiMessage(update.messageId, (message) => {
-      const lastPart = message.parts[message.parts.length - 1];
-      const toolCall = lastPart.toolCalls.find((tc) => tc.id === update.toolCallId);
-      if (!toolCall) {
+      const toolCall = message.parts.find((part) => part.type === 'tool' && part.data.id === update.toolCallId);
+      if (!toolCall || toolCall.type !== 'tool') {
         throw new Error(`Tool call with ID ${update.toolCallId} not found`);
       }
 
       if (update.newResult !== undefined) {
-        toolCall.result = update.newResult;
+        toolCall.data.result = update.newResult;
       }
       if (update.newClientArgs !== undefined) {
-        toolCall.client.args = update.newClientArgs;
+        toolCall.data.client.args = update.newClientArgs;
       }
       if (update.newClientResult !== undefined) {
-        toolCall.client.result = update.newClientResult;
+        toolCall.data.client.result = update.newClientResult;
       }
       if (update.newState !== undefined) {
-        toolCall.state = update.newState;
+        toolCall.data.state = update.newState;
       }
-    });
-  }
-
-  private beginNewAIMessagePart(update: ServerBeginNewAIMessagePart) {
-    this.produceAiMessage(update.messageId, (message) => {
-      message.parts.push({
-        content: '',
-        toolCalls: [],
-        createdAt: new Date().toISOString(),
-      });
     });
   }
 

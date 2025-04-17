@@ -1,4 +1,3 @@
-import type { MessageContent } from '@langchain/core/messages';
 import type { DeepPartial } from '@trpc/server';
 import type { ZodType } from 'zod';
 import type { AnyChatAgent } from '../common';
@@ -10,7 +9,6 @@ import { StructuredChatTool } from '../common/structuredTool';
 export abstract class AgentsBackend<
   ExtraBackendArgs extends readonly any[],
   BaseMessageType,
-  ToolReturn,
   ExtraExternalArgs extends z.ZodTypeAny,
 > {
   // Field to stop typescript from complaining about unused types.
@@ -18,7 +16,6 @@ export abstract class AgentsBackend<
   $types = undefined as any as {
     ExtraBackendArgs: ExtraBackendArgs;
     BaseMessageType: BaseMessageType;
-    ToolReturn: ToolReturn;
     ExtraExternalArgs: ExtraExternalArgs;
   };
 
@@ -27,9 +24,9 @@ export abstract class AgentsBackend<
   abstract createAgent: (...args: any[]) => AnyChatAgent;
 }
 
-type AnyAgentsBackend = AgentsBackend<readonly any[], any, any, any>;
+type AnyAgentsBackend = AgentsBackend<readonly any[], any, any>;
 
-export class NoBackend extends AgentsBackend<[], never, never, z.ZodNever> {
+export class NoBackend extends AgentsBackend<[], never, z.ZodNever> {
   createAgent = () => {
     throw new Error('No backend provided');
   };
@@ -93,19 +90,17 @@ class AgentBuilder<Context, Backend extends AnyAgentsBackend> {
       Context,
       Callbacks,
       ToolProgressData,
-      Backend['$types']['ToolReturn'],
       ResultForClient,
       Backend['$types']['ExtraExternalArgs'],
       Backend['$types']['ExtraBackendArgs']
     >;
-    mapErrorForAI?: (error: unknown) => MessageContent;
+    mapErrorForAI?: (error: unknown) => string;
     mapArgsForClient?: (args: DeepPartial<z.infer<Args>>) => ArgsForClient;
   }) {
     return new StructuredChatTool<
       Name,
       Args,
       ToolProgressData,
-      Backend['$types']['ToolReturn'],
       ArgsForClient,
       ResultForClient,
       Context,

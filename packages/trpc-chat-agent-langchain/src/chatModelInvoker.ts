@@ -10,7 +10,6 @@ import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatBedrockConverse } from '@langchain/aws';
 import { SystemMessage } from '@langchain/core/messages';
 import { AzureChatOpenAI, ChatOpenAI } from '@langchain/openai';
-import { concatMessageContent } from '@trpc-chat-agent/core';
 import { addAnthropicMessageCache } from './anthropicCache';
 
 export type ChatModelInvokerArgs = {
@@ -278,9 +277,17 @@ function anthropicWrapperForModel(args: {
 function appendFormattingReenabledToFirstMessage(messages: BaseMessage[]) {
   return messages.map((message, i) => {
     if (i === 0 && message instanceof SystemMessage) {
+      // Some unsafe fallbacks to ensure the prefix is always prepended
+      let content = message.content;
+      if (typeof content === 'string') {
+        content = 'Formatting re-enabled\n\n' + content;
+      } else if ((content[0] as any).text) {
+        (content[0] as any).text = 'Formatting re-enabled\n\n' + (content[0] as any).text;
+      }
+
       return new SystemMessage({
         ...message.toDict().data,
-        content: concatMessageContent('Formatting re-enabled\n\n', message.content),
+        content,
       });
     } else {
       return message;

@@ -1,4 +1,4 @@
-import type { MessageContent } from '@trpc-chat-agent/core';
+import type { MessageContent } from '@langchain/core/messages';
 import { AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import zodToJsonSchema from 'zod-to-json-schema';
 import { StructuredChatToolLangChain } from './tool';

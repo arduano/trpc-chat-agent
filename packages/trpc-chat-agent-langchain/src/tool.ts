@@ -8,11 +8,10 @@ import { ToolInputParsingException } from '@langchain/core/tools';
 
 export class StructuredChatToolLangChain<
   Args extends z.AnyZodObject = z.AnyZodObject,
-  Return = undefined,
   ResultForClient = undefined,
   Context = any,
   ExtraArgs extends z.AnyZodObject = z.AnyZodObject,
-> extends BaseLangChain<ToolCallInput<Args, ExtraArgs, Context, any>, ToolCallOutput<Return, ResultForClient>> {
+> extends BaseLangChain<ToolCallInput<Args, ExtraArgs, Context, any>, ToolCallOutput<ResultForClient>> {
   name: string;
   description: string;
   schema: Args;
@@ -22,7 +21,6 @@ export class StructuredChatToolLangChain<
       string,
       Args,
       any,
-      Return,
       any,
       ResultForClient,
       Context,
@@ -59,7 +57,7 @@ export class StructuredChatToolLangChain<
   async invoke(
     args: ToolCallInput<Args, ExtraArgs, Context, any>,
     config?: RunnableConfig
-  ): Promise<ToolCallOutput<Return, ResultForClient>> {
+  ): Promise<ToolCallOutput<ResultForClient>> {
     let parsed;
     try {
       parsed = await this.schema.parseAsync(args.input);

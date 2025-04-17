@@ -7,22 +7,17 @@ import type {
   ChatAgent,
   ChatTreePath,
   ClientSideConversationUpdate,
-  MessageContent,
   ServerSideConversationUpdate,
   ToolCallbackInvoker,
   ToolCallOutput,
+  UserMessageContent,
   UserMessageData,
 } from '../common';
 import { z } from 'zod';
-import { ServerSideChatConversationHelper } from '../common';
+import { normalizeToolResponse, ServerSideChatConversationHelper } from '../common';
 import { AgentsBackend } from './builder';
 
-class MockAgentBackend<ExtraExternalArgs extends z.ZodTypeAny> extends AgentsBackend<
-  [],
-  any,
-  MessageContent,
-  ExtraExternalArgs
-> {
+class MockAgentBackend<ExtraExternalArgs extends z.ZodTypeAny> extends AgentsBackend<[], any, ExtraExternalArgs> {
   constructor(readonly extraArgsSchema: ExtraExternalArgs) {
     super();
   }
@@ -69,7 +64,7 @@ class MockAgentBackend<ExtraExternalArgs extends z.ZodTypeAny> extends AgentsBac
         );
         const promise = agentArgs.generateResponseUpdates({
           messages,
-          lastUserMessage: lastUserMessage.content as string,
+          lastUserMessage: lastUserMessage.parts,
           conversationId,
           messageId: aiMessageId,
           create: eventHelper,
@@ -107,7 +102,7 @@ export type CreateMockAgentArgs<Tools extends readonly AnyStructuredChatTool[], 
   tools: Tools;
   generateResponseUpdates: (args: {
     messages: (UserMessageData | AIMessageData<Tools>)[];
-    lastUserMessage: string;
+    lastUserMessage: UserMessageContent[];
     messageId?: string;
     conversationId?: string;
     create: MockEventHelper<Tools, ExtraArgs>;
@@ -142,41 +137,28 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[], Ext
   ) {}
 
   emitter: EventStreamer<ResponseUpdate> = new EventStreamer();
+  messageIndex = 1;
 
-  async beginMessagePart(delay: number) {
-    await this.emitter.emit(
-      {
-        server: {
-          kind: 'begin-new-ai-message-part',
-          messageId: this.messageId,
-          conversationId: this.conversationId,
-        },
-        client: {
-          kind: 'begin-new-ai-message-part',
-          messageId: this.messageId,
-          conversationId: this.conversationId,
-        },
-      },
-      delay
-    );
+  async beginMessagePart() {
+    this.messageIndex++;
   }
 
   async aiMessagePartContent(text: string, tokenDelay: number) {
     const tokens = mockTokenize(text);
-    let cumulative: string = '';
     const updates = tokens.map<ResponseUpdate>((c) => {
-      cumulative += c;
       return {
         server: {
           kind: 'update-content',
           messageId: this.messageId,
-          totalContent: cumulative,
+          contentToAppend: c,
+          partId: `part-${this.messageIndex}`,
           conversationId: this.conversationId,
         },
         client: {
           kind: 'update-content',
           messageId: this.messageId,
           contentToAppend: c,
+          partId: `part-${this.messageIndex}`,
           conversationId: this.conversationId,
         },
       };
@@ -330,7 +312,7 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[], Ext
               kind: 'update-tool-call',
               messageId: this.messageId,
               toolCallId: callId,
-              newResult: response.response,
+              newResult: normalizeToolResponse(response.response),
               newClientResult: response.clientResult,
               newState: 'complete',
             },
@@ -356,7 +338,7 @@ export class MockEventHelper<Tools extends readonly AnyStructuredChatTool[], Ext
       Tools extends readonly AnyStructuredChatTool[],
       Calls extends readonly MockToolCallSchema<Tools, Tools[number]['TypeInfo']['Name']>[],
     > = {
-      [Index in keyof Calls]: ToolCallOutput<string, GetToolResult<GetToolByName<Calls[Index]['toolName'], Tools>>>;
+      [Index in keyof Calls]: ToolCallOutput<GetToolResult<GetToolByName<Calls[Index]['toolName'], Tools>>>;
     };
 
     return allResponses as TransformCalls<Tools, Calls>;

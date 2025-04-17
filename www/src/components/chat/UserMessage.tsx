@@ -1,4 +1,4 @@
-import type { ChatUserMessage } from '@trpc-chat-agent/core';
+import { userContentToText, type ChatUserMessage } from '@trpc-chat-agent/core';
 import { cn } from '@site/src/lib/utils';
 import { useState } from 'react';
 import { RiPencilFill } from 'react-icons/ri';
@@ -10,7 +10,8 @@ import { StyledMarkdown } from './StyledMarkdown';
 
 export function UserMessage({ message }: { message: ChatUserMessage }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedContent, setEditedContent] = useState(message.content as string);
+  const textContent = userContentToText(message.parts);
+  const [editedContent, setEditedContent] = useState(textContent);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +25,7 @@ export function UserMessage({ message }: { message: ChatUserMessage }) {
         <Button
           onClick={() => {
             setIsEditing(!isEditing);
-            setEditedContent(message.content as string);
+            setEditedContent(textContent);
           }}
           variant="ghost"
           size="sm"
@@ -69,7 +70,7 @@ export function UserMessage({ message }: { message: ChatUserMessage }) {
                   size="sm"
                   onClick={() => {
                     setIsEditing(false);
-                    setEditedContent(message.content as string);
+                    setEditedContent(textContent);
                   }}
                 >
                   Cancel
@@ -82,7 +83,7 @@ export function UserMessage({ message }: { message: ChatUserMessage }) {
           </form>
         ) : (
           <Card className="p-4 bg-secondary motion-ease-in motion-preset-slide-up-md motion-duration-100">
-            <StyledMarkdown>{message.content as string}</StyledMarkdown>
+            <StyledMarkdown>{textContent}</StyledMarkdown>
           </Card>
         )}
       </div>

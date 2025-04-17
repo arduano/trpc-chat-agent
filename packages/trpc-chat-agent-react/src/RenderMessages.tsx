@@ -2,14 +2,13 @@ import type {
   AgentTools,
   AnyChatAgent,
   ChatAIMessage,
-  ChatAIMessagePart,
   ChatAIMessageToolCall,
   ChatUserMessage,
   GetToolByName,
-  MessageContent,
+  MessageContentSpecialTextPart,
+  MessageContentTextPart,
 } from '@trpc-chat-agent/core';
-
-import { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 function RenderMemoed<T extends readonly any[]>({
   data,
@@ -30,7 +29,11 @@ export type RenderMessagesProps<Agent extends AnyChatAgent> = {
     children: React.ReactNode,
     options: { isLastMessage: boolean }
   ) => React.ReactNode;
-  renderAiMessagePartContent: (content: MessageContent, options: { isLastMessagePart: boolean }) => React.ReactNode;
+  renderAiMessageContent: (content: MessageContentTextPart, options: { isLastMessagePart: boolean }) => React.ReactNode;
+  renderAiSpecialContent?: (
+    content: MessageContentSpecialTextPart,
+    options: { isLastMessagePart: boolean }
+  ) => React.ReactNode;
   renderToolCallShell?: (toolCall: ChatAIMessageToolCall<Agent>, children: React.ReactNode) => React.ReactNode;
   renderToolCall:
     | {
@@ -47,7 +50,8 @@ export function RenderMessages<Agent extends AnyChatAgent>({
   messages,
   isStreaming,
   renderUserMessage,
-  renderAiMessagePartContent,
+  renderAiMessageContent,
+  renderAiSpecialContent,
   renderToolCall,
   renderAiMessageShell,
   renderToolCallShell,
@@ -68,44 +72,50 @@ export function RenderMessages<Agent extends AnyChatAgent>({
     return <RenderMemoed key={toolCall.id} data={[toolCall as any]} render={toolCallRenderFn as any} />;
   };
 
-  const renderAllToolCalls = (toolCalls: ChatAIMessageToolCall<Agent>[]) => {
-    return (
-      <>
-        {toolCalls.map((toolCall) => {
-          const toolCallRendered = renderSingleToolCall(toolCall);
-          return <RenderMemoed key={toolCall.id} data={[toolCall, toolCallRendered]} render={renderToolCallShell} />;
-        })}
-      </>
-    );
-  };
-
-  const renderAiMessagePart = (message: ChatAIMessagePart<Agent>, isLastMessagePart: boolean, isStreaming: boolean) => {
-    const content = (
-      <RenderMemoed data={[message.content, { isLastMessagePart }]} render={renderAiMessagePartContent} />
-    );
-    const toolCalls = <RenderMemoed data={[message.toolCalls]} render={renderAllToolCalls} />;
-
-    const isContentEmpty = !message.content.length && !message.toolCalls.length;
-
-    return (
-      <>
-        {content}
-        {toolCalls}
-        {isContentEmpty && isLastMessagePart && isStreaming && renderThinkingIndicator && renderThinkingIndicator()}
-      </>
-    );
-  };
-
   const renderAiMessage = (message: ChatAIMessage<Agent>, isLastMessage: boolean, isStreaming: boolean) => {
+    const allToolCallsResolved = !message.parts.find((p) => p.type === 'tool' && p.data.state === 'loading');
+    const lastPart = message.parts[message.parts.length - 1];
+    const lastPartHasNoText = !lastPart || lastPart.type === 'tool' || lastPart.text === '';
+
+    const shouldShowLoadingIndicator = isStreaming && allToolCallsResolved && lastPartHasNoText;
+
     const parts = (
       <>
-        {message.parts.map((part, i) => (
-          <RenderMemoed
-            key={i}
-            data={[part, isLastMessage && i === message.parts.length - 1, isStreaming]}
-            render={renderAiMessagePart}
-          />
-        ))}
+        {message.parts.map((part, i) => {
+          switch (part.type) {
+            case 'tool': {
+              const toolCallRendered = renderSingleToolCall(part.data);
+              return <RenderMemoed key={part.id} data={[part.data, toolCallRendered]} render={renderToolCallShell} />;
+            }
+            case 'text': {
+              return (
+                <RenderMemoed
+                  key={part.id}
+                  data={[part, { isLastMessagePart: i === message.parts.length - 1 }]}
+                  render={renderAiMessageContent}
+                />
+              );
+            }
+            case 'special-text': {
+              if (renderAiSpecialContent) {
+                return (
+                  <RenderMemoed
+                    key={part.id}
+                    data={[part, { isLastMessagePart: i === message.parts.length - 1 }]}
+                    render={renderAiSpecialContent}
+                  />
+                );
+              } else {
+                return <React.Fragment key={part.id} />;
+              }
+            }
+            default: {
+              return <React.Fragment key={i} />;
+            }
+          }
+        })}
+
+        {shouldShowLoadingIndicator && renderThinkingIndicator?.()}
       </>
     );
 

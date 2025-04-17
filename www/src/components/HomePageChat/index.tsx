@@ -1,7 +1,7 @@
 import type { ChatAIMessageToolCall, GetToolByName } from '@trpc-chat-agent/core';
 import Link from '@docusaurus/Link';
 import { cn } from '@site/src/lib/utils';
-import { initAgents, mockBackend } from '@trpc-chat-agent/core';
+import { initAgents, mockBackend, userContentToText } from '@trpc-chat-agent/core';
 import { useEffect, useState } from 'react';
 import { HiCheck, HiOutlineCode, HiOutlineDocument } from 'react-icons/hi';
 import { LuBrainCircuit } from 'react-icons/lu';
@@ -220,14 +220,14 @@ const agent = ai.agent({
     }),
   ],
   generateResponseUpdates: async ({ create, lastUserMessage }) => {
-    const lastUserMessageNormalized = lastUserMessage.replace(/\W+/g, '').toLowerCase();
+    const lastUserMessageNormalized = userContentToText(lastUserMessage).replace(/\W+/g, '').toLowerCase();
     const shouldGiveDemoMessage = lastUserMessageNormalized === 'hiwhoareyou';
 
     if (!shouldGiveDemoMessage) {
-      await create.beginMessagePart(0);
+      await create.beginMessagePart();
       await create.aiMessagePartContent(responseMessageNonDefault, 20);
     } else {
-      await create.beginMessagePart(0);
+      await create.beginMessagePart();
       await create.aiMessagePartContent(responseMessage1, 20);
 
       await create.aiToolCalls(
@@ -237,7 +237,7 @@ const agent = ai.agent({
         })
       );
 
-      await create.beginMessagePart(0);
+      await create.beginMessagePart();
 
       await create.aiToolCalls(
         create.toolCallSchema({
@@ -253,7 +253,7 @@ const agent = ai.agent({
         })
       );
 
-      await create.beginMessagePart(0);
+      await create.beginMessagePart();
 
       await create.aiToolCalls(
         create.toolCallSchema({
@@ -262,7 +262,7 @@ const agent = ai.agent({
         })
       );
 
-      await create.beginMessagePart(0);
+      await create.beginMessagePart();
 
       await create.aiMessagePartContent(responseMessage2, 20);
 
@@ -273,7 +273,7 @@ const agent = ai.agent({
         })
       );
 
-      await create.beginMessagePart(0);
+      await create.beginMessagePart();
       const responseStr = `The tool call can see your response was \`${response.response}\`! The response can be forwarded to the LLM too.`;
       await create.aiMessagePartContent(`${responseStr}\n\n${responseMessage3}`, 20);
       await create.aiToolCalls(

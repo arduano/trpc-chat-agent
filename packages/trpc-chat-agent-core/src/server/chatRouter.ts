@@ -189,13 +189,6 @@ export function makeChatRouterForAgent<Agent extends AnyChatAgent, Context exten
                   passEvent(eventData);
                 }
                 if (event.side === 'server') {
-                  const beginsNewMessagePart = event.update.kind === 'begin-new-ai-message-part';
-                  const completesToolCall = event.update.kind === 'update-tool-call' && !!event.update.newResult;
-                  const beginsToolCall = event.update.kind === 'begin-tool-call';
-                  if (beginsNewMessagePart || completesToolCall || beginsToolCall) {
-                    void saveCurrentConversation();
-                  }
-
                   const eventData = event.update;
                   conversation.processMessageUpdate(eventData);
                 }
@@ -289,7 +282,7 @@ function addMessagePairToConversation<Agent extends AnyChatAgent>(
     const newUserMessage: UserMessageData = {
       kind: 'user',
       id: userMessageId,
-      content: userMessageContent,
+      parts: [{ type: 'text', text: userMessageContent }],
       createdAt: new Date().toISOString(),
     };
 

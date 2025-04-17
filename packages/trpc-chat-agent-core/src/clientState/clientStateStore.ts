@@ -4,9 +4,10 @@ import type { z } from 'zod';
 import type {
   AgentExtraArgs,
   AgentTools,
+  AiMessageContentClientSide,
+  AiMessageContentForCustomToolCallType,
   AIMessageData,
   AIMessageDataClientSide,
-  AIMessageDataPartClientSide,
   AnyChatAgent,
   AnyStructuredChatTool,
   ChatAgentOrTools,
@@ -14,7 +15,6 @@ import type {
   ChatTreePath,
   ClientSideConversation,
   ClientSideUpdate,
-  MessageContent,
   ToolCallState,
   UserMessageData,
 } from '../common';
@@ -442,15 +442,20 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
   });
 
   const mapAiMessagePartAddCallbacks = (
-    part: AIMessageDataPartClientSide<Tools>,
+    part: AiMessageContentClientSide<Tools>,
     callbacks: AnyActiveCallbackWithResponse[]
   ): ChatAIMessagePart<Agent> => {
+    if (part.type !== 'tool') {
+      return part;
+    }
+
     return {
-      ...part,
-      toolCalls: part.toolCalls.map((toolCall) => ({
-        ...toolCall,
-        callbacks: callbacks.filter((c) => c.toolCallId === toolCall.id) as any, // Any necessary because of the ForceKeyToBeString hack
-      })),
+      type: 'tool',
+      id: part.id,
+      data: {
+        ...part.data,
+        callbacks: callbacks.filter((c) => c.toolCallId === part.data.id) as any, // Any necessary because of the ForceKeyToBeString hack
+      },
     };
   };
 
@@ -576,7 +581,12 @@ export function createSystemStateStoreSubscriber<Agent extends AnyChatAgent>(
     }
 
     const dummyUserMessage: UserMessageData = {
-      content: args.userMessage,
+      parts: [
+        {
+          type: 'text',
+          text: args.userMessage,
+        },
+      ],
       id: '-user-placeholder-',
       kind: 'user',
       createdAt: new Date().toISOString(),
@@ -851,10 +861,9 @@ export type ChatAIMessageToolCall<AgentOrTools extends ChatAgentOrTools> = ChatA
   AgentTools<AgentOrTools>
 >;
 
-export type ChatAIMessagePart<AgentOrTools extends ChatAgentOrTools> = {
-  content: MessageContent;
-  toolCalls: ChatAIMessageToolCall<AgentOrTools>[];
-};
+export type ChatAIMessagePart<AgentOrTools extends ChatAgentOrTools> = AiMessageContentForCustomToolCallType<
+  ChatAIMessageToolCall<AgentOrTools>
+>;
 
 export type ChatAIMessage<Agent extends AnyChatAgent> = {
   kind: 'ai';

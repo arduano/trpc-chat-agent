@@ -1,4 +1,4 @@
-import type { MessageContent } from '../messageContent';
+import type { UserMessageContent } from '../messageContent';
 import type { AnyStructuredChatTool } from '../structuredTool';
 
 export type ToolCallState = 'loading' | 'complete' | 'aborted';
@@ -8,7 +8,7 @@ export type ToolCall<Tool extends AnyStructuredChatTool> = {
   name: Tool['TypeInfo']['Name'];
   args: Tool['TypeInfo']['Args'];
   // May or may not be present. Generally present when the tool finishes executing. Will be missing if execution was cancelled before completion.
-  result?: MessageContent;
+  result?: UserMessageContent[];
   state: ToolCallState;
   client: {
     args: Tool['TypeInfo']['ArgsForClient'];

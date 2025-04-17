@@ -1,14 +1,26 @@
-import type { MessageContent } from '../messageContent';
+import type { MessageContentSpecialTextPart, UserMessageContent } from '../messageContent';
 import type { ChatTreePath } from './branching';
 import type { ClientSideConversation } from './conversation/client';
 import type { ToolCallState } from './tools';
 
-export type ClientUpdateMessageContent = {
+export type UpdateMessageContent = {
   kind: 'update-content';
   conversationId: string;
   messageId: string;
-  contentToAppend: MessageContent;
+  partId: string;
+  contentToAppend: string;
 };
+
+export type UpdateMessageSpecialContent = {
+  kind: 'update-special-content';
+  conversationId: string;
+  messageId: string;
+  partId: string;
+  contentToAppend: string;
+  specialType: MessageContentSpecialTextPart['specialType'];
+};
+
+export type CommonConversationUpdate = UpdateMessageContent | UpdateMessageSpecialContent;
 
 export type ClientUpdateMessageBeginToolCall = {
   kind: 'begin-tool-call';
@@ -27,12 +39,6 @@ export type ClientUpdateMessageToolCall = {
   newProgressStatus?: any;
   newResult?: any;
   newState?: ToolCallState;
-};
-
-export type ClientBeginNewAIMessagePart = {
-  kind: 'begin-new-ai-message-part';
-  conversationId: string;
-  messageId: string;
 };
 
 export type ClientSyncConversation = {
@@ -54,18 +60,11 @@ export type ClientRequestCallbackResponse = {
 };
 
 export type ClientSideConversationUpdate =
+  | CommonConversationUpdate
   | ClientUpdateMessageBeginToolCall
-  | ClientUpdateMessageContent
-  | ClientUpdateMessageToolCall
-  | ClientBeginNewAIMessagePart;
+  | ClientUpdateMessageToolCall;
 
 export type ClientSideUpdate = ClientSyncConversation | ClientRequestCallbackResponse | ClientSideConversationUpdate;
-
-export type ServerUpdateMessageContent = {
-  kind: 'update-content';
-  messageId: string;
-  totalContent: MessageContent;
-};
 
 export type ServerUpdateBeginToolCall = {
   kind: 'begin-tool-call';
@@ -80,23 +79,16 @@ export type ServerUpdateMessageToolCall = {
   kind: 'update-tool-call';
   messageId: string;
   toolCallId: string;
-  newResult?: any;
+  newResult?: UserMessageContent[];
   newClientArgs?: any;
   newClientResult?: any;
   newState?: ToolCallState;
 };
 
-export type ServerBeginNewAIMessagePart = {
-  kind: 'begin-new-ai-message-part';
-  conversationId: string;
-  messageId: string;
-};
-
 export type ServerSideConversationUpdate =
+  | CommonConversationUpdate
   | ServerUpdateBeginToolCall
-  | ServerUpdateMessageContent
-  | ServerUpdateMessageToolCall
-  | ServerBeginNewAIMessagePart;
+  | ServerUpdateMessageToolCall;
 
 export type ServerSideUpdate = ServerSideConversationUpdate;
 

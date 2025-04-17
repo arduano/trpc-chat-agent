@@ -2,59 +2,54 @@
  * Message content types copied from LangChain
  */
 
-export type ImageDetail = 'auto' | 'low' | 'high';
-export type MessageContentText = {
+import type { AnyStructuredChatTool } from './structuredTool';
+import type { ToolCallClientSideFromToolsArray, ToolCallFromToolsArray } from './types';
+
+export type UserMessageContentTextPart = {
   type: 'text';
   text: string;
 };
-export type MessageContentImageUrl = {
-  type: 'image_url';
-  image_url:
-    | string
-    | {
-        url: string;
-        detail?: ImageDetail;
-      };
+
+export type MessageContentTextPart = UserMessageContentTextPart & {
+  id: string;
 };
-export type MessageContentComplex =
-  | MessageContentText
-  | MessageContentImageUrl
-  | (Record<string, any> & {
-      type?: 'text' | 'image_url' | string;
-    })
-  | (Record<string, any> & {
-      type?: never;
-    });
-export type MessageContent = string | MessageContentComplex[];
 
-const contentTypesThatShouldBeString = ['text', 'text_delta'];
-const allowedClientContentTypes = [...contentTypesThatShouldBeString];
-function mapMessagePartToStringIfNecessary(content: MessageContentComplex): MessageContentComplex | string | null {
-  if (typeof content === 'string') {
-    return content;
-  }
+export type MessageContentSpecialTextPart = {
+  type: 'special-text';
+  id: string;
+  text: string;
+  specialType: 'thinking';
+};
 
-  if (content.type && !allowedClientContentTypes.includes(content.type)) {
-    return null;
-  }
+export type MessageContentToolPart<Tools extends readonly AnyStructuredChatTool[]> = MessageContentCustomToolCallType<
+  ToolCallFromToolsArray<Tools>
+>;
 
-  if (content.type && contentTypesThatShouldBeString.includes(content.type)) {
-    return (content as any).text ?? '';
-  }
+export type MessageContentToolPartClientSide<Tools extends readonly AnyStructuredChatTool[]> =
+  MessageContentCustomToolCallType<ToolCallClientSideFromToolsArray<Tools>>;
 
-  return content;
-}
+export type AiMessageContent<Tools extends readonly AnyStructuredChatTool[]> = AiMessageContentForCustomToolCallType<
+  ToolCallFromToolsArray<Tools>
+>;
 
-export function processMessageContentForClient(content: MessageContent): MessageContent {
-  if (typeof content === 'string') {
-    return content;
-  }
+export type AiMessageContentClientSide<Tools extends readonly AnyStructuredChatTool[]> =
+  AiMessageContentForCustomToolCallType<ToolCallClientSideFromToolsArray<Tools>>;
 
-  const mapped = content.map(mapMessagePartToStringIfNecessary).filter((c) => !!c);
-  if (mapped.find((c): c is string => typeof c !== 'string')) {
-    // If there's a non-string content, map strings to be objects
-    return content.map((c) => (typeof c === 'string' ? { type: 'text', text: c } : c));
-  } else {
-    return mapped.join('');
-  }
+// Custom types for generics
+export type AiMessageContentForCustomToolCallType<ToolCallType> =
+  | MessageContentTextPart
+  | MessageContentSpecialTextPart
+  | MessageContentCustomToolCallType<ToolCallType>;
+
+export type MessageContentCustomToolCallType<ToolCallType> = {
+  type: 'tool';
+  id: string;
+  data: ToolCallType;
+};
+
+// User
+export type UserMessageContent = UserMessageContentTextPart;
+
+export function userContentToText(content: UserMessageContent[]): string {
+  return content.map((part) => part.text).join('');
 }

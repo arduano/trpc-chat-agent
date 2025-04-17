@@ -5,7 +5,7 @@ import { CgRedo } from 'react-icons/cg';
 import { Button } from '../ui/button';
 import { MessageVariants } from './MessageVariants';
 
-export function AIMessageShell({ message, children }: { message: ChatAIMessage<any>; children: JSX.Element }) {
+export function AIMessageShell({ message, children }: { message: ChatAIMessage<any>; children: React.ReactNode }) {
   return (
     <div className="group flex items-start max-w-full gap-2 pr-12 lg:pr-48">
       <div className="flex-1 max-w-full">

@@ -114,7 +114,12 @@ function ChatComponentWithStaticId({ id, ...converationArgs }: ChatComponentProp
                   renderAiMessageShell={(message, children, { isLastMessage }) => (
                     <AIMessageShell message={message} children={children} isLastMessage={isLastMessage} />
                   )}
-                  renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
+                  renderAiMessageContent={(content) => <StyledMarkdown>{content.text}</StyledMarkdown>}
+                  renderAiSpecialContent={(content) => (
+                    <blockquote className="border-l-4 border-accent pl-4 my-4 text-accent-foreground">
+                      <StyledMarkdown>{content.text}</StyledMarkdown>
+                    </blockquote>
+                  )}
                   renderUserMessage={(message) => <UserMessage message={message} />}
                   renderToolCall={(tool) => <RenderTool tool={tool} />}
                   renderThinkingIndicator={() => <ThinkingIndicator />}

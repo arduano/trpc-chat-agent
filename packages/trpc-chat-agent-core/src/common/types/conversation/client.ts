@@ -1,19 +1,19 @@
 import type { AgentTools, ChatAgentOrTools } from '../../../common/agentTypes';
 import type { AnyStructuredChatTool } from '../../../common/structuredTool';
 import type { AIMessageDataClientSide } from '../message/ai';
-import type { ToolCallFromToolsArray } from '../tools';
+import type { ToolCallClientSideFromToolsArray } from '../tools';
 import type {
-  ClientBeginNewAIMessagePart,
   ClientSideConversationUpdate,
   ClientUpdateMessageBeginToolCall,
-  ClientUpdateMessageContent,
   ClientUpdateMessageToolCall,
+  UpdateMessageContent,
+  UpdateMessageSpecialContent,
 } from '../updates';
 import type { ConversationData } from './conversation';
 import { castDraft } from 'immer';
 import { mergeKeepingOldReferences } from '../../../common/merge';
 import { UnreachableError } from '../../../common/unreachable';
-import { ChatConversationHelper, concatMessageContent } from './conversation';
+import { ChatConversationHelper } from './conversation';
 
 export type ClientSideConversation<Tools extends readonly AnyStructuredChatTool[] = any> = ConversationData<
   AIMessageDataClientSide<Tools>
@@ -47,68 +47,85 @@ export class ClientSideChatConversationHelper<Agent extends ChatAgentOrTools> ex
     switch (update.kind) {
       case 'update-content':
         return this.updateMessageContent(update);
+      case 'update-special-content':
+        return this.updateMessageSpecialContent(update);
       case 'begin-tool-call':
         return this.updateMessageBeginToolCall(update);
       case 'update-tool-call':
         return this.updateMessageToolCall(update);
-      case 'begin-new-ai-message-part':
-        return this.beginNewAIMessagePart(update);
       default:
         throw new UnreachableError(update, `Invalid update kind "${(update as any).kind}"`);
     }
   }
 
-  private updateMessageContent(update: ClientUpdateMessageContent) {
+  private updateMessageContent(update: UpdateMessageContent) {
     this.produceAiMessage(update.messageId, (message) => {
-      const lastPart = message.parts[message.parts.length - 1];
-      lastPart.content = concatMessageContent(lastPart.content, update.contentToAppend);
+      const partWithId = message.parts.find((part) => part.type === 'text' && part.id === update.partId);
+      if (!partWithId) {
+        message.parts.push({
+          type: 'text',
+          id: update.partId,
+          text: update.contentToAppend,
+        });
+      } else if (partWithId.type === 'text') {
+        partWithId.text += update.contentToAppend;
+      }
+    });
+  }
+
+  private updateMessageSpecialContent(update: UpdateMessageSpecialContent) {
+    this.produceAiMessage(update.messageId, (message) => {
+      const partWithId = message.parts.find((part) => part.type === 'special-text' && part.id === update.partId);
+      if (!partWithId) {
+        message.parts.push({
+          type: 'special-text',
+          id: update.partId,
+          specialType: update.specialType,
+          text: update.contentToAppend,
+        });
+      } else if (partWithId.type === 'special-text') {
+        partWithId.text += update.contentToAppend;
+      }
     });
   }
 
   private updateMessageBeginToolCall(update: ClientUpdateMessageBeginToolCall) {
     this.produceAiMessage(update.messageId, (message) => {
-      const lastPart = message.parts[message.parts.length - 1];
-      const newToolCall = {
+      const newToolCall: ToolCallClientSideFromToolsArray<AgentTools<Agent>> = {
         id: update.toolCallId,
-        state: 'loading',
         name: update.toolCallName,
-      } as ToolCallFromToolsArray<AgentTools<Agent>>;
+        state: 'loading',
+      };
 
-      lastPart.toolCalls.push(castDraft(newToolCall));
+      message.parts.push(
+        castDraft({
+          type: 'tool',
+          id: update.toolCallId,
+          data: newToolCall,
+        })
+      );
     });
   }
 
   private updateMessageToolCall(update: ClientUpdateMessageToolCall) {
     this.produceAiMessage(update.messageId, (message) => {
-      const lastPart = message.parts[message.parts.length - 1];
-      const toolCallIndex = lastPart.toolCalls.findIndex((tc) => tc.id === update.toolCallId);
-      if (toolCallIndex === -1) {
+      const toolCall = message.parts.find((part) => part.type === 'tool' && part.data.id === update.toolCallId);
+      if (!toolCall || toolCall.type !== 'tool') {
         throw new Error(`Tool call with ID ${update.toolCallId} not found`);
       }
 
-      const toolCall = lastPart.toolCalls[toolCallIndex];
       if (update.newArgs !== undefined) {
-        toolCall.args = update.newArgs;
+        toolCall.data.args = update.newArgs;
       }
       if (update.newProgressStatus !== undefined) {
-        toolCall.progressStatus = update.newProgressStatus;
+        toolCall.data.progressStatus = update.newProgressStatus;
       }
       if (update.newResult !== undefined) {
-        toolCall.result = update.newResult;
+        toolCall.data.result = update.newResult;
       }
       if (update.newState !== undefined) {
-        toolCall.state = update.newState;
+        toolCall.data.state = update.newState;
       }
-    });
-  }
-
-  private beginNewAIMessagePart(update: ClientBeginNewAIMessagePart) {
-    this.produceAiMessage(update.messageId, (message) => {
-      message.parts.push({
-        content: '',
-        toolCalls: [],
-        createdAt: new Date().toISOString(),
-      });
     });
   }
 }

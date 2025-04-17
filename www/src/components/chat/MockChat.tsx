@@ -55,7 +55,7 @@ export function MockChat<Agent extends AnyChatAgent>({
           <RenderMessages
             messages={messages}
             renderAiMessageShell={(message, children) => <AIMessageShell message={message} children={children} />}
-            renderAiMessagePartContent={(content) => <StyledMarkdown>{content as string}</StyledMarkdown>}
+            renderAiMessageContent={(content) => <StyledMarkdown>{content.text}</StyledMarkdown>}
             renderUserMessage={(message) => <UserMessage message={message} />}
             renderToolCall={renderToolCall}
           />

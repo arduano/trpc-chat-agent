@@ -1,10 +1,9 @@
 import type { Callbacks as LangchainCallbacks } from '@langchain/core/callbacks/manager';
-import type { AIMessageChunk, BaseMessage, UsageMetadata } from '@langchain/core/messages';
+import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
 import type { ToolCall as LangChainToolCall } from '@langchain/core/messages/tool';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type {
   AIMessageData,
-  AIMessagePartData,
   AnyChatAgent,
   AnyStructuredChatTool,
   ChatAgent,
@@ -12,6 +11,7 @@ import type {
   ChatTreePath,
   ClientSideConversationUpdate,
   ClientSideUpdate,
+  CommonConversationUpdate,
   ServerSideConversation,
   ServerSideConversationUpdate,
   ServerSideUpdate,
@@ -25,7 +25,7 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { AIMessage, HumanMessage, isAIMessageChunk, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { parsePartialJson } from '@langchain/core/output_parsers';
 import { Annotation, END, interrupt, START, StateGraph } from '@langchain/langgraph';
-import { Debouncer, processMessageContentForClient, ServerSideChatConversationHelper } from '@trpc-chat-agent/core';
+import { Debouncer, normalizeToolResponse, ServerSideChatConversationHelper } from '@trpc-chat-agent/core';
 import { ChatModelInvoker, chatModelToInvoker } from './chatModelInvoker';
 import { StructuredChatToolLangChain } from './tool';
 
@@ -170,14 +170,8 @@ export function createChatAgentLangchain<
       return 'end';
     }
 
-    const lastPart = lastMessage.parts[lastMessage.parts.length - 1];
-    if (!lastPart) {
-      console.error('No last part, this is unexpected');
-      return 'end';
-    }
-
-    const toolCalls = lastPart.toolCalls;
-    if (toolCalls && toolCalls.length > 0) {
+    const unansweredToolCalls = lastMessage.parts.filter((p) => p.type === 'tool' && p.data.state === 'loading');
+    if (unansweredToolCalls.length > 0) {
       return 'continue';
     } else {
       return 'end';
@@ -246,16 +240,22 @@ export function createChatAgentLangchain<
       const allDebouncers: Debouncer<any>[] = [];
       let currentToolClientPreview: Debouncer<any> | null = null;
 
-      sendServerSideUpdate({
-        kind: 'begin-new-ai-message-part',
-        conversationId: state.conversationData.id,
-        messageId: aiMessageId,
-      });
-      sendClientSideUpdate({
-        kind: 'begin-new-ai-message-part',
-        conversationId: state.conversationData.id,
-        messageId: aiMessageId,
-      });
+      // Ensuring the part ID is unique across all parts
+      let counter = aiMessage.parts.length + 1;
+      let partId = '';
+      const bumpPartId = () => {
+        counter++;
+        partId = `part-${counter}`;
+      };
+
+      // Easily bumping the part ID when switching between part types, e.g. between thinking and text
+      let lastMessageType = '';
+      const setMessageType = (type: string) => {
+        if (lastMessageType !== type) {
+          lastMessageType = type;
+          bumpPartId();
+        }
+      };
 
       for await (const chunk of stream) {
         // console.log(chunk);
@@ -268,20 +268,52 @@ export function createChatAgentLangchain<
               aggregateChunk = aggregateChunk.concat(data);
             }
 
-            sendServerSideUpdate({
-              kind: 'update-content',
-              messageId: aiMessageId,
-              totalContent: aggregateChunk.content,
-            });
-
             if (data.content.length > 0) {
-              const processedDelta = processMessageContentForClient(data.content);
-              sendClientSideUpdate({
-                kind: 'update-content',
-                conversationId: state.conversationData.id,
-                messageId: aiMessageId,
-                contentToAppend: processedDelta,
-              });
+              const makeConversationUpdate = (): CommonConversationUpdate | undefined => {
+                if (typeof data.content === 'string') {
+                  setMessageType('text');
+                  return {
+                    kind: 'update-content',
+                    conversationId: state.conversationData.id,
+                    messageId: aiMessageId,
+                    partId,
+                    contentToAppend: data.content,
+                  };
+                }
+                const firstItem = data.content[0];
+                if (!firstItem) {
+                  return;
+                }
+
+                // Handle Anthropic custom message types
+                if (firstItem.type === 'text' && firstItem.text) {
+                  setMessageType('text');
+                  return {
+                    kind: 'update-content',
+                    conversationId: state.conversationData.id,
+                    messageId: aiMessageId,
+                    partId,
+                    contentToAppend: firstItem.text,
+                  };
+                }
+                if (firstItem.type === 'thinking' && firstItem.thinking) {
+                  setMessageType('thinking');
+                  return {
+                    kind: 'update-special-content',
+                    conversationId: state.conversationData.id,
+                    messageId: aiMessageId,
+                    partId,
+                    contentToAppend: firstItem.thinking,
+                    specialType: 'thinking',
+                  };
+                }
+              };
+
+              const update = makeConversationUpdate();
+              if (update) {
+                sendClientSideUpdate(update);
+                sendServerSideUpdate(update);
+              }
             }
 
             const toolId = data.tool_call_chunks?.[0]?.id;
@@ -394,12 +426,6 @@ export function createChatAgentLangchain<
     }
     const aiMessageId = lastMessage.id;
 
-    const lastPart = lastMessage.parts[lastMessage.parts.length - 1];
-    if (!lastPart) {
-      console.error('No last part, this is unexpected');
-      return;
-    }
-
     const sendServerSideUpdate = (update: ServerSideConversationUpdate) => {
       sendServerSideUpdateToConfig(update, config);
       stateConvo.processMessageUpdate(update);
@@ -409,8 +435,13 @@ export function createChatAgentLangchain<
       sendClientSideUpdateToConfig(update, config);
     };
 
+    const loadingToolCalls = lastMessage.parts
+      .filter((p) => p.type === 'tool')
+      .filter((p) => p.data.state === 'loading')
+      .map((p) => p.data);
+
     await Promise.all(
-      lastPart.toolCalls.map(async (toolCall) => {
+      loadingToolCalls.map(async (toolCall) => {
         const tool = toolsList.find((t) => t.name === toolCall.name)!;
 
         const progressDebouncer = new Debouncer(debounceMs, (progress) => {
@@ -449,7 +480,7 @@ export function createChatAgentLangchain<
             kind: 'update-tool-call',
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newResult: response,
+            newResult: normalizeToolResponse(response),
             newClientResult: clientResult,
             newState: 'complete',
           });
@@ -471,7 +502,9 @@ export function createChatAgentLangchain<
             kind: 'update-tool-call',
             messageId: aiMessageId,
             toolCallId: toolCall.id!,
-            newResult: aiResult ?? 'The tool has responded with an unexpected error',
+            newResult: aiResult
+              ? normalizeToolResponse(aiResult)
+              : normalizeToolResponse('The tool has responded with an unexpected error'),
             newState: 'aborted',
           });
           sendClientSideUpdate({
@@ -554,41 +587,58 @@ export function createChatAgentLangchain<
 function aiMessageAsLangChainMessages<Tools extends readonly AnyStructuredChatTool[]>(
   message: AIMessageData<Tools>
 ): BaseMessage[] {
-  function partHasContentOrToolCalls(part: AIMessagePartData<Tools>): boolean {
-    return part.content.length > 0 || part.toolCalls.length > 0;
-  }
+  const messages: BaseMessage[] = [];
 
-  function partAsLangchainMessages(part: AIMessagePartData<Tools>): BaseMessage[] {
-    const aiMessage = new AIMessage({
-      content: processMessageContentForClient(part.content),
-      tool_calls: part.toolCalls.map<LangChainToolCall>((tc) => ({
-        name: tc.name,
-        args: tc.args,
-        id: tc.id,
-        type: 'tool_call',
-      })),
-      response_metadata: part.responseMetadata,
-      usage_metadata: part.usageMetadata as UsageMetadata,
-    });
+  let content = '';
+  let tools: LangChainToolCall[] = [];
+  let toolResponses: BaseMessage[] = [];
 
-    const toolResponseMessages = part.toolCalls.map<ToolMessage>(
-      (tc) =>
+  const addMessageFromData = () => {
+    if (content === '' && tools.length === 0) {
+      return;
+    }
+
+    messages.push(new AIMessage({ content, tool_calls: tools }));
+    messages.push(...toolResponses);
+    content = '';
+    tools = [];
+    toolResponses = [];
+  };
+
+  for (const part of message.parts) {
+    if (part.type === 'text') {
+      if (tools.length > 0) {
+        addMessageFromData();
+      }
+
+      content += part.text;
+    }
+
+    if (part.type === 'tool' && part.data.result) {
+      toolResponses.push(
         new ToolMessage({
-          content: tc.result ?? 'Tool execution cancelled before completion.',
-          tool_call_id: tc.id,
+          content: part.data.result.map((content) => content.text).join(''),
+          tool_call_id: part.data.id,
         })
-    );
-
-    return [aiMessage, ...toolResponseMessages];
+      );
+      tools.push({
+        type: 'tool_call',
+        id: part.data.id,
+        name: part.data.name,
+        args: part.data.args,
+      });
+    }
   }
 
-  return message.parts.filter(partHasContentOrToolCalls).flatMap(partAsLangchainMessages);
+  addMessageFromData();
+
+  return messages;
 }
 
 function userMessageAsLangChainMessages(message: UserMessageData): BaseMessage[] {
   return [
     new HumanMessage({
-      content: message.content,
+      content: message.parts.map((part) => part.text).join(''),
     }),
   ];
 }

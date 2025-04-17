@@ -1,7 +1,7 @@
 import type { CallbackManagerForToolRun } from '@langchain/core/callbacks/manager';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
-import type { AnyStructuredChatTool, MessageContent } from '@trpc-chat-agent/core';
+import type { AnyStructuredChatTool } from '@trpc-chat-agent/core';
 import type { CreateChatAgentArgs } from './chatAgent';
 import { AgentsBackend } from '@trpc-chat-agent/core';
 import { z } from 'zod';
@@ -14,7 +14,6 @@ export type LangchainToolExtraArgs = readonly [CallbackManagerForToolRun | undef
 class LangChainAgentsBackend<ExtraExternalArgs extends z.ZodTypeAny> extends AgentsBackend<
   LangchainToolExtraArgs,
   BaseMessage,
-  MessageContent,
   ExtraExternalArgs
 > {
   constructor(readonly extraArgsSchema: ExtraExternalArgs) {
