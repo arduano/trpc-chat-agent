@@ -45,7 +45,7 @@
     "@langchain/aws": "^0.1.8",
     "@langchain/core": "^0.3.45",
     "@langchain/langgraph": "^0.2.64",
-    "@langchain/openai": "^0.3.17",
+    "@langchain/openai": "^0.5.5",
     "zod": "^3.24.3",
     "zod-to-json-schema": "^3.24.5"
   },

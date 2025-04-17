@@ -7,7 +7,7 @@ const Card = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & { ref?: React.RefObject<HTMLDivElement> }) => (
-  <div ref={ref} className={cn('rounded-xl border bg-card text-card-foreground shadow', className)} {...props} />
+  <div ref={ref} className={cn('rounded-xl bg-card text-card-foreground shadow', className)} {...props} />
 );
 Card.displayName = 'Card';
 

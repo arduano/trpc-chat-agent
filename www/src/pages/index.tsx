@@ -24,8 +24,8 @@ function HomepageHeader() {
           </p>
           <p className="text-sm italic">If you love tRPC, you'll love this tooklit</p>
         </div>
-        <div className="rounded-lg overflow-hidden w-screen mx-auto my-4">
-          <video src={DemoVideo} autoPlay loop muted playsInline className="w-full max-w-7xl" />
+        <div className="rounded-lg overflow-hidden w-screen my-4">
+          <video src={DemoVideo} autoPlay loop muted playsInline className="w-full mx-auto max-w-7xl" />
         </div>
         <div className="flex items-center justify-center gap-4 mb-8">
           <Link href="/docs/intro">

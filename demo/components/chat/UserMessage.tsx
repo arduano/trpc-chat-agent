@@ -1,5 +1,6 @@
+import type { ChatUserMessage } from '@trpc-chat-agent/core';
 import { cn } from '@/lib/utils';
-import { type ChatUserMessage, userContentToText } from '@trpc-chat-agent/core';
+import { userContentToText } from '@trpc-chat-agent/core';
 import { useEffect, useRef, useState } from 'react';
 import { RiPencilFill } from 'react-icons/ri';
 import { Button } from '../ui/button';

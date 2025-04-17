@@ -1,5 +1,6 @@
+import type { ReadonlySignal } from '@preact/signals-core';
 import type { AnyChatAgent, ExtraArgsFields, RouterTypeFromAgent } from '@trpc-chat-agent/core';
-import { computed, type ReadonlySignal } from '@preact/signals-core';
+import { computed } from '@preact/signals-core';
 import { createSystemStateStore, createSystemStateStoreSubscriber } from '@trpc-chat-agent/core';
 import { useEffect, useMemo, useState } from 'react';
 

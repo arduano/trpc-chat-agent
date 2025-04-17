@@ -1,3 +1,4 @@
+import type { initTRPC } from '@trpc/server';
 import type { AgentExtraArgs, AgentTools, AnyChatAgent } from '../common/agentTypes';
 import type {
   AIMessageData,
@@ -6,7 +7,7 @@ import type {
   ServerSideConversation,
   UserMessageData,
 } from '../common/types';
-import { type initTRPC, TRPCError } from '@trpc/server';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { chatBranchZod, ServerSideChatConversationHelper } from '../common/types';
 import { CallbackManager } from './callback';

@@ -40,8 +40,14 @@ export type ActiveCallback<ToolName extends string, CallbackName extends string,
 type AnyActiveCallback = ActiveCallback<string, string, any>;
 type Callbacks = Record<string, AnyActiveCallback | undefined>;
 
-export type RouterTypeFromAgent<Agent extends AnyChatAgent> = ReturnType<
-  typeof createTRPCClient<ReturnType<typeof makeChatRouterForAgent<Agent, any>>>
+// tRPC Hack to simplify the router type, as it has complex Symbol stuff
+// Yes this is fragile, but it seems like the only way
+type WithoutUntypedClientSymbol<T> = {
+  [K in keyof T as K extends string ? K : never]: T[K];
+};
+
+export type RouterTypeFromAgent<Agent extends AnyChatAgent> = WithoutUntypedClientSymbol<
+  ReturnType<typeof createTRPCClient<ReturnType<typeof makeChatRouterForAgent<Agent, any>>>>
 >;
 
 type ConversationRelatedData = {

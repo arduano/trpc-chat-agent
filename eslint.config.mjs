@@ -52,6 +52,8 @@ export default antfu(
       'unicorn/prefer-node-protocol': 'off',
       'jsdoc/check-alignment': 'off',
       'ts/no-empty-object-type': 'off',
+      'react-hooks-extra/no-direct-set-state-in-use-effect': 'off',
+      'react-web-api/no-leaked-timeout': 'off',
     },
   },
   {
